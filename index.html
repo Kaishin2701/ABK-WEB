@@ -1,0 +1,222 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>ABK App V3</title>
+    <link rel="stylesheet" href="style.css?v=2.2">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo-area">
+            <img src="assets/logo.png" alt="Logo" onerror="this.style.display='none'">
+            <h2>ABK TOOL</h2>
+        </div>
+        <nav>
+            <button class="tab-btn active" onclick="switchTab('tab-watermark')">Auto Watermark</button>
+            <button class="tab-btn" onclick="switchTab('tab-linkcheck')">Link Checker</button>
+            <button class="tab-btn" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
+            <button class="tab-btn" onclick="switchTab('tab-sku')">SKU Generator</button>
+            <button class="tab-btn" onclick="switchTab('tab-product')">Product Checker</button>
+        </nav>
+        <div class="footer-info">Ver 2.2 Web</div>
+    </aside>
+
+    <main>
+        <div id="tab-watermark" class="tab-content active">
+            <div class="header-title">ABK IMAGE PROCESSOR</div>
+            
+            <div class="group-box">
+                <div id="gallery-area" class="gallery-scroll">
+                    <p id="gallery-placeholder">Drop files or click Select Images...</p>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-secondary" onclick="document.getElementById('inp-files').click()">Select Images</button>
+                    <button class="btn-secondary" onclick="clearGallery()">Clear Gallery</button>
+                    <input type="file" id="inp-files" multiple accept="image/*" hidden>
+                </div>
+            </div>
+
+            <div class="group-box">
+                <div class="lbl-title">WATERMARK SETTINGS</div>
+                <div class="input-row">
+                    <input type="text" id="wm-path-display" placeholder="No logo selected..." readonly>
+                    <button class="btn-accent" onclick="document.getElementById('inp-wm').click()">Add </button>
+                    <input type="file" id="inp-wm" accept="image/*" hidden>
+                </div>
+                
+                <div class="input-row">
+                    <label>Mode:</label>
+                    <select id="sel-mode">
+                        <option value="Fullscreen">Fullscreen</option>
+                        <option value="Bottom-right">Bottom-right</option>
+                        <option value="Diagonal repeat">Diagonal repeat</option>
+                    </select>
+                    <label>Rename:</label>
+                    <input type="text" id="inp-rename" value="{default name}">
+                </div>
+
+                <div class="sliders-row">
+                    <div class="slider-group">
+                        <label id="lbl-quality">Quality: 85</label>
+                        <input type="range" id="rng-quality" min="10" max="100" value="85">
+                    </div>
+                    <div class="slider-group">
+                        <label id="lbl-opacity">Opacity: 100%</label>
+                        <input type="range" id="rng-opacity" min="0" max="100" value="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-container">
+                <textarea id="log-box" readonly></textarea>
+            </div>
+            
+            <div class="progress-bar"><div id="p-bar-fill"></div></div>
+            <p id="status-lbl">Ready.</p>
+            <button id="btn-start-wm" class="btn-big-green">START PROCESSING</button>
+            <div id="download-area" style="display:none"></div>
+        </div>
+
+        <div id="tab-linkcheck" class="tab-content">
+            <div class="header-title">MASS LINK CHECKER</div>
+            <div class="top-stats" id="link-stats">Live: 0 | Dead: 0 | Error: 0</div>
+            
+            <div class="split-layout">
+                <div class="split-left">
+                    <label style="color:#00ff88; font-weight:bold">Input URLs:</label>
+                    <textarea id="inp-urls" placeholder="Paste links here..."></textarea>
+                </div>
+                <div class="split-right">
+                    <div class="filter-row">
+                        <label>Filter:</label>
+                        <select id="sel-filter">
+                            <option>Show All</option>
+                            <option>Live (200)</option>
+                            <option>Dead (404)</option>
+                        </select>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="tbl-links">
+                            <thead>
+                                <tr>
+                                    <th width="60">Code</th>
+                                    <th>URL</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row" style="margin-top:10px">
+                <button id="btn-check-link" class="btn-green">START CHECKING</button>
+                <button id="btn-stop-link" class="btn-red" disabled>STOP</button>
+            </div>
+            <div class="progress-bar"><div id="link-p-bar"></div></div>
+            <p id="link-status">Ready.</p>
+        </div>
+
+        <div id="tab-cleaner" class="tab-content">
+            <div class="header-title">HTML CLEANER</div>
+            <div class="split-layout" style="height: 60vh;">
+                <div class="split-col">
+                    <label>1. Input Code:</label>
+                    <textarea id="html-in" placeholder="Paste HTML code here..."></textarea>
+                </div>
+                <div class="split-center">
+                    <button id="btn-clean" class="btn-green">CLEAN CODE NOW</button>
+                    <button id="btn-copy-html" class="btn-blue">Copy Result</button>
+                </div>
+                <div class="split-col">
+                    <label>2. Output Code:</label>
+                    <textarea id="html-out" readonly style="color:#00ff88"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-sku" class="tab-content">
+            <div class="header-title">SKU AUTO GENERATOR (DEMO VERSION)</div>
+            
+            <div class="group-box">
+                <div class="lbl-title">BASE PRODUCT CODE</div>
+                <div class="input-row">
+                    <input type="text" id="sku-base-code" placeholder="VD: SHIRT_ADK/KD hoáº·c HOODIE_KD hoáº·c PANTS_AD">
+                    <button class="btn-accent" onclick="skuGenerate()">Generate</button>
+                </div>
+                <div id="sku-info" style="color:#999; font-size:12px; margin-top:8px; display:none"></div>
+            </div>
+
+            <div class="group-box">
+                <div class="lbl-title">SKU VARIANTS (one row per Excel cell)</div>
+                <textarea id="sku-output" readonly style="background:#0a0a0a; color:#00ff88; font-family:monospace; height:200px; border:1px solid #333; padding:10px; border-radius:6px;">Enter base code and click Generate to preview result</textarea>
+            </div>
+
+            <div class="group-box">
+                <div class="btn-row" style="gap:10px;">
+                    <button class="btn-green" onclick="skuCopyAll()">Copy All</button>
+                    <button class="btn-blue" onclick="skuClearForm()">Clear Form</button>
+                    <button class="btn-secondary" onclick="skuExportCsv()">Export CSV</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-product" class="tab-content">
+            <div class="header-title">PRODUCT CHECKER</div>
+
+            <div class="group-box">
+                <div class="lbl-title">PRODUCT URL</div>
+                <div class="input-row">
+                    <input type="text" id="product-url" placeholder="Paste product URL here...">
+                    <button id="btn-product-fetch" class="btn-accent">Fetch</button>
+                </div>
+                <p id="product-status">Ready.</p>
+            </div>
+
+            <div class="group-box product-panel product-result-panel">
+                <div class="lbl-title">CHECK RESULT</div>
+                <div id="product-check-result" class="check-result">
+                    <p class="muted">No product checked.</p>
+                </div>
+<button id="btn-product-view-more" class="btn-secondary product-view-more" type="button">View More</button>
+            </div>
+
+            <div id="product-more-area" class="product-more-area" hidden>
+                <div class="product-grid">
+                    <div class="group-box product-panel">
+                        <div class="lbl-title">EXTRACTED INFORMATION</div>
+                        <div id="product-summary" class="product-summary">
+                            <p class="muted">No product loaded.</p>
+                        </div>
+                    </div>
+
+                    <div class="group-box product-panel">
+                        <div class="lbl-title">RAW DATA</div>
+                        <textarea id="product-raw" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="modules/skuAuto.js"></script>
+    <script src="script.js"></script>
+    <script src="modules/watermark.js"></script>
+    <script src="modules/linkCheck.js"></script>
+    <script src="modules/htmlClean.js"></script>
+    <script src="modules/productChecker.js?v=4.1"></script>
+</body>
+</html>
+
+
+
+
+
+
