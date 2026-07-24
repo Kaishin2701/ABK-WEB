@@ -1,4 +1,4 @@
-:root { --bg: #121212; --panel: #1e1e1e; --green: #00ff88; --border: #333; --text: #eee; }
+﻿:root { --bg: #121212; --panel: #1e1e1e; --green: #00ff88; --border: #333; --text: #eee; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
@@ -150,3 +150,24 @@ main { scroll-behavior: smooth; }
 .case-detail-list { margin-bottom: 10px; }
 .check-status + .case-detail-list { margin-top: 8px; }
 .case-detail-list + .check-status { margin-top: 16px; }
+.product-input-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
+.product-input-layout textarea { min-height: 96px; resize: vertical; font-family: monospace; }
+.product-input-layout button { align-self: start; min-width: 90px; }
+.product-result-table-wrap { overflow: auto; border: 1px solid #2a2a2a; border-radius: 6px; background: #0b0b0b; }
+.product-result-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.product-result-table th, .product-result-table td { padding: 10px; border-bottom: 1px solid #242424; vertical-align: top; }
+.product-result-table th:nth-child(1), .product-result-table td:nth-child(1) { width: 44%; }
+.product-result-table th:nth-child(2), .product-result-table td:nth-child(2) { width: 22%; }
+.product-result-table th:nth-child(3), .product-result-table td:nth-child(3) { width: 12%; text-align: center; }
+.product-result-table th:nth-child(4), .product-result-table td:nth-child(4) { width: 10%; text-align: center; }
+.product-result-table th:nth-child(5), .product-result-table td:nth-child(5) { width: 12%; text-align: right; }
+.product-result-url, .product-result-sku { word-break: break-word; }
+.product-status-pill { display: inline-block; padding: 5px 10px; border-radius: 999px; font-weight: 800; font-size: 11px; color: #080808; }
+.product-status-pill.pass { background: #00ff88; }
+.product-status-pill.fail { background: #ff5555; color: white; }
+.product-detail-title { color: #eee; font-weight: 800; margin-bottom: 10px; word-break: break-word; }
+.product-detail-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+@media (max-width: 900px) {
+  .product-input-layout { grid-template-columns: 1fr; }
+  .product-result-table { min-width: 760px; }
+}

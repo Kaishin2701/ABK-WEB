@@ -171,9 +171,9 @@
             <div class="header-title">PRODUCT CHECKER</div>
 
             <div class="group-box">
-                <div class="lbl-title">PRODUCT URL</div>
-                <div class="input-row">
-                    <input type="text" id="product-url" placeholder="Paste product URL here...">
+                <div class="lbl-title">PRODUCT URLS</div>
+                <div class="product-input-layout">
+                    <textarea id="product-url" rows="5" placeholder="Paste product URLs here, one URL per line..."></textarea>
                     <button id="btn-product-fetch" class="btn-accent">Fetch</button>
                 </div>
                 <p id="product-status">Ready.</p>
@@ -184,10 +184,15 @@
                 <div id="product-check-result" class="check-result">
                     <p class="muted">No product checked.</p>
                 </div>
-<button id="btn-product-view-more" class="btn-secondary product-view-more" type="button">View More</button>
             </div>
 
             <div id="product-more-area" class="product-more-area" hidden>
+                <div class="group-box product-panel">
+                    <div class="lbl-title">FAILED CASES</div>
+                    <div id="product-failed-cases" class="check-result">
+                        <p class="muted">Select a product row to view failed cases.</p>
+                    </div>
+                </div>
                 <div class="product-grid">
                     <div class="group-box product-panel">
                         <div class="lbl-title">EXTRACTED INFORMATION</div>
@@ -201,8 +206,7 @@
                         <textarea id="product-raw" readonly></textarea>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div>        </div>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -211,9 +215,15 @@
     <script src="modules/watermark.js"></script>
     <script src="modules/linkCheck.js"></script>
     <script src="modules/htmlClean.js"></script>
-    <script src="modules/productChecker.js?v=4.1"></script>
+    <script src="modules/productChecker.js?v=4.7"></script>
 </body>
 </html>
+
+
+
+
+
+
 
 
 

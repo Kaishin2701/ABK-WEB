@@ -22,6 +22,8 @@
     }
   ];
 
+  let checkedProducts = [];
+
   function init() {
     const btn = document.getElementById('btn-product-fetch');
     const input = document.getElementById('product-url');
@@ -29,47 +31,86 @@
     if (!btn || !input) return;
 
     btn.addEventListener('click', fetchFromInput);
-    const viewMoreBtn = document.getElementById('btn-product-view-more');
-    if (viewMoreBtn) viewMoreBtn.addEventListener('click', toggleProductMore);
     input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') fetchFromInput();
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') fetchFromInput();
     });
   }
 
   async function fetchFromInput() {
     const input = document.getElementById('product-url');
-    const url = input.value.trim();
+    const urls = parseProductUrls(input.value);
 
-    if (!url) {
-      alert('Please enter a product URL.');
+    if (!urls.length) {
+      alert('Please enter at least one product URL.');
       return;
     }
 
-    if (!/^https?:\/\//i.test(url)) {
-      alert('URL must start with http:// or https://');
+    const invalidUrl = urls.find((url) => !/^https?:\/\//i.test(url));
+    if (invalidUrl) {
+      alert(`URL must start with http:// or https://\n${invalidUrl}`);
       return;
     }
 
-    setLoading(true, 'Fetching product page...');
+    setLoading(true, `Checking 0/${urls.length} products...`);
     clearResult();
+    checkedProducts = urls.map((url) => ({ sourceUrl: url, url, status: 'PENDING' }));
+    renderBatchResults();
 
-    try {
-      const page = await fetchProductPage(url);
-      setStatus('Parsing product information...');
-      const product = parseProductContent(page.content, url, page.type, page.provider);
-      await enrichProductWithStoreApi(product, url);
-      applyProductCaseTests(product);
-      renderProduct(product);
-      setStatus(`Done. Product information extracted via ${page.provider}.`);
-    } catch (error) {
-      setStatus(`Error: ${error.message}`);
-      const rawBox = document.getElementById('product-raw');
-      if (rawBox) rawBox.value = '';
-    } finally {
-      setLoading(false);
+    for (let index = 0; index < urls.length; index++) {
+      const url = urls[index];
+      setStatus(`Checking ${index + 1}/${urls.length}: ${url}`);
+      checkedProducts[index] = { sourceUrl: url, url, status: 'CHECKING' };
+      renderBatchResults();
+
+      try {
+        checkedProducts[index] = await checkProductUrl(url);
+      } catch (error) {
+        checkedProducts[index] = buildFetchErrorProduct(url, error);
+      }
+      renderBatchResults();
     }
+
+    const failed = checkedProducts.filter((product) => getProductFailedCases(product).length > 0).length;
+    setLoading(false, `Done. Checked ${checkedProducts.length} products. Failed: ${failed}.`);
   }
 
+  async function checkProductUrl(url) {
+    const page = await fetchProductPage(url);
+    const product = parseProductContent(page.content, url, page.type, page.provider);
+    await enrichProductWithStoreApi(product, url);
+    applyProductCaseTests(product);
+    product.fetchProvider = product.fetchProvider || page.provider;
+    return product;
+  }
+
+  function parseProductUrls(value) {
+    const seen = new Set();
+    return String(value || '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((url) => {
+        if (seen.has(url)) return false;
+        seen.add(url);
+        return true;
+      });
+  }
+
+  function buildFetchErrorProduct(url, error) {
+    return {
+      sourceUrl: url,
+      url,
+      sku: '',
+      status: 'ERROR',
+      fetch_error: error.message,
+      fetch_error_case: {
+        case: 'Fetch Case',
+        status: 'FAIL',
+        issue_count: 1,
+        findings: [{ issue: 'fetch_failed', message: error.message }]
+      }
+    };
+  }
   async function fetchProductPage(url) {
     const attempts = [];
 
@@ -123,11 +164,14 @@
 
       product.url = product.sourceUrl || url;
       product.sourceUrl = product.sourceUrl || url;
+      product.page_price = product.page_price || product.price || '';
+      product.page_regular_price = product.page_regular_price || product.regularPrice || '';
       product.title = cleanText(decodeHtml(parent.name || product.title || '').replace(/^#+\s*/, ''));
       product.sku = cleanText(parent.sku || product.sku || '');
-      product.base_price = priceToNumber(parent.prices && parent.prices.price, parent.prices);
-      product.price = product.base_price || product.price;
-      product.regularPrice = priceToNumber(parent.prices && parent.prices.regular_price, parent.prices) || product.regularPrice;
+      product.store_api_price = priceToNumber(parent.prices && parent.prices.price, parent.prices);
+      product.base_price = product.store_api_price;
+      product.price = product.page_price || product.store_api_price || product.price;
+      product.regularPrice = product.page_regular_price || priceToNumber(parent.prices && parent.prices.regular_price, parent.prices) || product.regularPrice;
       product.currency = (parent.prices && parent.prices.currency_code) || product.currency || '';
       product.review_count = Number(parent.review_count || 0);
       product.categories = Array.isArray(parent.categories) ? parent.categories.map((item) => item.name).filter(Boolean) : product.categories;
@@ -384,13 +428,14 @@
     product.size_chart_case = runSizeChartCase(product);
     product.url_name_case = runUrlNameCase(product);
     product.personalise_option_case = runPersonaliseOptionCase(product);
+    product.description_sku_case = runDescriptionSkuCase(product);
     return product;
   }
 
   function runPriceCase(product) {
     const classification = classifyPriceProduct(product);
     const expected = getExpectedPrice(classification);
-    const actualBase = toComparablePrice(product.base_price !== undefined ? product.base_price : product.price);
+    const actualBase = getActualPriceForPriceCase(product, classification, expected);
     const variations = Array.isArray(product.size_prices) ? product.size_prices : [];
 
     const result = {
@@ -430,6 +475,24 @@
     return result;
   }
 
+  function getActualPriceForPriceCase(product, classification, expected) {
+    const variations = Array.isArray(product.size_prices) ? product.size_prices : [];
+    const variationPrices = variations.map((variation) => toComparablePrice(variation.price)).filter((price) => price !== null);
+
+    if (classification.isBundle) {
+      const pagePrice = toComparablePrice(product.page_price || product.price);
+      if (pagePrice !== null) return pagePrice;
+
+      const matchingVariationPrice = variationPrices.find((price) => expected !== null && roundMoney(price) === roundMoney(expected));
+      if (matchingVariationPrice !== undefined) return matchingVariationPrice;
+
+      if (variationPrices.length) return variationPrices[0];
+    }
+
+    const basePrice = toComparablePrice(product.base_price !== undefined ? product.base_price : product.price);
+    if (basePrice !== null) return basePrice;
+    return toComparablePrice(product.page_price || product.price);
+  }
   function buildPriceCheck(target, actual, expected, sku, variationId) {
     return {
       target,
@@ -442,6 +505,55 @@
     };
   }
 
+  function runDescriptionSkuCase(product) {
+    const rules = getDescriptionSkuRules();
+    const skuTokens = extractSkuTokens(product.sku);
+    const matchedRules = rules.filter((rule) => skuTokens.includes(rule.token));
+    const descriptionText = normalizeCaseText([
+      product.title,
+      product.description,
+      product.long_description,
+      product.short_description,
+      Array.isArray(product.description_headings) ? product.description_headings.join(' ') : ''
+    ].join(' '));
+    const findings = [];
+
+    matchedRules.forEach((rule) => {
+      const hasKeyword = rule.keywords.some((keyword) => new RegExp(`(^|[^a-z0-9])${escapeRegex(keyword.toLowerCase())}([^a-z0-9]|$)`, 'i').test(descriptionText));
+      if (!hasKeyword) {
+        findings.push({
+          issue: 'missing_description_keyword',
+          sku_token: rule.token,
+          expected: rule.label,
+          keywords: rule.keywords,
+          message: `SKU contains ${rule.token}, so description should mention ${rule.label}.`
+        });
+      }
+    });
+
+    return {
+      case: 'Description SKU Case',
+      status: findings.length ? 'FAIL' : 'PASS',
+      sku_tokens: matchedRules.map((rule) => rule.token),
+      checked_rules: matchedRules.length,
+      issue_count: findings.length,
+      findings
+    };
+  }
+
+  function getDescriptionSkuRules() {
+    return [
+      { token: 'HO', label: 'Home', keywords: ['home'] },
+      { token: 'AW', label: 'Away', keywords: ['away'] },
+      { token: 'TH', label: 'Third', keywords: ['third'] },
+      { token: 'GK', label: 'Goalkeeper', keywords: ['goalkeeper'] },
+      { token: 'TN', label: 'Training', keywords: ['training'] }
+    ];
+  }
+
+  function extractSkuTokens(sku) {
+    return String(sku || '').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  }
   function runPersonaliseOptionCase(product) {
     const printed = product.printed || detectPrinted(product);
     const options = Array.isArray(product.global_form) ? product.global_form : [];
@@ -1072,14 +1184,15 @@
       JSON.stringify(product.product_attributes || {})
     ].join(' '));
 
-    const isBundle = /bundle/.test(haystack);
+    const isBundle = detectBundleFromTitle(product.title) || /bundle/.test(haystack);
     const isRetro = /retro/.test(haystack);
     const isBaby = /baby|bodysuit/.test(haystack);
     const isKids = isBaby || /kids?|children|youth|kd|kid/.test(haystack);
     const isAdult = /adult|men|women|adk|\bad\b/.test(haystack);
     const isShirtOnly = /shirt/.test(haystack) && !/kit|short|socks|bundle/.test(haystack);
-    const withSocks = /with socks|\bws\b/.test(haystack) && !/no socks|_no_|\bno\b/.test(haystack);
-    const noSocks = /no socks|_no_|\bno\b/.test(haystack) || !withSocks;
+    const sockType = detectSockTypeFromTitle(product.title);
+    const withSocks = sockType === 'with_socks';
+    const noSocks = sockType === 'no_socks';
     const printed = detectPrinted(product).is_printed;
 
     if (isBundle) {
@@ -1111,6 +1224,16 @@
     return { productType: 'Unknown', isBundle, socks: withSocks ? 'with_socks' : noSocks ? 'no_socks' : 'unknown', isPrinted: printed, reason: 'Unable to classify product type from title, SKU, categories, tags, or attributes.' };
   }
 
+  function detectBundleFromTitle(title) {
+    const titleText = normalizeCaseText(title || '');
+    return /bundle|gift\s*pack|home\s*(and|&)\s*away|home\s*away|combo|family\s*pack/.test(titleText);
+  }
+  function detectSockTypeFromTitle(title) {
+    const titleText = normalizeCaseText(title || '');
+    if (/no\s*socks?|without\s*socks?/.test(titleText)) return 'no_socks';
+    if (/with\s*socks?/.test(titleText)) return 'with_socks';
+    return 'no_socks';
+  }
   function getExpectedPrice(classification) {
     const basePrices = {
       'Kids Kit - No Socks': 26.99,
@@ -1435,14 +1558,44 @@
     return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, '').replace(/\.0$/, '');
   }
   function extractPrices(text) {
-    const priceMatches = Array.from(text.matchAll(/(?:\u00a3|&pound;|&#163;)\s*([0-9]+(?:\.[0-9]{2})?)/gi)).map((match) => match[1]);
+    const mainText = extractMainPriceText(text);
+    const salePair = mainText.match(/(?:~~\s*)?(?:\u00a3|&pound;|&#163;)\s*([0-9]+(?:\.[0-9]{2})?)\s*(?:~~)?\s+(?:\u00a3|&pound;|&#163;)\s*([0-9]+(?:\.[0-9]{2})?)/i);
+    if (salePair) {
+      return {
+        regular: `GBP ${salePair[1]}`,
+        current: `GBP ${salePair[2]}`,
+        currency: 'GBP'
+      };
+    }
+
+    const priceMatches = Array.from(mainText.matchAll(/(?:\u00a3|&pound;|&#163;)\s*([0-9]+(?:\.[0-9]{2})?)/gi)).map((match) => match[1]);
     const uniquePrices = [...new Set(priceMatches)];
 
     return {
-      regular: uniquePrices[0] ? `GBP ${uniquePrices[0]}` : '',
-      current: uniquePrices.length > 1 ? `GBP ${uniquePrices[uniquePrices.length - 1]}` : (uniquePrices[0] ? `GBP ${uniquePrices[0]}` : ''),
+      regular: uniquePrices.length > 1 ? `GBP ${uniquePrices[0]}` : '',
+      current: uniquePrices.length > 1 ? `GBP ${uniquePrices[1]}` : (uniquePrices[0] ? `GBP ${uniquePrices[0]}` : ''),
       currency: uniquePrices.length ? 'GBP' : ''
     };
+  }
+
+  function extractMainPriceText(text) {
+    const source = String(text || '');
+    const endMarkers = [
+      /\[Button:\s*Add to basket\]/i,
+      /Add to basket/i,
+      /#####\s+The Perfect Gift/i,
+      /KFK\s*-\s*information/i,
+      /##\s+.*details/i,
+      /Related products/i,
+      /You may also like/i
+    ];
+    const endIndexes = endMarkers
+      .map((regex) => {
+        const match = source.match(regex);
+        return match && match.index !== undefined ? match.index : -1;
+      })
+      .filter((index) => index > 0);
+    return endIndexes.length ? source.slice(0, Math.min(...endIndexes)) : source;
   }
 
   function extractSizesFromText(text) {
@@ -1628,6 +1781,157 @@
     return String(value || '').replace(/\s+/g, ' ').trim();
   }
 
+  function renderBatchResults() {
+    const area = document.getElementById('product-check-result');
+    if (!area) return;
+
+    if (!checkedProducts.length) {
+      area.innerHTML = '<p class="muted">No product checked.</p>';
+      return;
+    }
+
+    area.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'product-result-table-wrap';
+
+    const table = document.createElement('table');
+    table.className = 'product-result-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>URL</th>
+          <th>SKU</th>
+          <th>Errors</th>
+          <th>Status</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector('tbody');
+    checkedProducts.forEach((product, index) => {
+      const failedCases = getProductFailedCases(product);
+      const isPending = product.status === 'PENDING' || product.status === 'CHECKING';
+      const status = isPending ? product.status : failedCases.length ? 'FAIL' : 'PASS';
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="product-result-url"></td>
+        <td class="product-result-sku"></td>
+        <td>${isPending ? '-' : failedCases.length}</td>
+        <td><span class="product-status-pill ${status === 'FAIL' ? 'fail' : 'pass'}">${escapeHtml(status)}</span></td>
+        <td></td>
+      `;
+
+      const urlCell = row.children[0];
+      const link = document.createElement('a');
+      link.href = product.sourceUrl || product.url || '#';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = product.sourceUrl || product.url || 'N/A';
+      urlCell.appendChild(link);
+
+      row.children[1].className = 'product-result-sku';
+      row.children[1].textContent = product.sku || (isPending ? status : 'Not found');
+
+      const button = document.createElement('button');
+      button.className = 'btn-secondary';
+      button.type = 'button';
+      button.textContent = 'View Detail';
+      button.disabled = isPending;
+      button.addEventListener('click', () => showProductDetail(index));
+      row.children[4].appendChild(button);
+
+      tbody.appendChild(row);
+    });
+
+    wrap.appendChild(table);
+    area.appendChild(wrap);
+  }
+
+  function getProductCaseEntries(product) {
+    return [
+      { key: 'fetch_error_case', label: 'Fetch Case', render: renderFetchErrorSection },
+      { key: 'price_case', label: 'Price Case', render: renderPriceCaseSection },
+      { key: 'forbidden_terms_case', label: 'Forbidden Terms Case', render: renderForbiddenTermsSection },
+      { key: 'alt_text_case', label: 'Alt Text Case', render: renderAltTextSection },
+      { key: 'size_chart_case', label: 'Size Chart Case', render: renderSizeChartSection },
+      { key: 'url_name_case', label: 'URL / Name Case', render: renderUrlNameSection },
+      { key: 'personalise_option_case', label: 'Personalise Option Case', render: renderPersonaliseOptionSection },
+      { key: 'description_sku_case', label: 'Description SKU Case', render: renderDescriptionSkuSection }
+    ];
+  }
+
+  function getProductFailedCases(product) {
+    return getProductCaseEntries(product).filter((entry) => {
+      const caseData = product && product[entry.key];
+      return caseData && String(caseData.status || '').toUpperCase() === 'FAIL';
+    });
+  }
+
+  function showProductDetail(index) {
+    const product = checkedProducts[index];
+    if (!product) return;
+
+    const moreArea = document.getElementById('product-more-area');
+    const failedArea = document.getElementById('product-failed-cases');
+    const summary = document.getElementById('product-summary');
+    const raw = document.getElementById('product-raw');
+    if (!moreArea || !failedArea || !summary || !raw) return;
+
+    moreArea.hidden = false;
+    failedArea.innerHTML = '';
+
+    const title = document.createElement('div');
+    title.className = 'product-detail-title';
+    title.textContent = product.title || product.sourceUrl || product.url || 'Product detail';
+    failedArea.appendChild(title);
+
+    const failedCases = getProductFailedCases(product);
+    if (!failedCases.length) {
+      failedArea.innerHTML += '<p class="muted">No failed cases for this product.</p>';
+    } else {
+      failedCases.forEach((entry) => entry.render(failedArea, product[entry.key]));
+    }
+
+    renderProductSummary(summary, product);
+    raw.value = JSON.stringify(product, null, 2);
+    moreArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderProductSummary(summary, product) {
+    summary.innerHTML = '';
+    addRow(summary, 'URL', product.sourceUrl || product.url || 'Not found');
+    addRow(summary, 'Title', product.title || 'Not found');
+    addRow(summary, 'SKU', product.sku || 'Not found');
+    addRow(summary, 'Price', [product.regularPrice, product.price].filter(Boolean).join(' -> ') || 'Not found');
+    addRow(summary, 'Currency', product.currency || 'Not found');
+    addRow(summary, 'Sizes', (product.sizes || []).join(', ') || 'Not found');
+    addRow(summary, 'Size Prices', product.size_prices && product.size_prices.length ? String(product.size_prices.length) + ' variations' : 'Not found');
+    addRow(summary, 'Categories', (product.categories || []).join(', ') || 'Not found');
+    addRow(summary, 'Tags', (product.tags || []).join(', ') || 'Not found');
+    addRow(summary, 'Rating', product.rating || 'Not found');
+    addRow(summary, 'Short Description', product.short_description || 'Not found');
+    addRow(summary, 'Long Description', product.long_description || product.description || 'Not found');
+    addRow(summary, 'Options', product.global_form && product.global_form.length ? String(product.global_form.length) + ' options' : 'Not found');
+    addRow(summary, 'Failed Cases', String(getProductFailedCases(product).length));
+    addImages(summary, product.images || []);
+  }
+
+  function renderFetchErrorSection(area, fetchCase) {
+    area.appendChild(createCaseStatusCard('Fetch Case', fetchCase, [`Issues: ${fetchCase.issue_count || 1}`]));
+    const list = document.createElement('div');
+    list.className = 'check-list case-detail-list';
+    const findings = Array.isArray(fetchCase.findings) ? fetchCase.findings : [];
+    findings.forEach((finding) => {
+      const item = document.createElement('div');
+      item.className = 'check-item fail';
+      item.innerHTML = `<div><div class="check-item-title">${escapeHtml(finding.issue || 'fetch_failed')}</div><div class="check-item-detail">${escapeHtml(finding.message || '')}</div></div><div class="check-badge fail">FIX</div>`;
+      list.appendChild(item);
+    });
+    area.appendChild(list);
+  }
   function renderProduct(product) {
     const summary = document.getElementById('product-summary');
     const raw = document.getElementById('product-raw');
@@ -1651,6 +1955,7 @@
     addRow(summary, 'Alt Text Case', product.alt_text_case ? product.alt_text_case.status + ' - ' + product.alt_text_case.issue_count + ' issues' : 'Not tested');
     addRow(summary, 'Size Chart Case', product.size_chart_case ? product.size_chart_case.status + ' - ' + product.size_chart_case.issue_count + ' issues' : 'Not tested');
     addRow(summary, 'Personalise Option Case', product.personalise_option_case ? product.personalise_option_case.status + ' - ' + product.personalise_option_case.issue_count + ' issues' : 'Not tested');
+    addRow(summary, 'Description SKU Case', product.description_sku_case ? product.description_sku_case.status + ' - ' + product.description_sku_case.issue_count + ' issues' : 'Not tested');
     addImages(summary, product.images);
 
     raw.value = JSON.stringify(product, null, 2);
@@ -1667,8 +1972,22 @@
     renderSizeChartSection(area, product.size_chart_case || { status: 'SKIP', findings: [], issue_count: 0 });
     renderUrlNameSection(area, product.url_name_case || { status: 'PASS', findings: [], issue_count: 0 });
     renderPersonaliseOptionSection(area, product.personalise_option_case || { status: 'PASS', findings: [], issue_count: 0 });
+    renderDescriptionSkuSection(area, product.description_sku_case || { status: 'PASS', findings: [], issue_count: 0 });
   }
 
+  function renderDescriptionSkuSection(area, descriptionCase) {
+    area.appendChild(createCaseStatusCard('Description SKU Case', descriptionCase, getDescriptionSkuCaseMeta(descriptionCase)));
+
+    const list = document.createElement('div');
+    list.className = 'check-list case-detail-list';
+    const findings = Array.isArray(descriptionCase.findings) ? descriptionCase.findings : [];
+    if (!findings.length) {
+      list.innerHTML = '<p class="muted">No description SKU issues found.</p>';
+    } else {
+      findings.forEach((finding) => list.appendChild(createDescriptionSkuFindingItem(finding)));
+    }
+    area.appendChild(list);
+  }
   function renderPersonaliseOptionSection(area, personaliseCase) {
     area.appendChild(createCaseStatusCard('Personalise Option Case', personaliseCase, getPersonaliseOptionCaseMeta(personaliseCase)));
 
@@ -1803,6 +2122,13 @@
       `Issues: ${sizeCase.issue_count || 0}`
     ];
   }
+  function getDescriptionSkuCaseMeta(descriptionCase) {
+    return [
+      `SKU tokens: ${(descriptionCase.sku_tokens || []).join(', ') || 'N/A'}`,
+      `Checked: ${descriptionCase.checked_rules || 0}`,
+      `Issues: ${descriptionCase.issue_count || 0}`
+    ];
+  }
   function getPersonaliseOptionCaseMeta(personaliseCase) {
     return [
       `Printed: ${personaliseCase.printed ? 'Yes' : 'No'}`,
@@ -1823,6 +2149,40 @@
       `Skipped: ${altCase.skipped_image_count || 0}`,
       `Issues: ${altCase.issue_count || 0}`
     ];
+  }
+  function createDescriptionSkuFindingItem(finding) {
+    const item = document.createElement('div');
+    item.className = 'check-item fail';
+
+    const content = document.createElement('div');
+
+    const title = document.createElement('div');
+    title.className = 'check-item-title';
+    title.textContent = `${finding.sku_token || 'SKU'}: ${finding.issue || 'description_sku_issue'}`;
+
+    const detail = document.createElement('div');
+    detail.className = 'check-item-detail';
+    detail.textContent = finding.message || '';
+
+    const expected = document.createElement('div');
+    expected.className = 'check-item-detail';
+    expected.textContent = `Expected: ${finding.expected || ''}`;
+
+    const keywords = document.createElement('div');
+    keywords.className = 'check-item-detail';
+    keywords.textContent = `Keywords: ${(finding.keywords || []).join(', ')}`;
+
+    const badge = document.createElement('div');
+    badge.className = 'check-badge fail';
+    badge.textContent = 'FIX';
+
+    content.appendChild(title);
+    content.appendChild(detail);
+    content.appendChild(expected);
+    content.appendChild(keywords);
+    item.appendChild(content);
+    item.appendChild(badge);
+    return item;
   }
   function createPersonaliseOptionFindingItem(finding) {
     const item = document.createElement('div');
@@ -2028,16 +2388,6 @@
     item.appendChild(badge);
     return item;
   }
-  function toggleProductMore() {
-    const moreArea = document.getElementById('product-more-area');
-    const btn = document.getElementById('btn-product-view-more');
-    if (!moreArea || !btn) return;
-
-    const willShow = moreArea.hidden;
-    moreArea.hidden = !willShow;
-    btn.innerText = willShow ? 'Hide Details' : 'View More';
-  }
-
   function formatCheckPrice(value) {
     if (value === null || value === undefined || value === '') return 'N/A';
     const number = Number(value);
@@ -2094,16 +2444,16 @@
 
   function clearResult() {
     const checkResult = document.getElementById('product-check-result');
+    const failedCases = document.getElementById('product-failed-cases');
     const summary = document.getElementById('product-summary');
     const raw = document.getElementById('product-raw');
     const moreArea = document.getElementById('product-more-area');
-    const viewMoreBtn = document.getElementById('btn-product-view-more');
 
     if (checkResult) checkResult.innerHTML = '<p class="muted">Checking...</p>';
-    if (summary) summary.innerHTML = '<p class="muted">Loading...</p>';
+    if (failedCases) failedCases.innerHTML = '<p class="muted">Select a product row to view failed cases.</p>';
+    if (summary) summary.innerHTML = '<p class="muted">No product loaded.</p>';
     if (raw) raw.value = '';
     if (moreArea) moreArea.hidden = true;
-    if (viewMoreBtn) viewMoreBtn.innerText = 'View More';
   }
 
   function setLoading(isLoading, message) {
@@ -2127,6 +2477,18 @@
 })();
 
 document.addEventListener('DOMContentLoaded', productChecker.init);
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
