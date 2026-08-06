@@ -1,6 +1,6 @@
 ﻿:root { --bg: #121212; --panel: #1e1e1e; --green: #00ff88; --border: #333; --text: #eee; }
 * { box-sizing: border-box; }
-body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; height: 100vh; overflow: hidden; }
 
 /* Keyframe Animations */
 @keyframes fadeIn {
@@ -34,7 +34,11 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); co
 }
 
 /* Sidebar */
-.sidebar { width: 220px; background: #000; padding: 20px; display: flex; flex-direction: column; border-right: 1px solid var(--border); animation: slideInLeft 0.5s ease-out; }
+.sidebar { width: 220px; background: #000; padding: 20px; display: flex; flex-direction: column; border-right: 1px solid var(--border); animation: slideInLeft 0.5s ease-out; transition: width 0.25s ease, padding 0.25s ease, transform 0.25s ease; overflow: hidden; }
+.sidebar-toggle { position: fixed; top: 14px; left: 198px; z-index: 200; width: 32px; height: 32px; padding: 0; border: 1px solid #3a3a3a; border-radius: 50%; background: #171717; color: var(--green); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); transition: left 0.25s ease, background 0.2s ease; }
+.sidebar-toggle:hover { background: #292929; }
+body.sidebar-hidden .sidebar { width: 0; padding-left: 0; padding-right: 0; border-right-width: 0; }
+body.sidebar-hidden .sidebar-toggle { left: 12px; }
 .logo-area { text-align: center; margin-bottom: 30px; }
 .logo-area img { width: 60px; animation: fadeIn 0.6s ease-out; }
 .logo-area h2 { color: var(--green); margin: 10px 0 0; font-size: 18px; animation: fadeIn 0.8s ease-out; }
@@ -44,7 +48,7 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); co
 .footer-info { margin-top: auto; font-size: 11px; color: #555; text-align: center; }
 
 /* Main */
-main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+main { flex: 1; min-width: 0; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
 .tab-content { display: none; height: 100%; flex-direction: column; opacity: 0; animation: fadeIn 0.4s ease-out forwards; }
 .tab-content.active { display: flex; }
 
@@ -170,4 +174,39 @@ main { scroll-behavior: smooth; }
 @media (max-width: 900px) {
   .product-input-layout { grid-template-columns: 1fr; }
   .product-result-table { min-width: 760px; }
+}
+
+@media (max-width: 768px) {
+  body { display: block; min-height: 100dvh; height: auto; overflow-x: hidden; overflow-y: auto; }
+  .sidebar { position: fixed; inset: 0 auto 0 0; width: min(82vw, 300px); padding: 66px 16px 18px; z-index: 150; box-shadow: 8px 0 24px rgba(0, 0, 0, 0.5); }
+  body:not(.sidebar-open) .sidebar { transform: translateX(-100%); }
+  .sidebar-toggle { top: 14px; left: 12px; width: 38px; height: 38px; font-size: 25px; }
+  body.sidebar-open .sidebar-toggle { left: min(calc(82vw - 22px), 278px); }
+  .logo-area { margin-bottom: 16px; }
+  .sidebar nav { overflow-y: auto; }
+  .footer-info { margin-top: 16px; }
+
+  main { min-height: 100dvh; width: 100%; padding: 66px 14px 24px; overflow: visible; display: block; }
+  .tab-content { height: auto; min-height: 0; }
+  .header-title { font-size: 22px; line-height: 1.15; margin-bottom: 16px; }
+  .group-box { padding: 13px; margin-bottom: 12px; }
+  .group-box:hover { transform: none; }
+  .input-row, .sliders-row, .btn-row, .split-layout { flex-direction: column; align-items: stretch; height: auto; }
+  .input-row > label { margin-top: 4px; }
+  .input-row > button, .btn-row > button, .split-center > button { width: 100%; }
+  .split-left, .split-right { width: 100%; min-height: 260px; }
+  .split-center { padding: 0; flex-direction: row; flex-wrap: wrap; }
+  .split-center > button { flex: 1 1 140px; }
+  #tab-cleaner .split-layout { gap: 12px; }
+  #tab-cleaner .split-col { min-height: 260px; }
+  #html-in, #html-out { min-height: 240px; }
+  .table-wrapper { min-height: 300px; }
+  .product-input-layout textarea { min-height: 130px; }
+  .product-input-layout button { width: 100%; min-height: 44px; }
+  .product-row { grid-template-columns: 1fr; gap: 4px; }
+  .check-status { align-items: flex-start; flex-direction: column; }
+  .check-meta { text-align: left; }
+  .product-result-table-wrap { margin: 0 -13px; border-radius: 0; }
+  .product-result-table { min-width: 680px; }
+  #product-raw { min-height: 280px; }
 }

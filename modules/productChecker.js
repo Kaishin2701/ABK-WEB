@@ -180,6 +180,10 @@
       product.image_count = buildImageCount(parent.images || []);
       product.image_details = buildImageDetails(parent.images || []);
       product.product_attributes = buildStoreProductAttributes(parent.attributes || [], product.product_attributes);
+      product.additional_information = mergeAdditionalInformation(
+        product.additional_information,
+        buildStoreAdditionalInformation(parent.attributes || [])
+      );
 
       const variations = Array.isArray(parent.variations) ? parent.variations : [];
       const variationDetails = await Promise.all(variations.map((variation) => fetchVariationDetail(variation)));
@@ -1364,6 +1368,7 @@
       global_form: globalForm,
       size_prices: [],
       product_attributes: sizes.length ? { size: sizes } : {},
+      additional_information: [],
       jsonLdFound: 0
     };
   }
@@ -1372,8 +1377,9 @@
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const jsonLdProducts = extractJsonLdProducts(doc);
-    const schemaProduct = jsonLdProducts[0] || {};
+    const schemaProduct = jsonLdProducts.find((item) => getJsonLdTypes(item).includes('ProductGroup')) || jsonLdProducts[0] || {};
     const offer = normalizeOffer(schemaProduct.offers);
+    const additionalInformation = extractAdditionalInformation(schemaProduct);
 
     const title = firstText(doc, [
       '.product_title',
@@ -1405,6 +1411,7 @@
       sizes: extractSizes(doc),
       images: extractImages(doc, schemaProduct.image),
       description: cleanText(description),
+      additional_information: additionalInformation,
       jsonLdFound: jsonLdProducts.length
     };
   }
@@ -1688,7 +1695,7 @@
         flattenJsonLd(data).forEach((item) => {
           const type = item && item['@type'];
           const types = Array.isArray(type) ? type : [type];
-          if (types.includes('Product')) products.push(item);
+          if (types.includes('ProductGroup') || types.includes('Product')) products.push(item);
         });
       } catch (error) {
         // Ignore invalid JSON-LD blocks.
@@ -1703,6 +1710,89 @@
     if (Array.isArray(data)) return data.flatMap(flattenJsonLd);
     if (data['@graph']) return flattenJsonLd(data['@graph']);
     return [data];
+  }
+
+  function getJsonLdTypes(item) {
+    const type = item && item['@type'];
+    return Array.isArray(type) ? type : [type];
+  }
+
+  function extractAdditionalInformation(schemaProduct) {
+    const properties = Array.isArray(schemaProduct && schemaProduct.additionalProperty)
+      ? schemaProduct.additionalProperty
+      : schemaProduct && schemaProduct.additionalProperty ? [schemaProduct.additionalProperty] : [];
+
+    return properties
+      .map((property) => buildAdditionalInformationItem(property && property.name, property && property.value))
+      .filter(Boolean);
+  }
+
+  function buildStoreAdditionalInformation(attributes) {
+    return (Array.isArray(attributes) ? attributes : [])
+      .map((attribute) => {
+        const name = attribute && (attribute.name || attribute.taxonomy);
+        const terms = attribute && Array.isArray(attribute.terms) ? attribute.terms.map((term) => term.name).filter(Boolean) : [];
+        const value = terms.length ? terms.join(', ') : attribute && attribute.value;
+        return buildAdditionalInformationItem(name, value);
+      })
+      .filter(Boolean);
+  }
+
+  function buildAdditionalInformationItem(name, value) {
+    const rawName = cleanText(name);
+    const rawValue = Array.isArray(value) ? value.map(cleanText).filter(Boolean).join(', ') : cleanText(value);
+    if (!rawName || !rawValue) return null;
+
+    const key = normalizeAdditionalInformationKey(rawName);
+    return {
+      key,
+      label: getAdditionalInformationLabel(key, rawName),
+      value: rawValue,
+      source_name: rawName
+    };
+  }
+
+  function normalizeAdditionalInformationKey(value) {
+    let key = String(value || '').toLowerCase();
+    while (/^pa[_-]?/.test(key)) key = key.replace(/^pa[_-]?/, '');
+    return key.replace(/[^a-z0-9]+/g, '');
+  }
+
+  function getAdditionalInformationLabel(key, fallback) {
+    const labels = {
+      age: 'Age',
+      season: 'Season',
+      national: 'Club / National',
+      club: 'Club / National',
+      team: 'Club / National',
+      kittype: 'Kit type',
+      department: 'Department',
+      subdepartment: 'Department',
+      player: 'Player',
+      players: 'Player'
+    };
+
+    if (labels[key]) return labels[key];
+    return cleanText(fallback)
+      .replace(/^pa[_-]?/i, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  function mergeAdditionalInformation(primary, secondary) {
+    const merged = [];
+    const seen = new Set();
+
+    [...(Array.isArray(primary) ? primary : []), ...(Array.isArray(secondary) ? secondary : [])]
+      .forEach((item) => {
+        if (!item || !item.label || !item.value) return;
+        const dedupeKey = `${item.key || item.label}::${item.value}`.toLowerCase();
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        merged.push(item);
+      });
+
+    return merged;
   }
 
   function normalizeOffer(offers) {
@@ -1877,8 +1967,9 @@
     const moreArea = document.getElementById('product-more-area');
     const failedArea = document.getElementById('product-failed-cases');
     const summary = document.getElementById('product-summary');
+    const additionalInformation = document.getElementById('product-additional-information');
     const raw = document.getElementById('product-raw');
-    if (!moreArea || !failedArea || !summary || !raw) return;
+    if (!moreArea || !failedArea || !summary || !additionalInformation || !raw) return;
 
     moreArea.hidden = false;
     failedArea.innerHTML = '';
@@ -1896,6 +1987,7 @@
     }
 
     renderProductSummary(summary, product);
+    renderAdditionalInformation(additionalInformation, product.additional_information);
     raw.value = JSON.stringify(product, null, 2);
     moreArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -1919,6 +2011,18 @@
     addImages(summary, product.images || []);
   }
 
+  function renderAdditionalInformation(area, information) {
+    area.innerHTML = '';
+    const items = Array.isArray(information) ? information : [];
+
+    if (!items.length) {
+      area.innerHTML = '<p class="muted">No additional information found.</p>';
+      return;
+    }
+
+    items.forEach((item) => addRow(area, item.label || item.source_name || 'Attribute', item.value));
+  }
+
   function renderFetchErrorSection(area, fetchCase) {
     area.appendChild(createCaseStatusCard('Fetch Case', fetchCase, [`Issues: ${fetchCase.issue_count || 1}`]));
     const list = document.createElement('div');
@@ -1934,6 +2038,7 @@
   }
   function renderProduct(product) {
     const summary = document.getElementById('product-summary');
+    const additionalInformation = document.getElementById('product-additional-information');
     const raw = document.getElementById('product-raw');
     renderCheckResult(product);
     summary.innerHTML = '';
@@ -1957,6 +2062,7 @@
     addRow(summary, 'Personalise Option Case', product.personalise_option_case ? product.personalise_option_case.status + ' - ' + product.personalise_option_case.issue_count + ' issues' : 'Not tested');
     addRow(summary, 'Description SKU Case', product.description_sku_case ? product.description_sku_case.status + ' - ' + product.description_sku_case.issue_count + ' issues' : 'Not tested');
     addImages(summary, product.images);
+    if (additionalInformation) renderAdditionalInformation(additionalInformation, product.additional_information);
 
     raw.value = JSON.stringify(product, null, 2);
   }
@@ -2446,12 +2552,14 @@
     const checkResult = document.getElementById('product-check-result');
     const failedCases = document.getElementById('product-failed-cases');
     const summary = document.getElementById('product-summary');
+    const additionalInformation = document.getElementById('product-additional-information');
     const raw = document.getElementById('product-raw');
     const moreArea = document.getElementById('product-more-area');
 
     if (checkResult) checkResult.innerHTML = '<p class="muted">Checking...</p>';
     if (failedCases) failedCases.innerHTML = '<p class="muted">Select a product row to view failed cases.</p>';
     if (summary) summary.innerHTML = '<p class="muted">No product loaded.</p>';
+    if (additionalInformation) additionalInformation.innerHTML = '<p class="muted">No additional information found.</p>';
     if (raw) raw.value = '';
     if (moreArea) moreArea.hidden = true;
   }

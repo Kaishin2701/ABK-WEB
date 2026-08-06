@@ -88,3 +88,39 @@ function skuExportCsv() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 }
+
+function isPhoneLayout() {
+    return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function setSidebarHidden(hidden) {
+    const toggle = document.getElementById('sidebar-toggle');
+    if (!toggle) return;
+
+    if (isPhoneLayout()) {
+        document.body.classList.toggle('sidebar-open', !hidden);
+        document.body.classList.remove('sidebar-hidden');
+    } else {
+        document.body.classList.toggle('sidebar-hidden', hidden);
+        document.body.classList.remove('sidebar-open');
+    }
+
+    toggle.textContent = hidden ? '+' : '−';
+    toggle.setAttribute('aria-label', hidden ? 'Show toolbar' : 'Hide toolbar');
+    toggle.setAttribute('aria-expanded', String(!hidden));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('sidebar-toggle');
+    if (!toggle) return;
+
+    setSidebarHidden(isPhoneLayout());
+    toggle.addEventListener('click', () => {
+        const isHidden = isPhoneLayout()
+            ? !document.body.classList.contains('sidebar-open')
+            : document.body.classList.contains('sidebar-hidden');
+        setSidebarHidden(!isHidden);
+    });
+
+    window.addEventListener('resize', () => setSidebarHidden(isPhoneLayout()));
+});

@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -11,6 +11,7 @@
 </head>
 <body>
 
+    <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Hide toolbar" aria-expanded="true">−</button>
     <aside class="sidebar">
         <div class="logo-area">
             <img src="assets/logo.png" alt="Logo" onerror="this.style.display='none'">
@@ -198,6 +199,13 @@
                         <div class="lbl-title">EXTRACTED INFORMATION</div>
                         <div id="product-summary" class="product-summary">
                             <p class="muted">No product loaded.</p>
+                        </div>
+                    </div>
+
+                    <div class="group-box product-panel">
+                        <div class="lbl-title">ADDITIONAL INFORMATION</div>
+                        <div id="product-additional-information" class="product-summary">
+                            <p class="muted">No additional information found.</p>
                         </div>
                     </div>
 
