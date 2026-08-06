@@ -136,16 +136,21 @@ main { scroll-behavior: smooth; }
 .check-status.pass .check-status-value { color: #00ff88; }
 .check-status.fail .check-status-value { color: #ff5555; }
 .check-status.skip .check-status-value { color: #ffcc66; }
+.check-status.warning .check-status-value { color: #ffcc66; }
 .check-meta { color: #bbb; font-size: 13px; text-align: right; }
 .check-list { display: grid; gap: 8px; }
 .check-item { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 10px; border: 1px solid #2a2a2a; border-radius: 6px; background: #151515; }
 .check-item.pass { border-color: rgba(0, 255, 136, 0.35); }
 .check-item.fail { border-color: rgba(255, 85, 85, 0.45); }
+.check-item.info { border-color: rgba(255, 204, 102, 0.45); }
+.check-item.warning { border-color: rgba(255, 204, 102, 0.45); }
 .check-item-title { color: #eee; font-weight: 700; }
 .check-item-detail { color: #999; font-size: 12px; margin-top: 3px; }
 .check-badge { align-self: center; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #111; }
 .check-badge.pass { background: #00ff88; }
 .check-badge.fail { background: #ff5555; color: white; }
+.check-badge.info { background: #ffcc66; }
+.check-badge.warning { background: #ffcc66; }
 .product-view-more { width: fit-content; margin-top: 12px; }
 .product-more-area[hidden] { display: none; }
 .product-more-area { display: block; }
@@ -154,6 +159,9 @@ main { scroll-behavior: smooth; }
 .case-detail-list { margin-bottom: 10px; }
 .check-status + .case-detail-list { margin-top: 8px; }
 .case-detail-list + .check-status { margin-top: 16px; }
+.case-section-label { margin-top: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.case-section-label.fail { color: #ff5555; }
+.case-section-label.warning { color: #ffcc66; }
 .product-input-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: stretch; }
 .product-input-layout textarea { min-height: 96px; resize: vertical; font-family: monospace; }
 .product-input-layout button { align-self: start; min-width: 90px; }
@@ -169,6 +177,7 @@ main { scroll-behavior: smooth; }
 .product-status-pill { display: inline-block; padding: 5px 10px; border-radius: 999px; font-weight: 800; font-size: 11px; color: #080808; }
 .product-status-pill.pass { background: #00ff88; }
 .product-status-pill.fail { background: #ff5555; color: white; }
+.product-status-pill.warning { background: #ffcc66; }
 .product-detail-title { color: #eee; font-weight: 800; margin-bottom: 10px; word-break: break-word; }
 .product-detail-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 @media (max-width: 900px) {

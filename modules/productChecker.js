@@ -186,9 +186,9 @@
       );
 
       const variations = Array.isArray(parent.variations) ? parent.variations : [];
-      const variationDetails = await Promise.all(variations.map((variation) => fetchVariationDetail(variation)));
+      const variationDetails = await fetchVariationDetails(variations);
       const sizePrices = variationDetails.filter(Boolean).map((variation) => normalizeVariationDetail(variation));
-      if (sizePrices.length) product.size_prices = sizePrices;
+      if (sizePrices.length) product.size_prices = mergeSizePrices(product.size_prices, sizePrices);
     } catch (error) {
       product.store_api_error = error.message;
     }
@@ -199,15 +199,67 @@
   async function fetchVariationDetail(variation) {
     const id = variation && variation.id;
     if (!id) return null;
-    try {
-      return await fetchJson(`https://kidsfootballkit.co.uk/wp-json/wc/store/v1/products/${id}`);
-    } catch (error) {
-      return {
-        id,
-        variation: variation.attributes ? variation.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(', ') : '',
-        store_api_error: error.message
-      };
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const detail = await fetchJson(`https://kidsfootballkit.co.uk/wp-json/wc/store/v1/products/${id}`);
+        if (hasVariationPrice(detail)) return detail;
+        lastError = new Error('Variation response did not include a price.');
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (attempt < 2) await delay(350 * (attempt + 1));
     }
+
+    return {
+      id,
+      variation: variation.attributes ? variation.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(', ') : '',
+      store_api_error: lastError ? lastError.message : 'Unable to fetch variation price.'
+    };
+  }
+
+  async function fetchVariationDetails(variations) {
+    const details = [];
+    for (let index = 0; index < variations.length; index++) {
+      setStatus(`Fetching size price ${index + 1}/${variations.length}...`);
+      details.push(await fetchVariationDetail(variations[index]));
+      if (index < variations.length - 1) await delay(150);
+    }
+    return details;
+  }
+
+  function hasVariationPrice(variation) {
+    return priceToNumber(variation && variation.prices && variation.prices.price, variation && variation.prices) !== null;
+  }
+
+  function delay(milliseconds) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+
+  function mergeSizePrices(existingPrices, incomingPrices) {
+    const merged = new Map();
+    const add = (price) => {
+      if (!price) return;
+      const key = cleanText(price.size || price.sku || price.variation_id || '').toLowerCase();
+      const previous = merged.get(key);
+      if (!previous) {
+        merged.set(key, price);
+        return;
+      }
+      merged.set(key, {
+        ...previous,
+        ...price,
+        price: price.price === null || price.price === undefined ? previous.price : price.price,
+        regular_price: price.regular_price === null || price.regular_price === undefined ? previous.regular_price : price.regular_price,
+        sale_price: price.sale_price === null || price.sale_price === undefined ? previous.sale_price : price.sale_price
+      });
+    };
+
+    (Array.isArray(existingPrices) ? existingPrices : []).forEach(add);
+    (Array.isArray(incomingPrices) ? incomingPrices : []).forEach(add);
+    return [...merged.values()];
   }
 
   async function fetchJson(url) {
@@ -426,6 +478,7 @@
   }
   function applyProductCaseTests(product) {
     product.printed = detectPrinted(product);
+    product.extracted_information = buildExtractedInformation(product);
     product.price_case = runPriceCase(product);
     product.forbidden_terms_case = runForbiddenTermsCase(product);
     product.alt_text_case = runAltTextCase(product);
@@ -433,13 +486,293 @@
     product.url_name_case = runUrlNameCase(product);
     product.personalise_option_case = runPersonaliseOptionCase(product);
     product.description_sku_case = runDescriptionSkuCase(product);
+    product.data_synchronization_case = runDataSynchronizationCase(product);
     return product;
+  }
+
+  const dataSyncFields = [
+    { key: 'age', label: 'Age' },
+    { key: 'season', label: 'Season' },
+    { key: 'clubnational', label: 'Club / National' },
+    { key: 'kittype', label: 'Kit type' },
+    { key: 'department', label: 'Department' },
+    { key: 'player', label: 'Player' }
+  ];
+
+  function buildExtractedInformation(product) {
+    const sources = getEiSources(product);
+    const age = detectEiAge(sources);
+    const season = detectEiSeason(sources);
+    const team = detectEiTeam(sources);
+    const kitType = detectEiKitType(sources);
+    const department = detectEiDepartment(sources);
+    const player = product.printed && product.printed.is_printed ? {
+      value: cleanText(product.printed.content),
+      sources: [product.printed.source || 'sku']
+    } : { value: '', sources: [] };
+
+    return [
+      buildEiInformationItem('age', 'Age', age),
+      buildEiInformationItem('season', 'Season', season),
+      buildEiInformationItem('clubnational', 'Club / National', team),
+      buildEiInformationItem('kittype', 'Kit type', kitType),
+      buildEiInformationItem('department', 'Department', department),
+      buildEiInformationItem('player', 'Player', player)
+    ];
+  }
+
+  function buildEiInformationItem(key, label, result) {
+    return {
+      key,
+      label,
+      value: cleanText(result && result.value),
+      sources: result && Array.isArray(result.sources) ? result.sources : []
+    };
+  }
+
+  function getEiSources(product) {
+    return [
+      { key: 'title', value: product.title },
+      { key: 'sku', value: product.sku },
+      { key: 'url', value: decodeURIComponentSafe(product.sourceUrl || product.url || '') },
+      { key: 'categories', value: Array.isArray(product.categories) ? product.categories.join(' ') : '' },
+      { key: 'tags', value: Array.isArray(product.tags) ? product.tags.join(' ') : '' },
+      { key: 'description', value: product.description || product.long_description || '' }
+    ].filter((source) => cleanText(source.value));
+  }
+
+  function decodeURIComponentSafe(value) {
+    try {
+      return decodeURIComponent(String(value || ''));
+    } catch (error) {
+      return String(value || '');
+    }
+  }
+
+  function detectEiAge(sources) {
+    return detectEiValue(sources, [
+      { value: 'Kids', pattern: /\b(kids?|children|child|youth|junior)\b/i },
+      { value: 'Women', pattern: /\b(women|woman|womens|ladies)\b/i },
+      { value: 'Men', pattern: /\b(men|mens|male)\b/i },
+      { value: 'Baby', pattern: /\b(baby|infant)\b/i },
+      { value: 'Adult', pattern: /\b(adult|adk)\b/i }
+    ]);
+  }
+
+  function detectEiSeason(sources) {
+    for (const source of sources) {
+      const season = normalizeSeasonValue(source.value);
+      if (season) return { value: season, sources: [source.key] };
+    }
+    return { value: '', sources: [] };
+  }
+
+  function detectEiKitType(sources) {
+    return detectEiValue(sources, [
+      { value: 'Goalkeeper', pattern: /\b(goalkeeper|goalie|\bgk\b)\b/i },
+      { value: 'Training', pattern: /\btraining\b/i },
+      { value: 'Fourth', pattern: /\b(fourth|4th)\b/i },
+      { value: 'Third', pattern: /\bthird\b/i },
+      { value: 'Away', pattern: /\baway\b/i },
+      { value: 'Home', pattern: /\bhome\b/i }
+    ]);
+  }
+
+  function detectEiDepartment(sources) {
+    return detectEiValue(sources, [
+      { value: 'No Socks', pattern: /\b(no\s*socks?)\b/i },
+      { value: 'With Socks', pattern: /\b(with\s*socks?)\b/i }
+    ]);
+  }
+
+  function detectEiValue(sources, rules) {
+    for (const source of sources) {
+      const match = rules.find((rule) => rule.pattern.test(String(source.value || '')));
+      if (match) return { value: match.value, sources: [source.key] };
+    }
+    return { value: '', sources: [] };
+  }
+
+  function detectEiTeam(sources) {
+    const dataSets = getTeamDataSets();
+    const matches = [];
+
+    sources.forEach((source, sourceIndex) => {
+      dataSets.forEach((dataSet) => {
+        dataSet.entries.forEach((entry) => {
+          const aliases = Array.isArray(entry.aliases) ? entry.aliases : [entry.name];
+          aliases.forEach((alias) => {
+            if (hasNamedEntity(source.value, alias)) {
+              matches.push({ value: entry.name, source: source.key, type: dataSet.type, sourceIndex, length: normalizeEntityText(alias).length });
+            }
+          });
+        });
+      });
+    });
+
+    if (!matches.length) return { value: '', sources: [] };
+    matches.sort((left, right) => left.sourceIndex - right.sourceIndex || right.length - left.length);
+    const best = matches[0];
+    return { value: best.value, sources: [best.source], team_type: best.type };
+  }
+
+  function getTeamDataSets() {
+    return [
+      { type: 'National', entries: typeof window !== 'undefined' && Array.isArray(window.NATIONAL_TEAMS) ? window.NATIONAL_TEAMS : [] },
+      { type: 'Club', entries: typeof window !== 'undefined' && Array.isArray(window.FOOTBALL_CLUBS) ? window.FOOTBALL_CLUBS : [] }
+    ];
+  }
+
+  function getKnownTeamVariants(value) {
+    const variants = new Set();
+    const normalizedValue = normalizeEntityText(value);
+    if (!normalizedValue) return variants;
+    variants.add(normalizedValue);
+
+    getTeamDataSets().forEach((dataSet) => {
+      dataSet.entries.forEach((entry) => {
+        const aliases = Array.isArray(entry.aliases) ? entry.aliases : [entry.name];
+        if (!aliases.some((alias) => hasNamedEntity(value, alias))) return;
+        variants.add(normalizeEntityText(entry.name));
+        aliases.forEach((alias) => variants.add(normalizeEntityText(alias)));
+      });
+    });
+    return variants;
+  }
+
+  function knownTeamsAreEquivalent(leftValue, rightValue) {
+    const leftVariants = getKnownTeamVariants(leftValue);
+    const rightVariants = getKnownTeamVariants(rightValue);
+    return [...leftVariants].some((variant) => rightVariants.has(variant));
+  }
+
+  function hasNamedEntity(value, candidate) {
+    const normalizedValue = normalizeEntityText(value);
+    const normalizedCandidate = normalizeEntityText(candidate);
+    if (!normalizedValue || !normalizedCandidate) return false;
+    const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegex(normalizedCandidate)}(?=$|[^a-z0-9])`, 'i');
+    return pattern.test(normalizedValue);
+  }
+
+  function normalizeEntityText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function runDataSynchronizationCase(product) {
+    const eiItems = Array.isArray(product.extracted_information) ? product.extracted_information : [];
+    const aiItems = Array.isArray(product.additional_information) ? product.additional_information : [];
+    const findings = [];
+    let checkedFields = 0;
+    let matchedFields = 0;
+
+    dataSyncFields.forEach((field) => {
+      const eiItem = eiItems.find((item) => item.key === field.key);
+      const aiItem = aiItems.find((item) => getDataSyncFieldKey(item) === field.key);
+      const eiValue = cleanText(eiItem && eiItem.value);
+      const aiValue = cleanText(aiItem && aiItem.value);
+
+      if (!eiValue && !aiValue) return;
+      if (!eiValue || !aiValue) {
+        findings.push({
+          field: field.label,
+          status: 'INFO',
+          ei_value: eiValue,
+          ai_value: aiValue,
+          source_ei: eiItem && eiItem.sources ? eiItem.sources : [],
+          source_ai: aiItem && aiItem.source_name ? aiItem.source_name : '',
+          message: !eiValue ? 'EI could not identify this value.' : 'AI does not provide this field.'
+        });
+        return;
+      }
+
+      checkedFields += 1;
+      const matches = dataSyncValuesMatch(field.key, eiValue, aiValue);
+      if (matches) matchedFields += 1;
+      findings.push({
+        field: field.label,
+        status: matches ? 'PASS' : 'FAIL',
+        ei_value: eiValue,
+        ai_value: aiValue,
+        source_ei: eiItem && eiItem.sources ? eiItem.sources : [],
+        source_ai: aiItem && aiItem.source_name ? aiItem.source_name : '',
+        message: matches ? 'EI and AI values are consistent.' : 'EI and AI values conflict.'
+      });
+    });
+
+    const failed = findings.filter((finding) => finding.status === 'FAIL');
+    return {
+      case: 'Data Synchronization Case',
+      status: failed.length ? 'FAIL' : checkedFields ? 'PASS' : 'SKIP',
+      checked_fields: checkedFields,
+      matched_fields: matchedFields,
+      issue_count: failed.length,
+      findings
+    };
+  }
+
+  function getDataSyncFieldKey(item) {
+    const key = String(item && item.key || '').toLowerCase();
+    if (['gender', 'genderage'].includes(key)) return 'age';
+    if (['national', 'nation', 'club', 'clubs', 'clubname', 'clubsname', 'team', 'teams', 'clubnational'].includes(key)) return 'clubnational';
+    if (['department', 'subdepartment', 'kitoption'].includes(key)) return 'department';
+    if (['player', 'players', 'printedplayer'].includes(key)) return 'player';
+    return key;
+  }
+
+  function dataSyncValuesMatch(field, eiValue, aiValue) {
+    if (field === 'clubnational') return knownTeamsAreEquivalent(eiValue, aiValue);
+    const left = normalizeDataSyncValue(field, eiValue);
+    const right = normalizeDataSyncValue(field, aiValue);
+    if (!left || !right) return false;
+    if (field === 'age' && left === 'adult') return ['adult', 'men', 'women'].includes(right);
+    if (field === 'age' && right === 'adult') return ['adult', 'men', 'women'].includes(left);
+    return left === right;
+  }
+
+  function normalizeDataSyncValue(field, value) {
+    const text = normalizeEntityText(value);
+    if (field === 'age') {
+      if (/\b(kid|kids|children|child|youth|junior)\b/.test(text)) return 'kids';
+      if (/\b(women|woman|womens|ladies)\b/.test(text)) return 'women';
+      if (/\b(men|mens|male)\b/.test(text)) return 'men';
+      if (/\b(baby|infant)\b/.test(text)) return 'baby';
+      if (/\b(adult)\b/.test(text)) return 'adult';
+    }
+    if (field === 'department') {
+      if (/\bno socks?\b/.test(text)) return 'no socks';
+      if (/\bwith socks?\b/.test(text)) return 'with socks';
+    }
+    if (field === 'season') return normalizeSeasonValue(value);
+    if (field === 'kittype') {
+      if (/goalkeeper|goalie|\bgk\b/.test(text)) return 'goalkeeper';
+      if (/training/.test(text)) return 'training';
+      if (/fourth|4th/.test(text)) return 'fourth';
+      if (/third/.test(text)) return 'third';
+      if (/away/.test(text)) return 'away';
+      if (/home/.test(text)) return 'home';
+    }
+    return text;
+  }
+
+  function normalizeSeasonValue(value) {
+    const source = String(value || '');
+    const range = source.match(/\b((?:19|20)\d{2})\s*(?:\/|-)\s*((?:19|20)\d{2}|\d{2})\b/);
+    if (range) {
+      const endYear = range[2].length === 2 ? range[2] : range[2].slice(-2);
+      return `${range[1]}/${endYear}`;
+    }
+    return (source.match(/\b(?:19|20)\d{2}\b/) || [''])[0];
   }
 
   function runPriceCase(product) {
     const classification = classifyPriceProduct(product);
     const expected = getExpectedPrice(classification);
-    const actualBase = getActualPriceForPriceCase(product, classification, expected);
     const variations = Array.isArray(product.size_prices) ? product.size_prices : [];
 
     const result = {
@@ -451,7 +784,6 @@
       socks: classification.socks,
       printed: classification.isPrinted,
       expected_price: expected,
-      actual_base_price: actualBase,
       checks: [],
       reason: classification.reason
     };
@@ -461,43 +793,28 @@
       return result;
     }
 
-    if (actualBase !== null) {
-      result.checks.push(buildPriceCheck('base_price', actualBase, expected, product.sku || ''));
-    }
-
     variations.forEach((variation) => {
       result.checks.push(buildPriceCheck(`size:${variation.size || variation.variation_id || 'unknown'}`, toComparablePrice(variation.price), expected, variation.sku || '', variation.variation_id || null));
     });
 
     if (!result.checks.length) {
-      result.status = 'SKIP';
-      result.reason = 'No price value found to compare.';
+      result.status = 'WARNING';
+      result.reason = 'No size variation price found to compare.';
       return result;
     }
 
-    result.status = result.checks.every((check) => check.pass) ? 'PASS' : 'FAIL';
+    if (result.checks.some((check) => check.status === 'FAIL')) {
+      result.status = 'FAIL';
+    } else if (result.checks.some((check) => check.status === 'WARNING')) {
+      result.status = 'WARNING';
+    } else {
+      result.status = 'PASS';
+    }
     return result;
   }
 
-  function getActualPriceForPriceCase(product, classification, expected) {
-    const variations = Array.isArray(product.size_prices) ? product.size_prices : [];
-    const variationPrices = variations.map((variation) => toComparablePrice(variation.price)).filter((price) => price !== null);
-
-    if (classification.isBundle) {
-      const pagePrice = toComparablePrice(product.page_price || product.price);
-      if (pagePrice !== null) return pagePrice;
-
-      const matchingVariationPrice = variationPrices.find((price) => expected !== null && roundMoney(price) === roundMoney(expected));
-      if (matchingVariationPrice !== undefined) return matchingVariationPrice;
-
-      if (variationPrices.length) return variationPrices[0];
-    }
-
-    const basePrice = toComparablePrice(product.base_price !== undefined ? product.base_price : product.price);
-    if (basePrice !== null) return basePrice;
-    return toComparablePrice(product.page_price || product.price);
-  }
   function buildPriceCheck(target, actual, expected, sku, variationId) {
+    const status = actual === null ? 'WARNING' : roundMoney(actual) === roundMoney(expected) ? 'PASS' : 'FAIL';
     return {
       target,
       sku,
@@ -505,7 +822,8 @@
       expected,
       actual,
       diff: actual === null ? null : roundMoney(actual - expected),
-      pass: actual !== null && roundMoney(actual) === roundMoney(expected)
+      pass: status === 'PASS',
+      status
     };
   }
 
@@ -537,7 +855,7 @@
 
     return {
       case: 'Description SKU Case',
-      status: findings.length ? 'FAIL' : 'PASS',
+      status: findings.length ? 'WARNING' : 'PASS',
       sku_tokens: matchedRules.map((rule) => rule.token),
       checked_rules: matchedRules.length,
       issue_count: findings.length,
@@ -603,7 +921,7 @@
       option && option.type,
       JSON.stringify((option && option.values) || [])
     ].join(' '));
-    return /personalise|personalize|name number|preferred name|preferred number/.test(text);
+    return /personalise|personalize|customi[sz]e|name number|preferred name|preferred number/.test(text);
   }
   function runUrlNameCase(product) {
     const title = cleanText(String(product.title || '').replace(/^#+\s*/, ''));
@@ -677,7 +995,7 @@
     if (!rule.shortcodes.length) {
       return {
         case: 'Size Chart Case',
-        status: 'SKIP',
+        status: 'WARNING',
         product_type: rule.productType,
         sku_indicator: rule.skuIndicator,
         expected_shortcodes: [],
@@ -690,7 +1008,7 @@
 
     return {
       case: 'Size Chart Case',
-      status: findings.length ? 'FAIL' : 'PASS',
+      status: findings.length ? 'WARNING' : 'PASS',
       product_type: rule.productType,
       sku_indicator: rule.skuIndicator,
       expected_shortcodes: rule.shortcodes,
@@ -931,7 +1249,7 @@
 
     return {
       case: 'Alt Text Case',
-      status: findings.length ? 'FAIL' : 'PASS',
+      status: findings.length ? 'WARNING' : 'PASS',
       required_angle_words: requiredAngles,
       image_count: images.length,
       product_image_count: images.length - skippedImages.length,
@@ -1187,13 +1505,14 @@
       Array.isArray(product.tags) ? product.tags.join(' ') : '',
       JSON.stringify(product.product_attributes || {})
     ].join(' '));
+    const titleAndSku = normalizeCaseText([product.title, product.sku].join(' '));
 
     const isBundle = detectBundleFromTitle(product.title) || /bundle/.test(haystack);
     const isRetro = /retro/.test(haystack);
     const isBaby = /baby|bodysuit/.test(haystack);
     const isKids = isBaby || /kids?|children|youth|kd|kid/.test(haystack);
     const isAdult = /adult|men|women|adk|\bad\b/.test(haystack);
-    const isShirtOnly = /shirt/.test(haystack) && !/kit|short|socks|bundle/.test(haystack);
+    const isShirtOnly = /\bshirt\b/.test(titleAndSku) && !/\b(?:kit|shorts?|socks?|bundle)\b/.test(titleAndSku);
     const sockType = detectSockTypeFromTitle(product.title);
     const withSocks = sockType === 'with_socks';
     const noSocks = sockType === 'no_socks';
@@ -1303,11 +1622,11 @@
   }
 
   function hasPrintedSkuPattern(sku) {
-    return /(^|_)[A-Z][A-Z0-9.' -]{1,}\s+\d{1,2}(_|$)/i.test(String(sku || ''));
+    return /(^|_)[\p{L}][\p{L}\p{N}.' -]{1,}\s+\d{1,2}(_|$)/u.test(String(sku || ''));
   }
 
   function extractPrintedSkuContent(sku) {
-    const match = String(sku || '').match(/(^|_)([A-Z][A-Z0-9.' -]{1,}\s+\d{1,2})(_|$)/i);
+    const match = String(sku || '').match(/(^|_)([\p{L}][\p{L}\p{N}.' -]{1,}\s+\d{1,2})(_|$)/u);
     return match ? cleanText(match[2]) : null;
   }
 
@@ -1346,6 +1665,7 @@
     const prices = extractPrices(text);
     const longDescription = extractDescriptionFromText(lines, title);
     const globalForm = extractGlobalFormFromText(text);
+    const imageDetails = extractImageDetailsFromText(text);
 
     return {
       sourceUrl: url,
@@ -1360,7 +1680,8 @@
       categories,
       tags,
       sizes,
-      images: extractImagesFromText(text),
+      images: imageDetails.map((image) => image.src),
+      image_details: imageDetails,
       description: cleanText(longDescription),
       short_description: extractShortDescription(lines),
       long_description: cleanText(longDescription),
@@ -1380,6 +1701,7 @@
     const schemaProduct = jsonLdProducts.find((item) => getJsonLdTypes(item).includes('ProductGroup')) || jsonLdProducts[0] || {};
     const offer = normalizeOffer(schemaProduct.offers);
     const additionalInformation = extractAdditionalInformation(schemaProduct);
+    const globalForm = extractGlobalFormFromHtml(doc);
 
     const title = firstText(doc, [
       '.product_title',
@@ -1409,8 +1731,10 @@
       categories: uniqueTextList(doc, '.posted_in a, .product_meta a[rel="tag"]').filter(Boolean),
       tags: uniqueTextList(doc, '.tagged_as a').filter(Boolean),
       sizes: extractSizes(doc),
+      size_prices: extractVariationSizePrices(doc),
       images: extractImages(doc, schemaProduct.image),
       description: cleanText(description),
+      global_form: globalForm,
       additional_information: additionalInformation,
       jsonLdFound: jsonLdProducts.length
     };
@@ -1539,7 +1863,45 @@
       });
     }
 
+    if (!form.some(isPersonaliseOption) && hasPersonaliseSignal(cleaned)) {
+      form.push({
+        name: 'detected_personalise',
+        label: 'Personalise',
+        type: 'radio',
+        values: ['Yes', 'No'],
+        price: 0,
+        detected_from: 'page_text'
+      });
+    }
+
     return form;
+  }
+
+  function extractGlobalFormFromHtml(doc) {
+    const sections = [
+      ...doc.querySelectorAll('form.cart, .product .summary, .tm-extra-product-options, .tc-extra-product-options')
+    ];
+    const text = sections.map((section) => section.textContent || '').join('\n') || (doc.body && doc.body.textContent) || '';
+    const form = extractGlobalFormFromText(text);
+
+    if (!form.some(isPersonaliseOption) && hasPersonaliseSignal(text)) {
+      form.push({
+        name: 'detected_personalise_html',
+        label: 'Personalise',
+        type: 'radio',
+        values: ['Yes', 'No'],
+        price: 0,
+        detected_from: 'page_html'
+      });
+    }
+
+    return form;
+  }
+
+  function hasPersonaliseSignal(text) {
+    const source = String(text || '');
+    return /\bpersonal(?:ise|ize)\s+(?:for\s+)?(?:\u00a3|&pound;|gbp\s*)?\s*\d+(?:\.\d{1,2})?\b/i.test(source)
+      || /\bpersonal(?:ise|ize)\b[\s\S]{0,180}\bYes\s*\(\+?[\s\S]{0,30}\)\s*[\s\S]{0,80}\bNo\b/i.test(source);
   }
 
   function extractTextBlock(text, startRegex, endRegex) {
@@ -1614,8 +1976,31 @@
   }
 
   function extractImagesFromText(text) {
-    const matches = Array.from(text.matchAll(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/g)).map((match) => match[1]);
-    return [...new Set(matches)].filter((src) => /product|kit|football|aston|villa|uploads/i.test(src)).slice(0, 12);
+    return extractImageDetailsFromText(text).map((image) => image.src);
+  }
+
+  function extractImageDetailsFromText(text) {
+    const images = [];
+    const byImageKey = new Map();
+    const matches = Array.from(String(text || '').matchAll(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g));
+
+    matches.forEach((match) => {
+      const alt = cleanText(match[1]).replace(/^Image\s+\d+:\s*/i, '');
+      const src = match[2];
+      if (!/product|kit|football|aston|villa|uploads/i.test(src)) return;
+      const imageKey = src.replace(/-\d+x\d+(?=\.[a-z0-9]+(?:\?|$))/i, '');
+      const existingIndex = byImageKey.get(imageKey);
+      const detail = { index: images.length, src, thumbnail: '', alt, name: alt, role: 'gallery' };
+
+      if (existingIndex === undefined) {
+        byImageKey.set(imageKey, images.length);
+        images.push(detail);
+      } else if (!/-\d+x\d+(?=\.[a-z0-9]+(?:\?|$))/i.test(src)) {
+        images[existingIndex] = { ...images[existingIndex], src, alt: alt || images[existingIndex].alt, name: alt || images[existingIndex].name };
+      }
+    });
+
+    return images.slice(0, 12).map((image, index) => ({ ...image, index, role: index === 0 ? 'main' : 'gallery' }));
   }
 
   function extractDescriptionFromText(lines, title) {
@@ -1761,13 +2146,18 @@
   function getAdditionalInformationLabel(key, fallback) {
     const labels = {
       age: 'Age',
+      gender: 'Age',
+      genderage: 'Age',
       season: 'Season',
       national: 'Club / National',
       club: 'Club / National',
+      clubname: 'Club / National',
+      clubsname: 'Club / National',
       team: 'Club / National',
       kittype: 'Kit type',
       department: 'Department',
       subdepartment: 'Department',
+      kitoption: 'Department',
       player: 'Player',
       players: 'Player'
     };
@@ -1903,14 +2293,16 @@
     checkedProducts.forEach((product, index) => {
       const failedCases = getProductFailedCases(product);
       const isPending = product.status === 'PENDING' || product.status === 'CHECKING';
-      const status = isPending ? product.status : failedCases.length ? 'FAIL' : 'PASS';
+      const warningCases = getProductWarningCases(product);
+      const status = isPending ? product.status : failedCases.length ? 'FAIL' : warningCases.length ? 'WARNING' : 'PASS';
+      const statusClass = status === 'FAIL' ? 'fail' : status === 'WARNING' || status === 'SKIP' ? 'warning' : 'pass';
 
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="product-result-url"></td>
         <td class="product-result-sku"></td>
         <td>${isPending ? '-' : failedCases.length}</td>
-        <td><span class="product-status-pill ${status === 'FAIL' ? 'fail' : 'pass'}">${escapeHtml(status)}</span></td>
+        <td><span class="product-status-pill ${statusClass}">${escapeHtml(status)}</span></td>
         <td></td>
       `;
 
@@ -1949,7 +2341,8 @@
       { key: 'size_chart_case', label: 'Size Chart Case', render: renderSizeChartSection },
       { key: 'url_name_case', label: 'URL / Name Case', render: renderUrlNameSection },
       { key: 'personalise_option_case', label: 'Personalise Option Case', render: renderPersonaliseOptionSection },
-      { key: 'description_sku_case', label: 'Description SKU Case', render: renderDescriptionSkuSection }
+      { key: 'description_sku_case', label: 'Description SKU Case', render: renderDescriptionSkuSection },
+      { key: 'data_synchronization_case', label: 'Data Synchronization Case', render: renderDataSynchronizationSection }
     ];
   }
 
@@ -1957,6 +2350,13 @@
     return getProductCaseEntries(product).filter((entry) => {
       const caseData = product && product[entry.key];
       return caseData && String(caseData.status || '').toUpperCase() === 'FAIL';
+    });
+  }
+
+  function getProductWarningCases(product) {
+    return getProductCaseEntries(product).filter((entry) => {
+      const caseData = product && product[entry.key];
+      return caseData && String(caseData.status || '').toUpperCase() === 'WARNING';
     });
   }
 
@@ -1980,10 +2380,24 @@
     failedArea.appendChild(title);
 
     const failedCases = getProductFailedCases(product);
-    if (!failedCases.length) {
-      failedArea.innerHTML += '<p class="muted">No failed cases for this product.</p>';
+    const warningCases = getProductWarningCases(product);
+    if (!failedCases.length && !warningCases.length) {
+      failedArea.innerHTML += '<p class="muted">No failed cases or warnings for this product.</p>';
     } else {
-      failedCases.forEach((entry) => entry.render(failedArea, product[entry.key]));
+      if (failedCases.length) {
+        const failedLabel = document.createElement('div');
+        failedLabel.className = 'case-section-label fail';
+        failedLabel.textContent = 'Failed cases';
+        failedArea.appendChild(failedLabel);
+        failedCases.forEach((entry) => entry.render(failedArea, product[entry.key]));
+      }
+      if (warningCases.length) {
+        const warningLabel = document.createElement('div');
+        warningLabel.className = 'case-section-label warning';
+        warningLabel.textContent = 'Warnings';
+        failedArea.appendChild(warningLabel);
+        warningCases.forEach((entry) => entry.render(failedArea, product[entry.key]));
+      }
     }
 
     renderProductSummary(summary, product);
@@ -2007,6 +2421,10 @@
     addRow(summary, 'Short Description', product.short_description || 'Not found');
     addRow(summary, 'Long Description', product.long_description || product.description || 'Not found');
     addRow(summary, 'Options', product.global_form && product.global_form.length ? String(product.global_form.length) + ' options' : 'Not found');
+    (product.extracted_information || []).forEach((item) => {
+      addRow(summary, `EI - ${item.label}`, item.value || 'Not found');
+    });
+    addRow(summary, 'Data Sync Case', formatDataSynchronizationCase(product.data_synchronization_case));
     addRow(summary, 'Failed Cases', String(getProductFailedCases(product).length));
     addImages(summary, product.images || []);
   }
@@ -2021,6 +2439,20 @@
     }
 
     items.forEach((item) => addRow(area, item.label || item.source_name || 'Attribute', item.value));
+  }
+
+  function renderDataSynchronizationSection(area, syncCase) {
+    area.appendChild(createCaseStatusCard('Data Synchronization Case', syncCase, getDataSynchronizationCaseMeta(syncCase)));
+
+    const list = document.createElement('div');
+    list.className = 'check-list case-detail-list';
+    const findings = Array.isArray(syncCase.findings) ? syncCase.findings : [];
+    if (!findings.length) {
+      list.innerHTML = '<p class="muted">No EI and AI fields are available to compare.</p>';
+    } else {
+      findings.forEach((finding) => list.appendChild(createDataSynchronizationFindingItem(finding)));
+    }
+    area.appendChild(list);
   }
 
   function renderFetchErrorSection(area, fetchCase) {
@@ -2061,6 +2493,10 @@
     addRow(summary, 'Size Chart Case', product.size_chart_case ? product.size_chart_case.status + ' - ' + product.size_chart_case.issue_count + ' issues' : 'Not tested');
     addRow(summary, 'Personalise Option Case', product.personalise_option_case ? product.personalise_option_case.status + ' - ' + product.personalise_option_case.issue_count + ' issues' : 'Not tested');
     addRow(summary, 'Description SKU Case', product.description_sku_case ? product.description_sku_case.status + ' - ' + product.description_sku_case.issue_count + ' issues' : 'Not tested');
+    (product.extracted_information || []).forEach((item) => {
+      addRow(summary, `EI - ${item.label}`, item.value || 'Not found');
+    });
+    addRow(summary, 'Data Sync Case', formatDataSynchronizationCase(product.data_synchronization_case));
     addImages(summary, product.images);
     if (additionalInformation) renderAdditionalInformation(additionalInformation, product.additional_information);
 
@@ -2079,6 +2515,7 @@
     renderUrlNameSection(area, product.url_name_case || { status: 'PASS', findings: [], issue_count: 0 });
     renderPersonaliseOptionSection(area, product.personalise_option_case || { status: 'PASS', findings: [], issue_count: 0 });
     renderDescriptionSkuSection(area, product.description_sku_case || { status: 'PASS', findings: [], issue_count: 0 });
+    renderDataSynchronizationSection(area, product.data_synchronization_case || { status: 'SKIP', findings: [], checked_fields: 0, matched_fields: 0, issue_count: 0 });
   }
 
   function renderDescriptionSkuSection(area, descriptionCase) {
@@ -2235,6 +2672,17 @@
       `Issues: ${descriptionCase.issue_count || 0}`
     ];
   }
+  function getDataSynchronizationCaseMeta(syncCase) {
+    return [
+      `Compared: ${syncCase.checked_fields || 0}`,
+      `Matched: ${syncCase.matched_fields || 0}`,
+      `Conflicts: ${syncCase.issue_count || 0}`
+    ];
+  }
+  function formatDataSynchronizationCase(syncCase) {
+    if (!syncCase) return 'Not tested';
+    return `${syncCase.status || 'SKIP'} - ${syncCase.issue_count || 0} conflicts`;
+  }
   function getPersonaliseOptionCaseMeta(personaliseCase) {
     return [
       `Printed: ${personaliseCase.printed ? 'Yes' : 'No'}`,
@@ -2256,9 +2704,49 @@
       `Issues: ${altCase.issue_count || 0}`
     ];
   }
+  function createDataSynchronizationFindingItem(finding) {
+    const item = document.createElement('div');
+    const status = String(finding.status || 'INFO').toUpperCase();
+    item.className = `check-item ${status === 'FAIL' ? 'fail' : status === 'PASS' ? 'pass' : 'info'}`;
+
+    const content = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'check-item-title';
+    title.textContent = `${finding.field || 'Field'}: ${status}`;
+
+    const ei = document.createElement('div');
+    ei.className = 'check-item-detail';
+    ei.textContent = `EI: ${finding.ei_value || 'Not found'}`;
+
+    const ai = document.createElement('div');
+    ai.className = 'check-item-detail';
+    ai.textContent = `AI: ${finding.ai_value || 'Not found'}`;
+
+    const source = document.createElement('div');
+    source.className = 'check-item-detail';
+    const eiSource = Array.isArray(finding.source_ei) ? finding.source_ei.join(', ') : finding.source_ei;
+    source.textContent = `Sources - EI: ${eiSource || 'N/A'} / AI: ${finding.source_ai || 'N/A'}`;
+
+    const message = document.createElement('div');
+    message.className = 'check-item-detail';
+    message.textContent = finding.message || '';
+
+    const badge = document.createElement('div');
+    badge.className = `check-badge ${status === 'FAIL' ? 'fail' : status === 'PASS' ? 'pass' : 'info'}`;
+    badge.textContent = status;
+
+    content.appendChild(title);
+    content.appendChild(ei);
+    content.appendChild(ai);
+    content.appendChild(source);
+    if (message.textContent) content.appendChild(message);
+    item.appendChild(content);
+    item.appendChild(badge);
+    return item;
+  }
   function createDescriptionSkuFindingItem(finding) {
     const item = document.createElement('div');
-    item.className = 'check-item fail';
+    item.className = 'check-item warning';
 
     const content = document.createElement('div');
 
@@ -2279,8 +2767,8 @@
     keywords.textContent = `Keywords: ${(finding.keywords || []).join(', ')}`;
 
     const badge = document.createElement('div');
-    badge.className = 'check-badge fail';
-    badge.textContent = 'FIX';
+    badge.className = 'check-badge warning';
+    badge.textContent = 'WARNING';
 
     content.appendChild(title);
     content.appendChild(detail);
@@ -2365,7 +2853,7 @@
   }
   function createSizeChartFindingItem(finding) {
     const item = document.createElement('div');
-    item.className = 'check-item fail';
+    item.className = 'check-item warning';
 
     const content = document.createElement('div');
 
@@ -2390,8 +2878,8 @@
     current.textContent = finding.current_alt ? `Current alt: ${finding.current_alt}` : '';
 
     const badge = document.createElement('div');
-    badge.className = 'check-badge fail';
-    badge.textContent = 'FIX';
+    badge.className = 'check-badge warning';
+    badge.textContent = 'WARNING';
 
     content.appendChild(title);
     content.appendChild(detail);
@@ -2403,7 +2891,7 @@
   }
   function createAltTextFindingItem(finding) {
     const item = document.createElement('div');
-    item.className = 'check-item fail';
+    item.className = 'check-item warning';
 
     const content = document.createElement('div');
 
@@ -2424,8 +2912,8 @@
     current.textContent = finding.current_alt ? `Current alt: ${finding.current_alt}` : finding.image || '';
 
     const badge = document.createElement('div');
-    badge.className = 'check-badge fail';
-    badge.textContent = 'FIX';
+    badge.className = 'check-badge warning';
+    badge.textContent = 'WARNING';
 
     content.appendChild(title);
     content.appendChild(detail);
@@ -2467,8 +2955,9 @@
   }
 
   function createCheckItem(check) {
+    const status = String(check.status || (check.pass ? 'PASS' : 'FAIL')).toUpperCase();
     const item = document.createElement('div');
-    item.className = `check-item ${check.pass ? 'pass' : 'fail'}`;
+    item.className = `check-item ${status === 'WARNING' ? 'warning' : status === 'PASS' ? 'pass' : 'fail'}`;
 
     const content = document.createElement('div');
     const title = document.createElement('div');
@@ -2484,8 +2973,8 @@
     sku.textContent = check.sku || '';
 
     const badge = document.createElement('div');
-    badge.className = `check-badge ${check.pass ? 'pass' : 'fail'}`;
-    badge.textContent = check.pass ? 'PASS' : 'FAIL';
+    badge.className = `check-badge ${status === 'WARNING' ? 'warning' : status === 'PASS' ? 'pass' : 'fail'}`;
+    badge.textContent = status;
 
     content.appendChild(title);
     content.appendChild(detail);
