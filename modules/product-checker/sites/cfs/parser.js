@@ -15,7 +15,7 @@
 
   function attributeLabel(key, fallback) {
     const labels = {
-      genderage: 'Gender/Age', season: 'Season', clubname: 'Clubs Name', national: 'National',
+      genderage: 'Gender/Age', season: 'Season', clubname: 'Clubs Name', national: 'National', nationalteam: 'National',
       kittype: 'Kit Type', kitoption: 'Kit Option', department: 'Department', players: 'Player', player: 'Player'
     };
     return labels[key] || clean(fallback).replace(/^pa[_-]?/i, '') || 'Attribute';
@@ -52,7 +52,7 @@
       addAdditional(items, seen, item.name, item.value);
     });
 
-    // CFS sometimes renders the source attributes in the Additional information
+    // CFS and RFK can render source attributes in the Additional information
     // tab instead of schema JSON-LD, so read that table as a first-class source.
     doc.querySelectorAll('.woocommerce-product-attributes tr, #tab-additional_information tr, .woocommerce-Tabs-panel--additional_information tr').forEach((row) => {
       addAdditional(items, seen, row.querySelector('th')?.textContent, row.querySelector('td')?.textContent);
@@ -180,7 +180,7 @@
       kittype: tokens.includes('GK') ? 'Goalkeeper' : tokens.includes('PREM') ? 'Pre Match' : tokens.includes('TN') ? 'Training' : tokens.includes('TH') ? 'Third' : tokens.includes('AW') ? 'Away' : tokens.includes('HO') ? 'Home' : ''
     };
     items.forEach((item) => {
-      // As with RFS, CFS socks are controlled by Additional Information, not EI.
+      // As with RFS, socks are controlled by Additional Information, not EI.
       if (item.key === 'department') { item.value = ''; item.sources = []; return; }
       if (!item.value && fallback[item.key]) { item.value = fallback[item.key]; item.sources = ['sku']; }
     });
@@ -215,6 +215,9 @@
     };
   }
 
+  // RFK currently uses the same WooCommerce markup as CFS. Its registration
+  // remains separate so it can be replaced independently if the theme changes.
   window.ProductCheckerSiteParsers.register('cfs', { parseHtml, extractExtractedInformation });
+  window.ProductCheckerSiteParsers.register('rfk', { parseHtml, extractExtractedInformation });
 })();
 

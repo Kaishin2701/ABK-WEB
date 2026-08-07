@@ -242,7 +242,7 @@ const productChecker = (() => {
   }
 
   function getProductPageProviders(site) {
-    if (!site || !['rfs', 'cfs'].includes(site.id)) return proxyProviders;
+    if (!site || !['rfs', 'cfs', 'rfk'].includes(site.id)) return proxyProviders;
     const htmlFirst = proxyProviders.filter((provider) => provider.type === 'html');
     const textFallback = proxyProviders.filter((provider) => provider.type !== 'html');
     return [...htmlFirst, ...textFallback];
@@ -553,8 +553,7 @@ const productChecker = (() => {
     return number / Math.pow(10, minorUnit);
   }
 
-  function getProductSlug(url) {
- …25857 tokens truncated… urlNameCase) {
+  function getProductSlug(ur…26542 tokens truncated… urlNameCase) {
     area.appendChild(createCaseStatusCard('URL / Name Case', urlNameCase, getUrlNameCaseMeta(urlNameCase)));
 
     const list = document.createElement('div');
