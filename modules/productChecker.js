@@ -23,6 +23,9 @@
   ];
 
   let checkedProducts = [];
+  const variationFetchConcurrency = 3;
+  const variationDetailCache = new Map();
+  let storeApiTransport = 'unknown';
 
   function init() {
     const btn = document.getElementById('btn-product-fetch');
@@ -53,19 +56,26 @@
 
     setLoading(true, `Checking 0/${urls.length} products...`);
     clearResult();
+    variationDetailCache.clear();
+    storeApiTransport = 'unknown';
     checkedProducts = urls.map((url) => ({ sourceUrl: url, url, status: 'PENDING' }));
     renderBatchResults();
 
     for (let index = 0; index < urls.length; index++) {
       const url = urls[index];
+      const startedAt = Date.now();
       setStatus(`Checking ${index + 1}/${urls.length}: ${url}`);
       checkedProducts[index] = { sourceUrl: url, url, status: 'CHECKING' };
       renderBatchResults();
 
       try {
-        checkedProducts[index] = await checkProductUrl(url);
+        const product = await checkProductUrl(url);
+        product.processing_ms = Date.now() - startedAt;
+        checkedProducts[index] = product;
       } catch (error) {
-        checkedProducts[index] = buildFetchErrorProduct(url, error);
+        const product = buildFetchErrorProduct(url, error);
+        product.processing_ms = Date.now() - startedAt;
+        checkedProducts[index] = product;
       }
       renderBatchResults();
     }
@@ -186,7 +196,7 @@
       );
 
       const variations = Array.isArray(parent.variations) ? parent.variations : [];
-      const variationDetails = await fetchVariationDetails(variations);
+      const variationDetails = await fetchVariationDetails(variations, product.size_prices);
       const sizePrices = variationDetails.filter(Boolean).map((variation) => normalizeVariationDetail(variation));
       if (sizePrices.length) product.size_prices = mergeSizePrices(product.size_prices, sizePrices);
     } catch (error) {
@@ -199,35 +209,108 @@
   async function fetchVariationDetail(variation) {
     const id = variation && variation.id;
     if (!id) return null;
+    const cacheKey = String(id);
+    if (variationDetailCache.has(cacheKey)) return variationDetailCache.get(cacheKey);
+
+    const request = fetchVariationDetailFromApi(variation);
+    variationDetailCache.set(cacheKey, request);
+    return request;
+  }
+
+  async function fetchVariationDetailFromApi(variation) {
+    const id = variation && variation.id;
     let lastError = null;
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const detail = await fetchJson(`https://kidsfootballkit.co.uk/wp-json/wc/store/v1/products/${id}`);
         if (hasVariationPrice(detail)) return detail;
-        lastError = new Error('Variation response did not include a price.');
+        return buildMissingVariationPriceResult(variation, 'Variation response did not include a price.');
       } catch (error) {
         lastError = error;
+        if (!isRetriableVariationError(error) || attempt === 2) break;
       }
 
       if (attempt < 2) await delay(350 * (attempt + 1));
     }
 
+    return buildMissingVariationPriceResult(variation, lastError ? lastError.message : 'Unable to fetch variation price.');
+  }
+
+  function buildMissingVariationPriceResult(variation, errorMessage) {
     return {
-      id,
-      variation: variation.attributes ? variation.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(', ') : '',
-      store_api_error: lastError ? lastError.message : 'Unable to fetch variation price.'
+      id: variation && variation.id,
+      variation: variation && variation.attributes ? variation.attributes.map((attr) => `${attr.name}: ${attr.value}`).join(', ') : '',
+      store_api_error: errorMessage
     };
   }
 
-  async function fetchVariationDetails(variations) {
-    const details = [];
-    for (let index = 0; index < variations.length; index++) {
-      setStatus(`Fetching size price ${index + 1}/${variations.length}...`);
-      details.push(await fetchVariationDetail(variations[index]));
-      if (index < variations.length - 1) await delay(150);
-    }
+  function isRetriableVariationError(error) {
+    const message = String(error && error.message || '');
+    return /timeout|network|failed to fetch|http (?:429|5\d\d)|service unavailable|internal server error/i.test(message);
+  }
+
+  async function fetchVariationDetails(variations, existingPrices) {
+    const missingVariations = (Array.isArray(variations) ? variations : []).filter((variation) => !hasExistingVariationPrice(variation, existingPrices));
+    if (!missingVariations.length) return [];
+
+    const details = new Array(missingVariations.length);
+    let nextIndex = 0;
+    let completed = 0;
+    const workerCount = Math.min(variationFetchConcurrency, missingVariations.length);
+
+    const worker = async () => {
+      while (nextIndex < missingVariations.length) {
+        const currentIndex = nextIndex++;
+        details[currentIndex] = await fetchVariationDetail(missingVariations[currentIndex]);
+        completed += 1;
+        setStatus(`Fetching missing size prices ${completed}/${missingVariations.length}...`);
+      }
+    };
+
+    await Promise.all(Array.from({ length: workerCount }, worker));
     return details;
+  }
+
+  function hasExistingVariationPrice(variation, existingPrices) {
+    const variationId = String(variation && variation.id || '');
+    if (!variationId) return false;
+    return (Array.isArray(existingPrices) ? existingPrices : []).some((price) => {
+      return String(price && price.variation_id || '') === variationId && toComparablePrice(price && price.price) !== null;
+    });
+  }
+
+  /*
+   * Store API is commonly blocked by browser CORS. Once one direct request
+   * fails, use the working proxy for the rest of this checking session.
+   */
+  async function fetchJson(url) {
+    let directError = null;
+
+    if (storeApiTransport !== 'proxy') {
+      try {
+        const response = await fetchWithTimeout(url, { method: 'GET' }, 30000);
+        if (!response.ok) throw new Error(`Store API HTTP ${response.status}`);
+        const text = await response.text();
+        const data = parsePossiblyWrappedJson(text);
+        storeApiTransport = 'direct';
+        return data;
+      } catch (error) {
+        directError = error;
+        storeApiTransport = 'proxy';
+      }
+    }
+
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    const response = await fetchWithTimeout(jinaUrl, { method: 'GET' }, 30000);
+    if (!response.ok) throw new Error(`Store API proxy HTTP ${response.status}`);
+    const text = await response.text();
+    try {
+      return parsePossiblyWrappedJson(text);
+    } catch (proxyError) {
+      const prefix = directError ? `${directError.message}; ` : '';
+      throw new Error(`${prefix}proxy parse failed: ${proxyError.message}`);
+    }
   }
 
   function hasVariationPrice(variation) {
@@ -262,24 +345,6 @@
     return [...merged.values()];
   }
 
-  async function fetchJson(url) {
-    try {
-      const response = await fetchWithTimeout(url, { method: 'GET' }, 30000);
-      if (!response.ok) throw new Error(`Store API HTTP ${response.status}`);
-      const text = await response.text();
-      return parsePossiblyWrappedJson(text);
-    } catch (directError) {
-      const jinaUrl = `https://r.jina.ai/${url}`;
-      const response = await fetchWithTimeout(jinaUrl, { method: 'GET' }, 30000);
-      if (!response.ok) throw new Error(`Store API proxy HTTP ${response.status}`);
-      const text = await response.text();
-      try {
-        return parsePossiblyWrappedJson(text);
-      } catch (proxyError) {
-        throw new Error(`${directError.message}; proxy parse failed: ${proxyError.message}`);
-      }
-    }
-  }
 
   function parsePossiblyWrappedJson(text) {
     const clean = String(text || '').replace(/^\uFEFF/, '').trim();
@@ -570,6 +635,7 @@
   function detectEiKitType(sources) {
     return detectEiValue(sources, [
       { value: 'Goalkeeper', pattern: /\b(goalkeeper|goalie|\bgk\b)\b/i },
+      { value: 'Pre Match', pattern: /\bpre[\s-]?match\b|\bprem\b/i },
       { value: 'Training', pattern: /\btraining\b/i },
       { value: 'Fourth', pattern: /\b(fourth|4th)\b/i },
       { value: 'Third', pattern: /\bthird\b/i },
@@ -751,6 +817,7 @@
     if (field === 'season') return normalizeSeasonValue(value);
     if (field === 'kittype') {
       if (/goalkeeper|goalie|\bgk\b/.test(text)) return 'goalkeeper';
+      if (/pre match|prematch|\bprem\b/.test(text)) return 'pre match';
       if (/training/.test(text)) return 'training';
       if (/fourth|4th/.test(text)) return 'fourth';
       if (/third/.test(text)) return 'third';
@@ -1217,7 +1284,6 @@
     const findings = [];
     const skippedImages = [];
     const seen = new Map();
-    const requiredAngles = getRequiredAltAngleWords();
 
     images.forEach((image, index) => {
       const alt = cleanText(image.alt || image.image_alt || '');
@@ -1242,15 +1308,11 @@
         seen.set(altKey, target);
       }
 
-      if (!hasRequiredAltAngle(alt)) {
-        findings.push(buildAltFinding(target, src, 'missing_angle_word', `Alt text must include one of: ${requiredAngles.join(', ')}.`, suggestAltText(product, image, index), alt));
-      }
     });
 
     return {
       case: 'Alt Text Case',
       status: findings.length ? 'WARNING' : 'PASS',
-      required_angle_words: requiredAngles,
       image_count: images.length,
       product_image_count: images.length - skippedImages.length,
       skipped_image_count: skippedImages.length,
@@ -1299,15 +1361,6 @@
 
   function buildAltFocusKeyword(product) {
     return cleanText(String(product.title || '').replace(/^#+\s*/, '').replace(/\s+[--|].*$/, ''));
-  }
-
-  function getRequiredAltAngleWords() {
-    return ['Front View', 'Back View', 'Close-up', 'Detail', 'With Socks', 'Shorts', 'Over View'];
-  }
-
-  function hasRequiredAltAngle(alt) {
-    const normalized = normalizeAltText(alt);
-    return getRequiredAltAngleWords().some((angle) => normalized.includes(normalizeAltText(angle)));
   }
 
   function hasKeywordOverlap(alt, keyword) {
@@ -1583,8 +1636,9 @@
 
   function detectPrinted(product) {
     const sku = String(product.sku || '');
+    const title = String(product.title || '');
     const normalizedSku = normalizeCaseText(sku);
-    const haystack = normalizeCaseText([product.title, sku, JSON.stringify(product.product_attributes || {})].join(' '));
+    const haystack = normalizeCaseText([title, sku, JSON.stringify(product.product_attributes || {})].join(' '));
 
     if (hasPrintedSkuPattern(sku)) {
       return {
@@ -1592,6 +1646,16 @@
         content: extractPrintedSkuContent(sku),
         source: 'sku',
         reason: 'SKU contains a name/number segment, so the product is identified as printed.'
+      };
+    }
+
+    const titlePlayer = extractPrintedTitleContent(title);
+    if (titlePlayer) {
+      return {
+        is_printed: true,
+        content: titlePlayer,
+        source: 'title',
+        reason: 'Product title ends with a player name and shirt number, so the product is identified as printed.'
       };
     }
 
@@ -1622,12 +1686,17 @@
   }
 
   function hasPrintedSkuPattern(sku) {
-    return /(^|_)[\p{L}][\p{L}\p{N}.' -]{1,}\s+\d{1,2}(_|$)/u.test(String(sku || ''));
+    return /(^|_)[\p{L}][\p{L}\p{N}.'’ -]{1,}\s+\d{1,2}(_|$)/u.test(String(sku || ''));
   }
 
   function extractPrintedSkuContent(sku) {
-    const match = String(sku || '').match(/(^|_)([\p{L}][\p{L}\p{N}.' -]{1,}\s+\d{1,2})(_|$)/u);
+    const match = String(sku || '').match(/(^|_)([\p{L}][\p{L}\p{N}.'’ -]{1,}\s+\d{1,2})(_|$)/u);
     return match ? cleanText(match[2]) : null;
+  }
+
+  function extractPrintedTitleContent(title) {
+    const match = String(title || '').match(/(?:^|[-–—])\s*([\p{L}][\p{L}\p{N}.'’ -]{1,}?\s+\d{1,2})(?=\s*(?:\(|$))/u);
+    return match ? cleanText(match[1]) : null;
   }
 
   function toComparablePrice(value) {
@@ -2302,7 +2371,12 @@
         <td class="product-result-url"></td>
         <td class="product-result-sku"></td>
         <td>${isPending ? '-' : failedCases.length}</td>
-        <td><span class="product-status-pill ${statusClass}">${escapeHtml(status)}</span></td>
+        <td>
+          <div class="product-status-cell">
+            <span class="product-status-pill ${statusClass}">${escapeHtml(status)}</span>
+            <span class="product-processing-time">${isPending ? 'Processing...' : formatProcessingTime(product.processing_ms)}</span>
+          </div>
+        </td>
         <td></td>
       `;
 
@@ -2330,6 +2404,18 @@
 
     wrap.appendChild(table);
     area.appendChild(wrap);
+  }
+
+  function formatProcessingTime(milliseconds) {
+    const value = Number(milliseconds);
+    if (!Number.isFinite(value) || value < 0) return 'Time N/A';
+    if (value < 1000) return `${value} ms`;
+
+    const totalSeconds = value / 1000;
+    if (totalSeconds < 60) return `${totalSeconds.toFixed(1)}s`;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.round(totalSeconds % 60);
+    return `${minutes}m ${seconds}s`;
   }
 
   function getProductCaseEntries(product) {
