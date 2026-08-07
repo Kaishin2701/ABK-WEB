@@ -46,3 +46,4 @@
     ["Zambia"], ["Zimbabwe"]
   ].map(([name, ...aliases]) => ({ name, aliases: [name, ...aliases] }));
 })();
+

@@ -20,7 +20,7 @@ function handleFileSelect(e) {
     const newFiles = Array.from(e.target.files);
     inputFiles = [...inputFiles, ...newFiles];
     renderGallery();
-    log(`Đã thêm ${newFiles.length} ảnh.`);
+    log(`ÄÃ£ thÃªm ${newFiles.length} áº£nh.`);
 }
 
 function handleWmSelect(e) {
@@ -31,7 +31,7 @@ function handleWmSelect(e) {
         reader.onload = (ev) => {
             wmImg = new Image();
             wmImg.src = ev.target.result;
-            log(`Đã load Watermark: ${file.name}`);
+            log(`ÄÃ£ load Watermark: ${file.name}`);
         };
         reader.readAsDataURL(file);
     }
@@ -41,7 +41,7 @@ function renderGallery() {
     const area = document.getElementById('gallery-area');
     area.innerHTML = '';
     if(inputFiles.length === 0) {
-        area.innerHTML = '<p id="gallery-placeholder">Trống...</p>';
+        area.innerHTML = '<p id="gallery-placeholder">Trá»‘ng...</p>';
         return;
     }
     inputFiles.forEach(f => {
@@ -55,14 +55,14 @@ function renderGallery() {
 function clearGallery() {
     inputFiles = [];
     renderGallery();
-    log("Đã xóa danh sách ảnh.");
+    log("ÄÃ£ xÃ³a danh sÃ¡ch áº£nh.");
 }
 
 async function startProcess() {
-    if(!inputFiles.length) return alert("Chưa chọn ảnh!");
+    if(!inputFiles.length) return alert("ChÆ°a chá»n áº£nh!");
 
     const btn = document.getElementById('btn-start-wm');
-    btn.disabled = true; btn.innerText = "ĐANG XỬ LÝ...";
+    btn.disabled = true; btn.innerText = "ÄANG Xá»¬ LÃ...";
     document.getElementById('log-box').value = ""; // Clear log
     
     const mode = document.getElementById('sel-mode').value;
@@ -70,10 +70,10 @@ async function startProcess() {
     const quality = parseInt(document.getElementById('rng-quality').value) / 100;
     const renameTpl = document.getElementById('inp-rename').value;
     const downloadArea = document.getElementById('download-area');
-    downloadArea.innerHTML = ''; // Reset link tải
+    downloadArea.innerHTML = ''; // Reset link táº£i
 
-    log(`🚀 Bắt đầu xử lý ${inputFiles.length} ảnh...`);
-    if(!wmImg) log("⚠️ Không có watermark, chỉ xử lý hình ảnh gốc.");
+    log(`ðŸš€ Báº¯t Ä‘áº§u xá»­ lÃ½ ${inputFiles.length} áº£nh...`);
+    if(!wmImg) log("âš ï¸ KhÃ´ng cÃ³ watermark, chá»‰ xá»­ lÃ½ hÃ¬nh áº£nh gá»‘c.");
 
     const processedFiles = []; // Array of {blob, name}
 
@@ -89,13 +89,13 @@ async function startProcess() {
 
             processedFiles.push({blob, name: newName});
 
-            log(`✅ OK: ${file.name} -> ${newName}`);
+            log(`âœ… OK: ${file.name} -> ${newName}`);
             document.getElementById('p-bar-fill').style.width = Math.round(((i+1)/inputFiles.length)*100) + "%";
             document.getElementById('status-lbl').innerText = `${i+1}/${inputFiles.length}`;
         } catch(e) {
-            log(`❌ Error: ${inputFiles[i].name} - ${e}`);
+            log(`âŒ Error: ${inputFiles[i].name} - ${e}`);
         }
-        await new Promise(r => setTimeout(r, 100)); // Delay để UI mượt
+        await new Promise(r => setTimeout(r, 100)); // Delay Ä‘á»ƒ UI mÆ°á»£t
     }
 
     // Download logic
@@ -119,12 +119,12 @@ async function startProcess() {
         a.href = zipUrl; a.download = 'processed_images.zip';
         downloadArea.appendChild(a);
         a.click();
-        log(`📦 Đã tạo ZIP với ${processedFiles.length} ảnh.`);
+        log(`ðŸ“¦ ÄÃ£ táº¡o ZIP vá»›i ${processedFiles.length} áº£nh.`);
     }
 
-    log("🎉 Hoàn tất!");
+    log("ðŸŽ‰ HoÃ n táº¥t!");
     btn.disabled = false; btn.innerText = "START PROCESSING";
-    const msg = processedFiles.length > 1 ? "Xử lý xong! Đã tải xuống file ZIP." : "Xử lý xong! Kiểm tra thư mục Tải về của trình duyệt.";
+    const msg = processedFiles.length > 1 ? "Xá»­ lÃ½ xong! ÄÃ£ táº£i xuá»‘ng file ZIP." : "Xá»­ lÃ½ xong! Kiá»ƒm tra thÆ° má»¥c Táº£i vá» cá»§a trÃ¬nh duyá»‡t.";
     alert(msg);
 }
 
@@ -141,7 +141,7 @@ function processImage(file, mode, opacity, quality) {
                 // 1. Draw Original
                 ctx.drawImage(img, 0, 0);
 
-                // 2. Draw Watermark (chỉ nếu có)
+                // 2. Draw Watermark (chá»‰ náº¿u cÃ³)
                 if(wmImg) {
                     ctx.globalAlpha = opacity;
                     const W = canvas.width, H = canvas.height;

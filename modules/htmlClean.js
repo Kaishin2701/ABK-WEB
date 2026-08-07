@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Gán sự kiện cho đúng ID trong index.html (V3)
+    // 1. GÃ¡n sá»± kiá»‡n cho Ä‘Ãºng ID trong index.html (V3)
     const btnClean = document.getElementById('btn-clean');
     const btnCopy = document.getElementById('btn-copy-html');
 
@@ -8,60 +8,60 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function runHtmlClean() {
-    // 2. Lấy đúng ID input/output
+    // 2. Láº¥y Ä‘Ãºng ID input/output
     const rawInput = document.getElementById('html-in').value;
     const outputBox = document.getElementById('html-out');
 
     if (!rawInput.trim()) {
-        alert("Vui lòng dán code HTML vào ô Input!");
+        alert("Vui lÃ²ng dÃ¡n code HTML vÃ o Ã´ Input!");
         return;
     }
 
-    // --- LOGIC GIỐNG HỆT PYTHON (BeautifulSoup) ---
+    // --- LOGIC GIá»NG Há»†T PYTHON (BeautifulSoup) ---
 
-    // Tạo DOM ảo để xử lý
+    // Táº¡o DOM áº£o Ä‘á»ƒ xá»­ lÃ½
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawInput, 'text/html');
     const body = doc.body;
 
-    // A. DANH SÁCH THẺ CẦN "LỘT VỎ" (UNWRAP)
+    // A. DANH SÃCH THáºº Cáº¦N "Lá»˜T Vá»Ž" (UNWRAP)
     // Python: useless_containers = ['div', 'section', ...]
     const uselessTags = ['div', 'section', 'article', 'header', 'footer', 'aside', 'main', 'nav'];
     
-    // Lặp qua từng loại thẻ và lột vỏ
+    // Láº·p qua tá»«ng loáº¡i tháº» vÃ  lá»™t vá»
     uselessTags.forEach(tagName => {
-        // Lấy tất cả thẻ loại này
+        // Láº¥y táº¥t cáº£ tháº» loáº¡i nÃ y
         const elements = body.querySelectorAll(tagName);
         elements.forEach(el => {
-            // Di chuyển toàn bộ thẻ con ra ngoài (trước thẻ cha)
+            // Di chuyá»ƒn toÃ n bá»™ tháº» con ra ngoÃ i (trÆ°á»›c tháº» cha)
             while (el.firstChild) {
                 el.parentNode.insertBefore(el.firstChild, el);
             }
-            // Xóa thẻ cha rỗng
+            // XÃ³a tháº» cha rá»—ng
             el.remove();
         });
     });
 
-    // B. LỌC THUỘC TÍNH (WHITELIST)
+    // B. Lá»ŒC THUá»˜C TÃNH (WHITELIST)
     // Python: allowed_attributes = ['style', 'href', ...]
     const allowedAttrs = ['style', 'href', 'target', 'src', 'alt', 'width', 'height', 'colspan', 'rowspan'];
     const allElements = body.querySelectorAll('*');
 
     allElements.forEach(el => {
-        // Chuyển attributes thành mảng để duyệt
+        // Chuyá»ƒn attributes thÃ nh máº£ng Ä‘á»ƒ duyá»‡t
         const attrs = Array.from(el.attributes);
         attrs.forEach(attr => {
             if (!allowedAttrs.includes(attr.name)) {
-                el.removeAttribute(attr.name); // Xóa attribute không cho phép
+                el.removeAttribute(attr.name); // XÃ³a attribute khÃ´ng cho phÃ©p
             }
         });
     });
 
-    // C. XỬ LÝ THẺ SPAN
+    // C. Xá»¬ LÃ THáºº SPAN
     // Python: if not span.attrs: span.unwrap()
     const spans = body.querySelectorAll('span');
     spans.forEach(span => {
-        // Nếu không còn attribute nào (hoặc style đã bị xóa ở bước B)
+        // Náº¿u khÃ´ng cÃ²n attribute nÃ o (hoáº·c style Ä‘Ã£ bá»‹ xÃ³a á»Ÿ bÆ°á»›c B)
         if (span.attributes.length === 0) {
             while (span.firstChild) {
                 span.parentNode.insertBefore(span.firstChild, span);
@@ -70,23 +70,23 @@ function runHtmlClean() {
         }
     });
 
-    // D. DỌN DẸP THẺ RỖNG (Block tags)
+    // D. Dá»ŒN Dáº¸P THáºº Rá»–NG (Block tags)
     // Python: if not text and not find(['img', 'br', ...])
     const blockTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'ul', 'ol', 'blockquote'];
     blockTags.forEach(tag => {
         const els = body.querySelectorAll(tag);
         els.forEach(el => {
             const textContent = el.textContent.trim();
-            // Kiểm tra có thẻ đặc biệt bên trong không
+            // Kiá»ƒm tra cÃ³ tháº» Ä‘áº·c biá»‡t bÃªn trong khÃ´ng
             const hasSpecialTag = el.querySelector('img, br, hr, iframe');
             
             if (!textContent && !hasSpecialTag) {
-                el.remove(); // Xóa nếu rỗng tuếch
+                el.remove(); // XÃ³a náº¿u rá»—ng tuáº¿ch
             }
         });
     });
 
-    // 3. Xuất kết quả ra ô Output
+    // 3. Xuáº¥t káº¿t quáº£ ra Ã´ Output
     outputBox.value = body.innerHTML.trim();
 }
 
@@ -99,11 +99,11 @@ function copyCleanResult() {
 
     try {
         navigator.clipboard.writeText(output.value).then(() => {
-            alert("Đã copy code sạch!");
+            alert("ÄÃ£ copy code sáº¡ch!");
         });
     } catch (err) {
-        // Fallback cho trình duyệt cũ
+        // Fallback cho trÃ¬nh duyá»‡t cÅ©
         document.execCommand('copy');
-        alert("Đã copy code sạch!");
+        alert("ÄÃ£ copy code sáº¡ch!");
     }
 }

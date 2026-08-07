@@ -22,7 +22,7 @@ function skuGenerate() {
     const baseCode = document.getElementById('sku-base-code').value.trim();
     
     if (!baseCode) {
-        alert('⚠️ Vui lòng nhập Base Product Code');
+        alert('âš ï¸ Vui lÃ²ng nháº­p Base Product Code');
         return;
     }
 
@@ -30,47 +30,47 @@ function skuGenerate() {
     currentSkuVariants = skuAuto.generateAllVariants(baseCode);
     
     if (currentSkuVariants.length === 0) {
-        alert('❌ Base code không hợp lệ! Cần chứa: ADK/KD, KD hoặc AD');
+        alert('âŒ Base code khÃ´ng há»£p lá»‡! Cáº§n chá»©a: ADK/KD, KD hoáº·c AD');
         return;
     }
 
-    // Display as text (mỗi dòng 1 SKU)
+    // Display as text (má»—i dÃ²ng 1 SKU)
     const outputText = currentSkuVariants.join('\n');
     document.getElementById('sku-output').value = outputText;
     
     const infoDiv = document.getElementById('sku-info');
-    infoDiv.innerHTML = `✅ ${currentSkuVariants.length} variants được tạo - Copy tất cả rồi paste vào Excel`;
+    infoDiv.innerHTML = `âœ… ${currentSkuVariants.length} variants Ä‘Æ°á»£c táº¡o - Copy táº¥t cáº£ rá»“i paste vÃ o Excel`;
     infoDiv.style.display = 'block';
 }
 
 function copySingleSku(sku) {
     navigator.clipboard.writeText(sku).then(() => {
-        alert(`✅ Copied: ${sku}`);
+        alert(`âœ… Copied: ${sku}`);
     });
 }
 
 function skuCopyAll() {
     if (currentSkuVariants.length === 0) {
-        alert('⚠️ Vui lòng Generate trước');
+        alert('âš ï¸ Vui lÃ²ng Generate trÆ°á»›c');
         return;
     }
     
     const textArea = document.getElementById('sku-output');
     textArea.select();
     document.execCommand('copy');
-    alert(`✅ Copied ${currentSkuVariants.length} SKUs to clipboard!`);
+    alert(`âœ… Copied ${currentSkuVariants.length} SKUs to clipboard!`);
 }
 
 function skuClearForm() {
     document.getElementById('sku-base-code').value = '';
-    document.getElementById('sku-output').value = 'Nhập base code và bấm Generate để xem kết quả';
+    document.getElementById('sku-output').value = 'Nháº­p base code vÃ  báº¥m Generate Ä‘á»ƒ xem káº¿t quáº£';
     document.getElementById('sku-info').style.display = 'none';
     currentSkuVariants = [];
 }
 
 function skuExportCsv() {
     if (currentSkuVariants.length === 0) {
-        alert('⚠️ Vui lòng Generate trước');
+        alert('âš ï¸ Vui lÃ²ng Generate trÆ°á»›c');
         return;
     }
     
@@ -105,7 +105,7 @@ function setSidebarHidden(hidden) {
         document.body.classList.remove('sidebar-open');
     }
 
-    toggle.textContent = hidden ? '+' : '−';
+    toggle.textContent = hidden ? '+' : 'âˆ’';
     toggle.setAttribute('aria-label', hidden ? 'Show toolbar' : 'Hide toolbar');
     toggle.setAttribute('aria-expanded', String(!hidden));
 }
@@ -124,3 +124,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('resize', () => setSidebarHidden(isPhoneLayout()));
 });
+

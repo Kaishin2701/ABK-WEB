@@ -1,6 +1,6 @@
 /**
  * SKU Auto Generator Module
- * Tương tự logic hàm Excel LET để sinh mã sản phẩm biến thể
+ * TÆ°Æ¡ng tá»± logic hÃ m Excel LET Ä‘á»ƒ sinh mÃ£ sáº£n pháº©m biáº¿n thá»ƒ
  */
 
 const skuAuto = (() => {
@@ -12,10 +12,10 @@ const skuAuto = (() => {
   };
 
   /**
-   * Sinh SKU dựa trên base product code
-   * @param {string} baseCode - Mã sản phẩm cơ sở (VD: "SHIRT_ADK/KD")
-   * @param {number} rowIndex - Số hàng (từ 1 trở lên)
-   * @returns {string} - SKU biến thể
+   * Sinh SKU dá»±a trÃªn base product code
+   * @param {string} baseCode - MÃ£ sáº£n pháº©m cÆ¡ sá»Ÿ (VD: "SHIRT_ADK/KD")
+   * @param {number} rowIndex - Sá»‘ hÃ ng (tá»« 1 trá»Ÿ lÃªn)
+   * @returns {string} - SKU biáº¿n thá»ƒ
    */
   function generateSku(baseCode, rowIndex) {
     if (!baseCode || baseCode.trim() === '') {
@@ -54,9 +54,9 @@ const skuAuto = (() => {
   }
 
   /**
-   * Sinh toàn bộ variants cho một base code
-   * @param {string} baseCode - Mã sản phẩm cơ sở
-   * @returns {Array} - Mảng tất cả SKU variants
+   * Sinh toÃ n bá»™ variants cho má»™t base code
+   * @param {string} baseCode - MÃ£ sáº£n pháº©m cÆ¡ sá»Ÿ
+   * @returns {Array} - Máº£ng táº¥t cáº£ SKU variants
    */
   function generateAllVariants(baseCode) {
     const variants = [];
@@ -87,7 +87,8 @@ const skuAuto = (() => {
   };
 })();
 
-// Export cho Node.js hoặc browser
+// Export cho Node.js hoáº·c browser
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = skuAuto;
 }
+

@@ -91,7 +91,7 @@ const productChecker = (() => {
     const product = parseProductContent(page.content, url, page.type, page.provider, siteHint);
     product.site = identifyProductSite(product, url);
     if (product.site.id === 'kfk') await enrichProductWithStoreApi(product, url);
-    if (product.site.id === 'rfs') await enrichRfsMediaAltText(product, url);
+    if (product.site.id === 'rfs') await enrichWordPressMediaAltText(product, url);
     product.site = identifyProductSite(product, url);
     applyProductCaseTests(product);
     product.fetchProvider = product.fetchProvider || page.provider;
@@ -242,7 +242,7 @@ const productChecker = (() => {
   }
 
   function getProductPageProviders(site) {
-    if (!site || site.id !== 'rfs') return proxyProviders;
+    if (!site || !['rfs', 'cfs'].includes(site.id)) return proxyProviders;
     const htmlFirst = proxyProviders.filter((provider) => provider.type === 'html');
     const textFallback = proxyProviders.filter((provider) => provider.type !== 'html');
     return [...htmlFirst, ...textFallback];
@@ -554,8 +554,7 @@ const productChecker = (() => {
   }
 
   function getProductSlug(url) {
-    try {
-      const …24860 tokens truncated… urlNameCase) {
+ …25857 tokens truncated… urlNameCase) {
     area.appendChild(createCaseStatusCard('URL / Name Case', urlNameCase, getUrlNameCaseMeta(urlNameCase)));
 
     const list = document.createElement('div');
