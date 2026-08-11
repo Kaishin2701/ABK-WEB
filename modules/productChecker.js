@@ -242,7 +242,10 @@
   }
 
   function getProductPageProviders(site) {
-    if (!site || !['rfs', 'cfs', 'rfk'].includes(site.id)) return proxyProviders;
+    // The Size Guide is a separate WooCommerce tab. KFK, CFS and RFK must
+    // receive HTML before the Reader/text fallback so AI Size Guide can only
+    // be derived from that tab, never inferred from the product title.
+    if (!site || !['kfk', 'rfs', 'cfs', 'rfk'].includes(site.id)) return proxyProviders;
     const htmlFirst = proxyProviders.filter((provider) => provider.type === 'html');
     const textFallback = proxyProviders.filter((provider) => provider.type !== 'html');
     return [...htmlFirst, ...textFallback];
@@ -576,12 +579,14 @@
     product.site = product.site || identifyProductSite(product, product.sourceUrl || product.url);
     if (product.site.status !== 'active') {
       product.printed = detectPrinted(product);
+      appendSizeGuideAdditionalInformation(product);
       product.extracted_information = buildSiteExtractedInformation(product);
       product.site_configuration_case = buildSiteConfigurationCase(product.site);
       return product;
     }
 
     product.printed = detectPrinted(product);
+    appendSizeGuideAdditionalInformation(product);
     product.extracted_information = buildSiteExtractedInformation(product);
     product.price_case = runPriceCase(product);
     product.forbidden_terms_case = runForbiddenTermsCase(product);
@@ -633,10 +638,45 @@
 
   function buildSiteExtractedInformation(product) {
     const parser = window.ProductCheckerSiteParsers && product.site && window.ProductCheckerSiteParsers.get(product.site.id);
+    let items;
     if (parser && typeof parser.extractExtractedInformation === 'function') {
-      return parser.extractExtractedInformation(product, { buildBase: buildExtractedInformation });
+      items = parser.extractExtractedInformation(product, { buildBase: buildExtractedInformation });
+    } else {
+      items = buildExtractedInformation(product);
     }
-    return buildExtractedInformation(product);
+    return appendSizeGuideExtractedInformation(product, items);
+  }
+
+  function appendSizeGuideExtractedInformation(product, items) {
+    if (!isKeywordSizeChartSite(product)) return items;
+    const rule = getSizeChartKeywordRule(product.title || '');
+    const normalizedItems = Array.isArray(items) ? items.filter((item) => item.key !== 'sizeguide') : [];
+    normalizedItems.push({
+      key: 'sizeguide',
+      label: 'Size Guide',
+      value: rule ? rule.sizeGuide : '',
+      sources: rule ? ['title'] : []
+    });
+    return normalizedItems;
+  }
+
+  function appendSizeGuideAdditionalInformation(product) {
+    if (!isKeywordSizeChartSite(product)) return;
+
+    const currentItems = Array.isArray(product.additional_information) ? product.additional_information : [];
+    const withoutSizeGuide = currentItems.filter((item) => getDataSyncFieldKey(item) !== 'sizeguide');
+    const actualRule = getSizeChartKeywordRule(product.size_guide || '');
+
+    if (actualRule) {
+      withoutSizeGuide.push({
+        key: 'sizeguide',
+        label: 'Size Guide',
+        value: actualRule.sizeGuide,
+        source_name: 'Size Guide tab'
+      });
+    }
+
+    product.additional_information = withoutSizeGuide;
   }
 
   function identifyProductSite(product, url) {
@@ -679,7 +719,8 @@
     { key: 'clubnational', label: 'Club / National' },
     { key: 'kittype', label: 'Kit type' },
     { key: 'department', label: 'Department' },
-    { key: 'player', label: 'Player' }
+    { key: 'player', label: 'Player' },
+    { key: 'sizeguide', label: 'Size Guide' }
   ];
 
   function buildExtractedInformation(product) {
@@ -1193,7 +1234,10 @@
   function runSizeChartCase(product) {
     const rule = classifySizeChartRule(product);
     const altValidation = validateSizeChartAltText(product, rule);
-    const findings = [...altValidation.findings];
+    const description = getSizeChartDescriptionText(product);
+    const dataFindings = isKeywordSizeChartSite(product) ? validateSizeChartData(product, description, rule) : [];
+    const sizeGuideValidation = isKeywordSizeChartSite(product) ? validateSizeGuideType(product, rule) : { findings: [], actualSizeGuide: '' };
+    const findings = [...altValidation.findings, ...dataFindings, ...sizeGuideValidation.findings];
 
     if (!rule.shortcodes.length) {
       return {
@@ -1204,19 +1248,29 @@
         expected_shortcodes: [],
         expected_size_chart_alts: altValidation.expectedAlts,
         size_chart_images: altValidation.images,
+        detection_source: rule.detectionSource || 'SKU',
+        data_table_checked: Boolean(description),
+        size_guide_checked: Boolean(sizeGuideValidation.actualSizeGuide),
+        expected_size_guide: rule.sizeGuide || '',
+        actual_size_guide: sizeGuideValidation.actualSizeGuide,
         issue_count: 1,
-        findings: [{ issue: 'unknown_sku_indicator', message: rule.reason || 'SKU does not contain AD, KD, WM, or ADK.' }]
+        findings: [{ issue: 'unknown_size_chart_type', message: rule.reason || 'Product type could not be identified.' }]
       };
     }
 
     return {
       case: 'Size Chart Case',
-      status: findings.length ? 'WARNING' : 'PASS',
+      status: findings.some((finding) => String(finding.status || '').toUpperCase() === 'FAIL') ? 'FAIL' : (findings.length ? 'WARNING' : 'PASS'),
       product_type: rule.productType,
       sku_indicator: rule.skuIndicator,
       expected_shortcodes: rule.shortcodes,
       expected_size_chart_alts: altValidation.expectedAlts,
       size_chart_images: altValidation.images,
+      detection_source: rule.detectionSource || 'SKU',
+      data_table_checked: Boolean(description),
+      size_guide_checked: Boolean(sizeGuideValidation.actualSizeGuide),
+      expected_size_guide: rule.sizeGuide || '',
+      actual_size_guide: sizeGuideValidation.actualSizeGuide,
       issue_count: findings.length,
       findings
     };
@@ -1224,28 +1278,96 @@
 
   function classifySizeChartRule(product) {
     const sku = String(product.sku || '').toUpperCase();
+    const title = cleanText(product.title || '');
+
+    if (isKeywordSizeChartSite(product)) {
+      const keywordRule = getSizeChartKeywordRule(title);
+      if (keywordRule) return keywordRule;
+      return {
+        productType: 'Unknown',
+        skuIndicator: '',
+        shortcodes: [],
+        detectionSource: 'Title keyword',
+        reason: 'Product title does not contain the Men, Kid, Adult, Women, or Baby keyword.'
+      };
+    }
 
     if (hasSkuIndicator(sku, 'ADK')) {
-      return { productType: 'Adult Football Kit (shirt + shorts)', skuIndicator: 'ADK', shortcodes: ['[kfk_size_adult]'] };
+      return { productType: 'Adult Football Kit (shirt + shorts)', skuIndicator: 'ADK', shortcodes: ['[kfk_size_adult]'], detectionSource: 'SKU' };
     }
 
     if (hasSkuIndicator(sku, 'WM')) {
-      return { productType: 'Women Football Shirt', skuIndicator: 'WM', shortcodes: ['[kfk_size_women]'] };
+      return { productType: 'Women Football Shirt', skuIndicator: 'WM', shortcodes: ['[kfk_size_women]'], detectionSource: 'SKU' };
     }
 
     if (hasSkuIndicator(sku, 'KD')) {
-      return { productType: 'Kids Football Kit', skuIndicator: 'KD', shortcodes: ['[kfk_size_kids]'] };
+      return { productType: 'Kids Football Kit', skuIndicator: 'KD', shortcodes: ['[kfk_size_kids]'], detectionSource: 'SKU' };
     }
 
     if (hasSkuIndicator(sku, 'AD')) {
-      return { productType: 'Men Football Shirt', skuIndicator: 'AD', shortcodes: ['[kfk_size_men]'] };
+      return { productType: 'Men Football Shirt', skuIndicator: 'AD', shortcodes: ['[kfk_size_men]'], detectionSource: 'SKU' };
     }
 
     if (hasSkuIndicator(sku, 'BABY')) {
-      return { productType: 'Baby Football Kit', skuIndicator: 'Baby', shortcodes: ['[kfk_size_baby]'] };
+      return { productType: 'Baby Football Kit', skuIndicator: 'Baby', shortcodes: ['[kfk_size_baby]'], detectionSource: 'SKU' };
     }
 
-    return { productType: 'Unknown', skuIndicator: '', shortcodes: [], reason: 'SKU does not contain AD, KD, WM, ADK, or Baby indicator.' };
+    return { productType: 'Unknown', skuIndicator: '', shortcodes: [], detectionSource: 'SKU', reason: 'SKU does not contain AD, KD, WM, ADK, or Baby indicator.' };
+  }
+
+  function isKeywordSizeChartSite(product) {
+    return Boolean(product && product.site && ['kfk', 'cfs', 'rfk'].includes(product.site.id));
+  }
+
+  function getSizeChartKeywordRule(title) {
+    const source = cleanText(title);
+    if (/\b(?:women|woman)(?:['’]?s)?\b/i.test(source)) {
+      return { productType: 'Women Football Shirt', sizeGuide: "Women's Size Guide", skuIndicator: 'Women', shortcodes: ['[kfk_size_women]'], detectionSource: 'Title keyword: Women' };
+    }
+    if (/\b(?:baby|babies)\b/i.test(source)) {
+      return { productType: 'Baby Football Kit', sizeGuide: 'Baby Size Guide', skuIndicator: 'Baby', shortcodes: ['[kfk_size_baby]'], detectionSource: 'Title keyword: Baby' };
+    }
+    if (/\badult\b/i.test(source)) {
+      return { productType: 'Adult Football Kit (shirt + shorts)', sizeGuide: 'Adult Kit Size Guide', skuIndicator: 'ADK', shortcodes: ['[kfk_size_adult]'], detectionSource: 'Title keyword: Adult' };
+    }
+    if (/\b(?:kid|kids)\b/i.test(source)) {
+      return { productType: 'Kids Football Kit', sizeGuide: 'Kids Size Guide', skuIndicator: 'KD', shortcodes: ['[kfk_size_kids]'], detectionSource: 'Title keyword: Kid' };
+    }
+    if (/\bmen(?:['’]?s)?\b/i.test(source)) {
+      return { productType: 'Men Football Shirt', sizeGuide: "Men's Shirt Size Guide", skuIndicator: 'AD', shortcodes: ['[kfk_size_men]'], detectionSource: 'Title keyword: Men' };
+    }
+    return null;
+  }
+
+  function getSizeChartDescriptionText(product) {
+    return [...new Set([
+      cleanText(product && product.short_description || ''),
+      cleanText(product && product.long_description || ''),
+      cleanText(product && product.description || '')
+    ].filter((value) => value && !/^(?:n\/?a|not found)$/i.test(value)))].join(' ');
+  }
+
+  function validateSizeGuideType(product, expectedRule) {
+    const rawSizeGuide = cleanText(product && product.size_guide || '');
+    if (!rawSizeGuide || /^(?:n\/?a|not found)$/i.test(rawSizeGuide) || !expectedRule || !expectedRule.sizeGuide) {
+      return { actualSizeGuide: '', findings: [] };
+    }
+
+    const actualRule = getSizeChartKeywordRule(rawSizeGuide);
+    if (!actualRule || actualRule.skuIndicator === expectedRule.skuIndicator) {
+      return { actualSizeGuide: actualRule ? actualRule.sizeGuide : rawSizeGuide, findings: [] };
+    }
+
+    return {
+      actualSizeGuide: actualRule.sizeGuide,
+      findings: [{
+        status: 'FAIL',
+        issue: 'size_guide_type_mismatch',
+        message: `The Size Guide tab is for ${actualRule.productType}, but the product title requires ${expectedRule.productType}.`,
+        expected: expectedRule.sizeGuide,
+        actual: actualRule.sizeGuide
+      }]
+    };
   }
 
   function hasSkuIndicator(sku, indicator) {
@@ -1509,18 +1631,18 @@
   }
 
   function normalizeSizeText(value) {
-    return String(value || '').toLowerCase().replace(/[--]/g, '-').replace(/\s+/g, ' ').trim();
+    return String(value || '').toLowerCase().replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
   }
 
   function getKidsSizeRows() {
     return [
-      ['16', '3-4 yrs', '95-105', '70', '44', '32'],
-      ['18', '4-5 yrs', '105-115', '74', '47', '34'],
-      ['20', '5-6 yrs', '115-125', '78', '50', '36'],
-      ['22', '7-8 yrs', '125-135', '82', '53', '38'],
-      ['24', '8-9 yrs', '135-145', '86', '56', '39'],
-      ['26', '10-11 yrs', '145-155', '90', '59', '40'],
-      ['28', '12-13 yrs', '155-165', '94', '62', '43']
+      ['16', '3-4', '95-105', '70', '44', '32'],
+      ['18', '4-5', '105-115', '74', '47', '34'],
+      ['20', '5-6', '115-125', '78', '50', '36'],
+      ['22', '7-8', '125-135', '82', '53', '38'],
+      ['24', '8-9', '135-145', '86', '56', '39'],
+      ['26', '10-11', '145-155', '90', '59', '40'],
+      ['28', '12-13', '155-165', '94', '62', '43']
     ];
   }
 
@@ -1530,7 +1652,9 @@
       ['M', '170-178', '65-75', '100-104', '75'],
       ['L', '175-182', '75-85', '104-108', '77'],
       ['XL', '180-188', '85-95', '108-114', '79'],
-      ['XXL', '185-192', '95-105', '114-120', '81']
+      ['XXL', '185-192', '95-105', '114-120', '81'],
+      ['3XL', '188-195', '105-115', '120-126', '83'],
+      ['4XL', '190-200', '115-130', '126-132', '85']
     ];
   }
 
@@ -2303,6 +2427,18 @@
       '#tab-description',
       '.product .summary'
     ]) || schemaProduct.description || '';
+    const sizeGuide = firstText(doc, [
+      '#tab-kfk_size_guide',
+      '.woocommerce-Tabs-panel--kfk_size_guide',
+      '#tab-rfk_size_guide',
+      '.woocommerce-Tabs-panel--rfk_size_guide',
+      '#tab-ecomus_size_guide',
+      '.woocommerce-Tabs-panel--ecomus_size_guide',
+      '#tab-size-guide',
+      '.woocommerce-Tabs-panel--size-guide',
+      '#tab-size_guide',
+      '.woocommerce-Tabs-panel--size_guide'
+    ]);
 
     return {
       sourceUrl: url,
@@ -2320,6 +2456,7 @@
       size_prices: extractVariationSizePrices(doc),
       images: extractImages(doc, schemaProduct.image),
       description: cleanText(description),
+      size_guide: cleanText(sizeGuide),
       global_form: globalForm,
       additional_information: additionalInformation,
       jsonLdFound: jsonLdProducts.length
@@ -3313,8 +3450,10 @@
   function getSizeChartCaseMeta(sizeCase) {
     return [
       sizeCase.product_type || 'Unknown',
-      `SKU: ${sizeCase.sku_indicator || 'N/A'}`,
+      `Detected by: ${sizeCase.detection_source || 'SKU'} (${sizeCase.sku_indicator || 'N/A'})`,
       `Size chart images: ${(sizeCase.size_chart_images || []).length}`,
+      `Data table checked: ${sizeCase.data_table_checked ? 'Yes' : 'No'}`,
+      sizeCase.size_guide_checked ? `Size Guide tab: ${sizeCase.actual_size_guide || 'Detected'}` : 'Size Guide tab: Not found',
       `Issues: ${sizeCase.issue_count || 0}`
     ];
   }
@@ -3514,7 +3653,8 @@
   }
   function createSizeChartFindingItem(finding) {
     const item = document.createElement('div');
-    item.className = 'check-item warning';
+    const status = String(finding.status || 'WARNING').toUpperCase();
+    item.className = `check-item ${status === 'FAIL' ? 'fail' : 'warning'}`;
 
     const content = document.createElement('div');
 
@@ -3536,11 +3676,11 @@
 
     const current = document.createElement('div');
     current.className = 'check-item-detail';
-    current.textContent = finding.current_alt ? `Current alt: ${finding.current_alt}` : '';
+    current.textContent = finding.actual ? `Actual: ${finding.actual}` : (finding.current_alt ? `Current alt: ${finding.current_alt}` : '');
 
     const badge = document.createElement('div');
-    badge.className = 'check-badge warning';
-    badge.textContent = 'WARNING';
+    badge.className = `check-badge ${status === 'FAIL' ? 'fail' : 'warning'}`;
+    badge.textContent = status === 'FAIL' ? 'FAIL' : 'WARNING';
 
     content.appendChild(title);
     content.appendChild(detail);

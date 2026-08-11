@@ -194,6 +194,16 @@
     const sizePrices = variationPrices(doc);
     const productImages = images(doc);
     const description = text(doc, ['#tab-description', '.woocommerce-Tabs-panel--description', '.entry-content']);
+    const sizeGuide = text(doc, [
+      '#tab-rfk_size_guide',
+      '.woocommerce-Tabs-panel--rfk_size_guide',
+      '#tab-ecomus_size_guide',
+      '.woocommerce-Tabs-panel--ecomus_size_guide',
+      '#tab-size-guide',
+      '.woocommerce-Tabs-panel--size-guide',
+      '#tab-size_guide',
+      '.woocommerce-Tabs-panel--size_guide'
+    ]);
     const form = doc.querySelector('form.variations_form[data-product_id]');
     const productSizes = sizes(doc, sizePrices);
     return {
@@ -209,6 +219,7 @@
       tags: [...doc.querySelectorAll('.tagged_as a, .product_meta .tagged_as a')].map((node) => clean(node.textContent)).filter(Boolean),
       sizes: productSizes, size_prices: sizePrices, images: productImages.map((item) => item.src), image_details: productImages,
       description, short_description: text(doc, ['.woocommerce-product-details__short-description', '.summary .short-description']), long_description: description,
+      size_guide: sizeGuide,
       description_headings: [...doc.querySelectorAll('#tab-description h2, #tab-description h3, .woocommerce-Tabs-panel--description h2, .woocommerce-Tabs-panel--description h3')].map((node) => clean(node.textContent)).filter(Boolean),
       global_form: globalForm(doc), product_attributes: attributes(info, productSizes), additional_information: info,
       jsonLdFound: Object.keys(schema).length ? 1 : 0, parser: 'cfs-woocommerce-html'
