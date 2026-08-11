@@ -586,6 +586,8 @@
     product.price_case = runPriceCase(product);
     product.forbidden_terms_case = runForbiddenTermsCase(product);
     product.alt_text_case = runAltTextCase(product);
+    product.colors = extractColorsFromText(product.title);
+    product.color_consistency_case = runColorConsistencyCase(product);
     product.size_chart_case = runSizeChartCase(product);
     product.url_name_case = runUrlNameCase(product);
     product.personalise_option_case = runPersonaliseOptionCase(product);
@@ -1600,6 +1602,149 @@
       findings
     };
   }
+
+  function extractColorsFromText(value) {
+    const colorRules = [
+      ['Sky Blue', ['sky blue']],
+      ['Royal Blue', ['royal blue']],
+      ['Light Blue', ['light blue']],
+      ['Dark Blue', ['dark blue']],
+      ['Light Green', ['light green']],
+      ['Dark Green', ['dark green']],
+      ['Light Grey', ['light grey', 'light gray']],
+      ['Dark Grey', ['dark grey', 'dark gray']],
+      ['Neon Yellow', ['neon yellow', 'fluorescent yellow']],
+      ['Neon Green', ['neon green', 'fluorescent green']],
+      ['Navy', ['navy']],
+      ['Black', ['black']],
+      ['White', ['white']],
+      ['Red', ['red']],
+      ['Blue', ['blue']],
+      ['Green', ['green']],
+      ['Yellow', ['yellow']],
+      ['Gold', ['gold']],
+      ['Orange', ['orange']],
+      ['Purple', ['purple']],
+      ['Pink', ['pink']],
+      ['Grey', ['grey', 'gray']],
+      ['Silver', ['silver']],
+      ['Maroon', ['maroon']],
+      ['Burgundy', ['burgundy']],
+      ['Brown', ['brown']],
+      ['Beige', ['beige']],
+      ['Cream', ['cream']],
+      ['Teal', ['teal']],
+      ['Turquoise', ['turquoise']],
+      ['Mint', ['mint']],
+      ['Aqua', ['aqua']],
+      ['Multicolour', ['multicolour', 'multicolor']]
+    ];
+    let remaining = ` ${cleanText(value).toLowerCase()} `;
+    const foundColors = new Map();
+
+    colorRules.forEach(([color, aliases]) => {
+      aliases.forEach((alias) => {
+        const expression = new RegExp(`(^|[^a-z])${escapeRegex(alias)}(?=$|[^a-z])`, 'i');
+        const match = remaining.match(expression);
+        if (!match) return;
+        if (!foundColors.has(color)) foundColors.set(color, match.index + String(match[1] || '').length);
+        remaining = remaining.replace(new RegExp(`(^|[^a-z])${escapeRegex(alias)}(?=$|[^a-z])`, 'ig'), (match) => match.replace(/[a-z]/ig, ' '));
+      });
+    });
+    return [...foundColors.entries()].sort((left, right) => left[1] - right[1]).map(([color]) => color);
+  }
+
+  function runColorConsistencyCase(product) {
+    const titleColors = Array.isArray(product.colors) ? product.colors : extractColorsFromText(product.title);
+    const images = getAltTextImages(product).filter((image) => !getSupportImageType(image));
+    const descriptions = [
+      { label: 'Short Description', value: cleanText(product.short_description || '') },
+      { label: 'Long Description', value: cleanText(product.long_description || product.description || '') }
+    ].filter((item) => item.value && !/^(?:n\/?a|not found)$/i.test(item.value));
+    const findings = [];
+    let warningCount = 0;
+    let failCount = 0;
+
+    if (!images.length) {
+      findings.push({
+        target: 'Product images',
+        status: 'WARNING',
+        issue: 'alt_text_unavailable',
+        message: 'No product image Alt Text was available for colour comparison.',
+        title_colors: titleColors,
+        alt_colors: []
+      });
+      warningCount += 1;
+    }
+
+    images.forEach((image, index) => {
+      const target = `image:${index + 1}`;
+      const alt = cleanText(image.alt || image.image_alt || '');
+      if (!alt) {
+        findings.push({
+          target,
+          status: 'WARNING',
+          issue: 'alt_text_unavailable',
+          message: 'Alt Text is N/A, so colour comparison could not be completed.',
+          image: image.src || image.image || '',
+          title_colors: titleColors,
+          alt_colors: []
+        });
+        warningCount += 1;
+        return;
+      }
+
+      const altColors = extractColorsFromText(alt);
+      const unexpectedInAlt = altColors.filter((color) => !titleColors.includes(color));
+      if (unexpectedInAlt.length) {
+        findings.push({
+          target,
+          status: 'FAIL',
+          issue: 'alt_colour_missing_in_title',
+          message: 'Colour found in this Alt Text is missing from the product title.',
+          image: image.src || image.image || '',
+          title_colors: titleColors,
+          alt_colors: altColors,
+          colors: unexpectedInAlt,
+          current_alt: alt
+        });
+        failCount += 1;
+      }
+    });
+
+    descriptions.forEach((description) => {
+      const descriptionColors = extractColorsFromText(description.value);
+      // A description may mention supporting or secondary colours. It is valid
+      // as long as it mentions at least one colour extracted from the title.
+      // Descriptions with no colour data stay neutral (PASS), as they cannot
+      // confirm or contradict the title colour.
+      if (!descriptionColors.length || !titleColors.length) return;
+      const matchingTitleColors = descriptionColors.filter((color) => titleColors.includes(color));
+      if (matchingTitleColors.length) return;
+      findings.push({
+        target: description.label,
+        status: 'FAIL',
+        issue: 'description_has_no_title_colour',
+        message: 'This description mentions colours but none of them match a colour in the product title.',
+        title_colors: titleColors,
+        alt_colors: descriptionColors,
+        compared_source: description.label,
+        colors: descriptionColors
+      });
+      failCount += 1;
+    });
+
+    return {
+      case: 'Color Consistency Case',
+      status: failCount ? 'FAIL' : warningCount ? 'WARNING' : 'PASS',
+      title_colors: titleColors,
+      checked_images: images.length,
+      checked_descriptions: descriptions.map((description) => description.label),
+      issue_count: findings.length,
+      findings
+    };
+  }
+
   function getAltTextImages(product) {
     if (Array.isArray(product.image_details) && product.image_details.length) return product.image_details;
     return (Array.isArray(product.images) ? product.images : []).map((src, index) => ({ index, src, alt: '' }));
@@ -2811,6 +2956,7 @@
       { key: 'price_case', label: 'Price Case', render: renderPriceCaseSection },
       { key: 'forbidden_terms_case', label: 'Forbidden Terms Case', render: renderForbiddenTermsSection },
       { key: 'alt_text_case', label: 'Alt Text Case', render: renderAltTextSection },
+      { key: 'color_consistency_case', label: 'Color Consistency Case', render: renderColorConsistencySection },
       { key: 'size_chart_case', label: 'Size Chart Case', render: renderSizeChartSection },
       { key: 'url_name_case', label: 'URL / Name Case', render: renderUrlNameSection },
       { key: 'personalise_option_case', label: 'Personalise Option Case', render: renderPersonaliseOptionSection },
@@ -2885,6 +3031,7 @@
     addRow(summary, 'URL', product.sourceUrl || product.url || 'Not found');
     addRow(summary, 'Title', product.title || 'Not found');
     addRow(summary, 'SKU', product.sku || 'Not found');
+    addRow(summary, 'Colors', (product.colors || []).join(', ') || 'Not found');
     addRow(summary, 'Price', [product.regularPrice, product.price].filter(Boolean).join(' -> ') || 'Not found');
     addRow(summary, 'Currency', product.currency || 'Not found');
     addRow(summary, 'Sizes', (product.sizes || []).join(', ') || 'Not found');
@@ -2968,6 +3115,7 @@
 
     addRow(summary, 'Title', product.title || 'Not found');
     addRow(summary, 'SKU', product.sku || 'Not found');
+    addRow(summary, 'Colors', (product.colors || []).join(', ') || 'Not found');
     addRow(summary, 'Price', [product.regularPrice, product.price].filter(Boolean).join(' -> ') || 'Not found');
     addRow(summary, 'Currency', product.currency || 'Not found');
     addRow(summary, 'Sizes', product.sizes.join(', ') || 'Not found');
@@ -3002,6 +3150,7 @@
     renderPriceCaseSection(area, product.price_case || {});
     renderForbiddenTermsSection(area, product.forbidden_terms_case || { status: 'PASS', findings: [], scanned_fields: [] });
     renderAltTextSection(area, product.alt_text_case || { status: 'PASS', findings: [], image_count: 0, issue_count: 0 });
+    renderColorConsistencySection(area, product.color_consistency_case || { status: 'SKIP', title_colors: [], checked_images: 0, findings: [], issue_count: 0 });
     renderSizeChartSection(area, product.size_chart_case || { status: 'SKIP', findings: [], issue_count: 0 });
     renderUrlNameSection(area, product.url_name_case || { status: 'PASS', findings: [], issue_count: 0 });
     renderPersonaliseOptionSection(area, product.personalise_option_case || { status: 'PASS', findings: [], issue_count: 0 });
@@ -3103,6 +3252,19 @@
     }
     area.appendChild(list);
   }
+  function renderColorConsistencySection(area, colorCase) {
+    area.appendChild(createCaseStatusCard('Color Consistency Case', colorCase, getColorConsistencyCaseMeta(colorCase)));
+
+    const list = document.createElement('div');
+    list.className = 'check-list case-detail-list';
+    const findings = Array.isArray(colorCase.findings) ? colorCase.findings : [];
+    if (!findings.length) {
+      list.innerHTML = '<p class="muted">Title and product image Alt Text colours are consistent.</p>';
+    } else {
+      findings.forEach((finding) => list.appendChild(createColorConsistencyFindingItem(finding)));
+    }
+    area.appendChild(list);
+  }
   function createCaseStatusCard(labelText, caseData, metaLines) {
     const status = String(caseData.status || 'SKIP').toUpperCase();
     const statusBox = document.createElement('div');
@@ -3193,6 +3355,14 @@
       `Images: ${productImages}`,
       `Skipped: ${altCase.skipped_image_count || 0}`,
       `Issues: ${altCase.issue_count || 0}`
+    ];
+  }
+  function getColorConsistencyCaseMeta(colorCase) {
+    return [
+      `Title colors: ${(colorCase.title_colors || []).join(', ') || 'None found'}`,
+      `Images checked: ${colorCase.checked_images || 0}`,
+      `Descriptions checked: ${(colorCase.checked_descriptions || []).join(', ') || 'None available'}`,
+      `Issues: ${colorCase.issue_count || 0}`
     ];
   }
   function createDataSynchronizationFindingItem(finding) {
@@ -3410,6 +3580,40 @@
     content.appendChild(detail);
     content.appendChild(suggestion);
     content.appendChild(current);
+    item.appendChild(content);
+    item.appendChild(badge);
+    return item;
+  }
+  function createColorConsistencyFindingItem(finding) {
+    const status = String(finding.status || 'WARNING').toUpperCase();
+    const className = status === 'FAIL' ? 'fail' : status === 'PASS' ? 'pass' : 'warning';
+    const item = document.createElement('div');
+    item.className = `check-item ${className}`;
+
+    const content = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'check-item-title';
+    title.textContent = `${finding.target || 'Image'}: ${finding.issue || 'color_consistency_issue'}`;
+    const detail = document.createElement('div');
+    detail.className = 'check-item-detail';
+    detail.textContent = finding.message || '';
+    const expected = document.createElement('div');
+    expected.className = 'check-item-detail';
+    expected.textContent = `Title colors: ${(finding.title_colors || []).join(', ') || 'None found'}`;
+    const actual = document.createElement('div');
+    actual.className = 'check-item-detail';
+    actual.textContent = `${finding.compared_source || 'Alt'} colors: ${(finding.alt_colors || []).join(', ') || 'None found'}`;
+    const mismatch = document.createElement('div');
+    mismatch.className = 'check-item-detail';
+    mismatch.textContent = finding.colors && finding.colors.length ? `Unexpected colors: ${finding.colors.join(', ')}` : '';
+    const badge = document.createElement('div');
+    badge.className = `check-badge ${className}`;
+    badge.textContent = status;
+    content.appendChild(title);
+    content.appendChild(detail);
+    content.appendChild(expected);
+    content.appendChild(actual);
+    if (mismatch.textContent) content.appendChild(mismatch);
     item.appendChild(content);
     item.appendChild(badge);
     return item;
