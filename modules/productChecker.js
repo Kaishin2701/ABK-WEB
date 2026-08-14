@@ -26,12 +26,16 @@
   const variationFetchConcurrency = 3;
   const variationDetailCache = new Map();
   let storeApiTransport = 'unknown';
+  let forbiddenTermRules = [];
+  let forbiddenTermRulesLoadPromise = null;
 
   function init() {
     const btn = document.getElementById('btn-product-fetch');
     const input = document.getElementById('product-url');
 
     if (!btn || !input) return;
+
+    void loadForbiddenTermRules();
 
     btn.addEventListener('click', fetchFromInput);
     input.addEventListener('keydown', (event) => {
@@ -85,6 +89,7 @@
   }
 
   async function checkProductUrl(url) {
+    await loadForbiddenTermRules();
     const siteHint = identifyProductSite({}, url);
     const page = await fetchProductPage(url, siteHint);
     if (isNotFoundPageContent(page.content)) return buildNotFoundProduct(url, page.provider);
@@ -109,6 +114,34 @@
         seen.add(url);
         return true;
       });
+  }
+
+  function loadForbiddenTermRules() {
+    if (forbiddenTermRulesLoadPromise) return forbiddenTermRulesLoadPromise;
+
+    forbiddenTermRulesLoadPromise = fetch('Data/forbidden-terms.json', { cache: 'no-store' })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((rules) => {
+        if (!Array.isArray(rules)) throw new Error('Rules file must contain an array.');
+        forbiddenTermRules = rules
+          .filter((rule) => rule && typeof rule.find === 'string' && rule.find.trim() && typeof rule.replaceWith === 'string')
+          .map((rule) => ({
+            find: rule.find.trim(),
+            replaceWith: rule.replaceWith.trim(),
+            status: String(rule.status || 'WARNING').toUpperCase() === 'FAIL' ? 'FAIL' : 'WARNING'
+          }));
+        return forbiddenTermRules;
+      })
+      .catch((error) => {
+        console.warn('Forbidden term rules could not be loaded:', error.message);
+        forbiddenTermRules = [];
+        return forbiddenTermRules;
+      });
+
+    return forbiddenTermRulesLoadPromise;
   }
 
   function buildFetchErrorProduct(url, error) {
@@ -1168,6 +1201,16 @@
     return /personalise|personalize|customi[sz]e|name number|preferred name|preferred number/.test(text);
   }
   function runUrlNameCase(product) {
+    if (!product || !product.site || product.site.id !== 'kfk') {
+      return {
+        case: 'URL / Name Case',
+        status: 'SKIP',
+        checked_rules: 0,
+        issue_count: 0,
+        findings: []
+      };
+    }
+
     const title = cleanText(String(product.title || '').replace(/^#+\s*/, ''));
     const sourceUrl = product.sourceUrl || product.url || '';
     const slug = getProductSlug(sourceUrl).toLowerCase();
@@ -1234,8 +1277,8 @@
   function runSizeChartCase(product) {
     const rule = classifySizeChartRule(product);
     const altValidation = validateSizeChartAltText(product, rule);
-    const description = getSizeChartDescriptionText(product);
-    const dataFindings = isKeywordSizeChartSite(product) ? validateSizeChartData(product, description, rule) : [];
+    const sizeChartData = getSizeChartDataText(product);
+    const dataFindings = isKeywordSizeChartSite(product) ? validateSizeChartData(product, sizeChartData, rule) : [];
     const sizeGuideValidation = isKeywordSizeChartSite(product) ? validateSizeGuideType(product, rule) : { findings: [], actualSizeGuide: '' };
     const findings = [...altValidation.findings, ...dataFindings, ...sizeGuideValidation.findings];
 
@@ -1249,7 +1292,7 @@
         expected_size_chart_alts: altValidation.expectedAlts,
         size_chart_images: altValidation.images,
         detection_source: rule.detectionSource || 'SKU',
-        data_table_checked: Boolean(description),
+        data_table_checked: Boolean(sizeChartData),
         size_guide_checked: Boolean(sizeGuideValidation.actualSizeGuide),
         expected_size_guide: rule.sizeGuide || '',
         actual_size_guide: sizeGuideValidation.actualSizeGuide,
@@ -1267,7 +1310,7 @@
       expected_size_chart_alts: altValidation.expectedAlts,
       size_chart_images: altValidation.images,
       detection_source: rule.detectionSource || 'SKU',
-      data_table_checked: Boolean(description),
+      data_table_checked: Boolean(sizeChartData),
       size_guide_checked: Boolean(sizeGuideValidation.actualSizeGuide),
       expected_size_guide: rule.sizeGuide || '',
       actual_size_guide: sizeGuideValidation.actualSizeGuide,
@@ -1339,7 +1382,15 @@
     return null;
   }
 
-  function getSizeChartDescriptionText(product) {
+  function getSizeChartDataText(product) {
+    // KFK, CFS and RFK render the authoritative measurements inside their
+    // dedicated Size Guide tab. Do not validate against product descriptions,
+    // which may contain unrelated layout or promotional text.
+    if (isKeywordSizeChartSite(product)) {
+      const tabText = cleanText(product && product.size_guide || '');
+      return /^(?:n\/?a|not found)$/i.test(tabText) ? '' : tabText;
+    }
+
     return [...new Set([
       cleanText(product && product.short_description || ''),
       cleanText(product && product.long_description || ''),
@@ -1957,17 +2008,22 @@
             found: match.text,
             rule: rule.find,
             replace_with: rule.replaceWith,
+            status: rule.status || 'WARNING',
             context: buildMatchContext(value, match.index, match.end)
           });
         });
       });
     });
 
+    const failCount = findings.filter((finding) => finding.status === 'FAIL').length;
+    const warningCount = findings.filter((finding) => finding.status === 'WARNING').length;
     return {
       case: 'Forbidden Terms Case',
-      status: findings.length ? 'FAIL' : 'PASS',
+      status: failCount ? 'FAIL' : warningCount ? 'WARNING' : 'PASS',
       scanned_fields: fields.map((item) => item.field),
       issue_count: findings.length,
+      fail_count: failCount,
+      warning_count: warningCount,
       findings
     };
   }
@@ -2010,7 +2066,7 @@
     return `${before}${before ? ' ' : ''}[${found}]${after ? ' ' : ''}${after}`;
   }
 
-  function getForbiddenTermRules() {
+  function getLegacyForbiddenTermRules() {
     return [
       { find: 'official', replaceWith: 'football-inspired' },
       { find: 'official look', replaceWith: 'football-inspired look' },
@@ -2098,6 +2154,11 @@
       { find: 'Old Trafford', replaceWith: 'brand detail' }
     ];
   }
+
+  function getForbiddenTermRules() {
+    return forbiddenTermRules;
+  }
+
   function classifyPriceProduct(product) {
     const haystack = normalizeCaseText([
       product.title,
@@ -3443,6 +3504,8 @@
     const findings = Array.isArray(forbiddenCase.findings) ? forbiddenCase.findings : [];
     return [
       `Issues: ${findings.length}`,
+      `Fail: ${forbiddenCase.fail_count || 0}`,
+      `Warnings: ${forbiddenCase.warning_count || 0}`,
       `Fields: ${(forbiddenCase.scanned_fields || []).length}`
     ];
   }
@@ -3760,8 +3823,10 @@
   }
 
   function createForbiddenFindingItem(finding) {
+    const status = String(finding.status || 'WARNING').toUpperCase();
+    const className = status === 'FAIL' ? 'fail' : 'warning';
     const item = document.createElement('div');
-    item.className = 'check-item fail';
+    item.className = `check-item ${className}`;
 
     const content = document.createElement('div');
 
@@ -3778,8 +3843,8 @@
     context.textContent = finding.context || '';
 
     const badge = document.createElement('div');
-    badge.className = 'check-badge fail';
-    badge.textContent = 'FIX';
+    badge.className = `check-badge ${className}`;
+    badge.textContent = status === 'FAIL' ? 'FIX' : 'WARNING';
 
     content.appendChild(title);
     content.appendChild(detail);
