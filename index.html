@@ -24,7 +24,7 @@
             <button class="tab-btn" onclick="switchTab('tab-sku')">SKU Generator</button>
             <button class="tab-btn" onclick="switchTab('tab-product')">Product Checker</button>
         </nav>
-        <div class="footer-info">Ver 2.2 Web</div>
+        <div class="footer-info">Ver 5.4 Web</div>
     </aside>
 
     <main>
@@ -60,6 +60,13 @@
                     <label>Rename:</label>
                     <input type="text" id="inp-rename" value="{default name}">
                 </div>
+
+                <div class="input-row">
+                    <label>Output:</label>
+                    <input type="text" id="output-path-display" placeholder="Downloads (default)" readonly>
+                    <button id="btn-select-output" class="btn-secondary" type="button">Select Folder</button>
+                </div>
+                <p id="output-folder-note" class="muted">No folder selected: files will download normally.</p>
 
                 <div class="sliders-row">
                     <div class="slider-group">
@@ -222,7 +229,7 @@
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
     <script src="script.js?v=3.0"></script>
-    <script src="modules/watermark.js"></script>
+    <script src="modules/watermark.js?v=1.1"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>
     <script src="modules/product-checker/core/contracts.js"></script>

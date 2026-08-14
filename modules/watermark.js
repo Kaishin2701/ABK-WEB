@@ -1,10 +1,12 @@
 let inputFiles = [];
 let wmImg = null;
+let outputDirectoryHandle = null;
 
 // UI Connect
 document.getElementById('inp-files').addEventListener('change', handleFileSelect);
 document.getElementById('inp-wm').addEventListener('change', handleWmSelect);
 document.getElementById('btn-start-wm').addEventListener('click', startProcess);
+document.getElementById('btn-select-output').addEventListener('click', selectOutputFolder);
 document.getElementById('rng-quality').addEventListener('input', (e) => document.getElementById('lbl-quality').innerText = `Quality: ${e.target.value}`);
 document.getElementById('rng-opacity').addEventListener('input', (e) => document.getElementById('lbl-opacity').innerText = `Opacity: ${e.target.value}%`);
 
@@ -20,7 +22,7 @@ function handleFileSelect(e) {
     const newFiles = Array.from(e.target.files);
     inputFiles = [...inputFiles, ...newFiles];
     renderGallery();
-    log(`ÄÃ£ thÃªm ${newFiles.length} áº£nh.`);
+    log(`Đã thêm ${newFiles.length} ảnh.`);
 }
 
 function handleWmSelect(e) {
@@ -31,7 +33,7 @@ function handleWmSelect(e) {
         reader.onload = (ev) => {
             wmImg = new Image();
             wmImg.src = ev.target.result;
-            log(`ÄÃ£ load Watermark: ${file.name}`);
+            log(`Đã load Watermark: ${file.name}`);
         };
         reader.readAsDataURL(file);
     }
@@ -41,7 +43,7 @@ function renderGallery() {
     const area = document.getElementById('gallery-area');
     area.innerHTML = '';
     if(inputFiles.length === 0) {
-        area.innerHTML = '<p id="gallery-placeholder">Trá»‘ng...</p>';
+        area.innerHTML = '<p id="gallery-placeholder">Trống...</p>';
         return;
     }
     inputFiles.forEach(f => {
@@ -55,25 +57,67 @@ function renderGallery() {
 function clearGallery() {
     inputFiles = [];
     renderGallery();
-    log("ÄÃ£ xÃ³a danh sÃ¡ch áº£nh.");
+    log("Đã xóa danh sách ảnh.");
+}
+
+async function selectOutputFolder() {
+    if (!window.showDirectoryPicker) {
+        alert('This browser does not support folder selection. Please use Chrome or Edge.');
+        return;
+    }
+
+    try {
+        outputDirectoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        document.getElementById('output-path-display').value = outputDirectoryHandle.name;
+        document.getElementById('output-folder-note').textContent = 'Processed images will be saved directly to the selected folder.';
+        log(`Output folder selected: ${outputDirectoryHandle.name}`);
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Unable to select output folder:', error);
+            alert('Unable to access the selected folder. Please try again.');
+        }
+    }
+}
+
+async function saveProcessedFilesToFolder(processedFiles) {
+    if (!outputDirectoryHandle) return false;
+
+    try {
+        const permission = await outputDirectoryHandle.requestPermission({ mode: 'readwrite' });
+        if (permission !== 'granted') throw new Error('Write permission was not granted.');
+
+        for (const { blob, name } of processedFiles) {
+            const fileHandle = await outputDirectoryHandle.getFileHandle(name, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+        }
+
+        log(`Saved ${processedFiles.length} images to: ${outputDirectoryHandle.name}`);
+        return true;
+    } catch (error) {
+        console.error('Unable to save to selected folder:', error);
+        log(`Unable to save to selected folder: ${error.message}. Falling back to download.`);
+        return false;
+    }
 }
 
 async function startProcess() {
-    if(!inputFiles.length) return alert("ChÆ°a chá»n áº£nh!");
+    if(!inputFiles.length) return alert("Chưa chọn ảnh!");
 
     const btn = document.getElementById('btn-start-wm');
-    btn.disabled = true; btn.innerText = "ÄANG Xá»¬ LÃ...";
+    btn.disabled = true; btn.innerText = "ĐANG XỬ LÝ...";
     document.getElementById('log-box').value = ""; // Clear log
-    
+
     const mode = document.getElementById('sel-mode').value;
     const opacity = parseInt(document.getElementById('rng-opacity').value) / 100;
     const quality = parseInt(document.getElementById('rng-quality').value) / 100;
     const renameTpl = document.getElementById('inp-rename').value;
     const downloadArea = document.getElementById('download-area');
-    downloadArea.innerHTML = ''; // Reset link táº£i
+    downloadArea.innerHTML = ''; // Reset link tải
 
-    log(`ðŸš€ Báº¯t Ä‘áº§u xá»­ lÃ½ ${inputFiles.length} áº£nh...`);
-    if(!wmImg) log("âš ï¸ KhÃ´ng cÃ³ watermark, chá»‰ xá»­ lÃ½ hÃ¬nh áº£nh gá»‘c.");
+    log(`🚀 Bắt đầu xử lý ${inputFiles.length} ảnh...`);
+    if(!wmImg) log("⚠️ Không có watermark, chỉ xử lý hình ảnh gốc.");
 
     const processedFiles = []; // Array of {blob, name}
 
@@ -81,7 +125,7 @@ async function startProcess() {
         try {
             const file = inputFiles[i];
             const blob = await processImage(file, mode, opacity, quality);
-            
+
             // Rename logic
             let baseName = file.name.substring(0, file.name.lastIndexOf('.'));
             let newName = renameTpl.replace('{default name}', baseName);
@@ -89,14 +133,18 @@ async function startProcess() {
 
             processedFiles.push({blob, name: newName});
 
-            log(`âœ… OK: ${file.name} -> ${newName}`);
+            log(`✅ OK: ${file.name} -> ${newName}`);
             document.getElementById('p-bar-fill').style.width = Math.round(((i+1)/inputFiles.length)*100) + "%";
             document.getElementById('status-lbl').innerText = `${i+1}/${inputFiles.length}`;
         } catch(e) {
-            log(`âŒ Error: ${inputFiles[i].name} - ${e}`);
+            log(`❌ Error: ${inputFiles[i].name} - ${e}`);
         }
-        await new Promise(r => setTimeout(r, 100)); // Delay Ä‘á»ƒ UI mÆ°á»£t
+        await new Promise(r => setTimeout(r, 100)); // Delay để UI mượt
     }
+
+    const outputFileCount = processedFiles.length;
+    const savedToFolder = outputFileCount > 0 && await saveProcessedFilesToFolder(processedFiles);
+    if (savedToFolder) processedFiles.length = 0;
 
     // Download logic
     if(processedFiles.length === 1) {
@@ -119,12 +167,16 @@ async function startProcess() {
         a.href = zipUrl; a.download = 'processed_images.zip';
         downloadArea.appendChild(a);
         a.click();
-        log(`ðŸ“¦ ÄÃ£ táº¡o ZIP vá»›i ${processedFiles.length} áº£nh.`);
+        log(`📦 Đã tạo ZIP với ${processedFiles.length} ảnh.`);
     }
 
-    log("ðŸŽ‰ HoÃ n táº¥t!");
+    log("🎉 Hoàn tất!");
     btn.disabled = false; btn.innerText = "START PROCESSING";
-    const msg = processedFiles.length > 1 ? "Xá»­ lÃ½ xong! ÄÃ£ táº£i xuá»‘ng file ZIP." : "Xá»­ lÃ½ xong! Kiá»ƒm tra thÆ° má»¥c Táº£i vá» cá»§a trÃ¬nh duyá»‡t.";
+    if (savedToFolder) {
+        alert(`Processing complete! Saved ${outputFileCount} images to ${outputDirectoryHandle.name}.`);
+        return;
+    }
+    const msg = processedFiles.length > 1 ? "Xử lý xong! Đã tải xuống file ZIP." : "Xử lý xong! Kiểm tra thư mục Tải về của trình duyệt.";
     alert(msg);
 }
 
@@ -137,11 +189,11 @@ function processImage(file, mode, opacity, quality) {
                 const canvas = document.createElement('canvas');
                 canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
-                
+
                 // 1. Draw Original
                 ctx.drawImage(img, 0, 0);
 
-                // 2. Draw Watermark (chá»‰ náº¿u cÃ³)
+                // 2. Draw Watermark (chỉ nếu có)
                 if(wmImg) {
                     ctx.globalAlpha = opacity;
                     const W = canvas.width, H = canvas.height;
@@ -163,7 +215,7 @@ function processImage(file, mode, opacity, quality) {
                         const newH = Math.floor(scale / ratio);
                         const stepX = scale + 50;
                         const stepY = newH + 50;
-                        
+
                         for(let x=0; x < W + stepX; x += stepX) {
                             for(let y=0; y < H + stepY; y += stepY) {
                                 ctx.drawImage(wmImg, x, y, scale, newH);
@@ -171,7 +223,7 @@ function processImage(file, mode, opacity, quality) {
                         }
                     }
                 }
-                
+
                 canvas.toBlob(resolve, 'image/webp', quality);
             };
             img.src = e.target.result;
