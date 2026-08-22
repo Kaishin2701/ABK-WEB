@@ -7,28 +7,33 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK App V3</title>
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 
-    <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Hide toolbar" aria-expanded="true">−</button>
-    <aside class="sidebar">
-        <div class="logo-area">
-            <img src="assets/logo.png" alt="Logo" onerror="this.style.display='none'">
-            <h2>ABK TOOL</h2>
+    <header class="top-toolbar">
+        <div class="app-brand">
+            <img src="assets/logo.png" alt="ABK" onerror="this.style.display='none'">
+            <span>ABK TOOL</span>
         </div>
-        <nav>
-            <button class="tab-btn active" onclick="switchTab('tab-watermark')">Auto Watermark</button>
-            <button class="tab-btn" onclick="switchTab('tab-linkcheck')">Link Checker</button>
-            <button class="tab-btn" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
-            <button class="tab-btn" onclick="switchTab('tab-sku')">SKU Generator</button>
-            <button class="tab-btn" onclick="switchTab('tab-product')">Product Checker</button>
+        <nav class="top-nav" aria-label="Main navigation">
+            <div class="tool-menu-wrap">
+                <button id="tool-menu-toggle" class="top-tab" type="button" data-section="tools" aria-expanded="false" aria-controls="tool-menu">Tool <span aria-hidden="true">⌄</span></button>
+                <div id="tool-menu" class="tool-menu" role="menu">
+                    <button type="button" role="menuitem" onclick="switchTab('tab-watermark')">Auto Watermark</button>
+                    <button type="button" role="menuitem" onclick="switchTab('tab-linkcheck')">Link Checker</button>
+                    <button type="button" role="menuitem" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
+                    <button type="button" role="menuitem" onclick="switchTab('tab-sku')">SKU Generator</button>
+                    <button type="button" role="menuitem" onclick="switchTab('tab-product')">Product Checker</button>
+                </div>
+            </div>
+            <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
         </nav>
-        <div class="footer-info">Ver 5.4 Web</div>
-    </aside>
+        <div class="app-version">Ver 5.4.1 Web</div>
+    </header>
 
     <main>
-        <div id="tab-watermark" class="tab-content active">
+        <div id="tab-watermark" class="tab-content">
             <div class="header-title">ABK IMAGE PROCESSOR</div>
             
             <div class="group-box">
@@ -222,13 +227,26 @@
                     </div>
                 </div>
             </div>        </div>
+
+        <div id="tab-information" class="tab-content active">
+            <div class="header-title">INFORMATION</div>
+            <div class="group-box update-log">
+                <div class="lbl-title">UPDATE LOG</div>
+                <article class="update-entry">
+                    <div class="update-entry-meta"><strong>Ver 5.4.1</strong><span>Current release</span></div>
+                    <h3>Tool navigation and information hub</h3>
+                    <p>Tools are now grouped under the horizontal Tool menu. This Information tab records future app updates.</p>
+                </article>
+                <p class="muted">Future entries will follow the sequence 5.4.2, 5.4.3, and so on.</p>
+            </div>
+        </div>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=3.0"></script>
+    <script src="script.js?v=3.1"></script>
     <script src="modules/watermark.js?v=1.1"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>

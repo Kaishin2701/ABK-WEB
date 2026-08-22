@@ -1,18 +1,30 @@
 function switchTab(tabId) {
-    // Hide all
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    
-    // Show one
-    document.getElementById(tabId).classList.add('active');
-    
-    // Active button logic
-    const btns = document.querySelectorAll('.tab-btn');
-    if(tabId === 'tab-watermark') btns[0].classList.add('active');
-    if(tabId === 'tab-linkcheck') btns[1].classList.add('active');
-    if(tabId === 'tab-cleaner') btns[2].classList.add('active');
-    if(tabId === 'tab-sku') btns[3].classList.add('active');
-    if(tabId === 'tab-product') btns[4].classList.add('active');
+    const activeTab = document.getElementById(tabId);
+    if (!activeTab) return;
+    activeTab.classList.add('active');
+
+    const section = tabId === 'tab-information' ? 'information' : 'tools';
+    document.querySelectorAll('[data-section]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.section === section);
+    });
+    closeToolMenu();
+}
+
+function closeToolMenu() {
+    const menu = document.getElementById('tool-menu');
+    const toggle = document.getElementById('tool-menu-toggle');
+    if (menu) menu.classList.remove('open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleToolMenu() {
+    const menu = document.getElementById('tool-menu');
+    const toggle = document.getElementById('tool-menu-toggle');
+    if (!menu || !toggle) return;
+    const willOpen = !menu.classList.contains('open');
+    menu.classList.toggle('open', willOpen);
+    toggle.setAttribute('aria-expanded', String(willOpen));
 }
 
 // ============= SKU GENERATOR FUNCTIONS =============
@@ -89,39 +101,14 @@ function skuExportCsv() {
     window.URL.revokeObjectURL(url);
 }
 
-function isPhoneLayout() {
-    return window.matchMedia('(max-width: 768px)').matches;
-}
-
-function setSidebarHidden(hidden) {
-    const toggle = document.getElementById('sidebar-toggle');
-    if (!toggle) return;
-
-    if (isPhoneLayout()) {
-        document.body.classList.toggle('sidebar-open', !hidden);
-        document.body.classList.remove('sidebar-hidden');
-    } else {
-        document.body.classList.toggle('sidebar-hidden', hidden);
-        document.body.classList.remove('sidebar-open');
-    }
-
-    toggle.textContent = hidden ? '+' : 'âˆ’';
-    toggle.setAttribute('aria-label', hidden ? 'Show toolbar' : 'Hide toolbar');
-    toggle.setAttribute('aria-expanded', String(!hidden));
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('sidebar-toggle');
-    if (!toggle) return;
+    const toolToggle = document.getElementById('tool-menu-toggle');
+    const toolMenu = document.getElementById('tool-menu');
+    if (!toolToggle || !toolMenu) return;
 
-    setSidebarHidden(isPhoneLayout());
-    toggle.addEventListener('click', () => {
-        const isHidden = isPhoneLayout()
-            ? !document.body.classList.contains('sidebar-open')
-            : document.body.classList.contains('sidebar-hidden');
-        setSidebarHidden(!isHidden);
+    toolToggle.addEventListener('click', toggleToolMenu);
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.tool-menu-wrap')) closeToolMenu();
     });
-
-    window.addEventListener('resize', () => setSidebarHidden(isPhoneLayout()));
 });
 
