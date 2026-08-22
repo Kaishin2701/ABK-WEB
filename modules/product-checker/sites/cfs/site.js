@@ -19,6 +19,7 @@ window.ProductCheckerSiteRegistry.register({
       'Printed Bundle': 66.29
     },
     retroPriceAdjustment: 1,
+    longSleeveAdjustment: 1,
     printedUpgrade: 10,
     printedBundleUpgrade: 20,
     addOns: { badge: 2.99, personalisation: 10 }

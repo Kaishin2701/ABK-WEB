@@ -2296,7 +2296,8 @@
     if (priceRules.skipRetro && classification.productType === 'Retro Shirt / Retro Kids Kit') return null;
     const base = basePrices[classification.baseProductType || classification.productType];
     if (base === undefined) return null;
-    const adjustedBase = base + Number(classification.priceAdjustment || 0);
+    const longSleeveAdjustment = isLongSleeveProduct(product) ? Number(priceRules.longSleeveAdjustment || 0) : 0;
+    const adjustedBase = base + Number(classification.priceAdjustment || 0) + longSleeveAdjustment;
 
     if (classification.isPrinted && classification.isBundle && priceRules.printedBundleUpgrade) {
       return roundMoney(adjustedBase + priceRules.printedBundleUpgrade);
@@ -2311,6 +2312,11 @@
     }
 
     return roundMoney(adjustedBase);
+  }
+
+  function isLongSleeveProduct(product) {
+    const titleAndSku = normalizeCaseText([product && product.title, product && product.sku].join(' '));
+    return /\blong[\s-]?sleeves?\b/.test(titleAndSku);
   }
 
   function getSitePriceRules(product) {
