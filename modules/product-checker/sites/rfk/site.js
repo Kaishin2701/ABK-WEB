@@ -18,6 +18,7 @@ window.ProductCheckerSiteRegistry.register({
       "Men's Shirt Bundle": 47.49
     },
     retroPriceAdjustment: 1,
+    longSleeveAdjustment: 1,
     printedUpgrade: 10,
     applyPrintedUpgradeToBundles: true
   },

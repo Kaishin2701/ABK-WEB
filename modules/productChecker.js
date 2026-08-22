@@ -2213,7 +2213,7 @@
           : withSocks ? 'Retro Kid Kit - With Socks' : 'Retro Kid Kit - No Socks';
         return { productType, isBundle, socks: withSocks ? 'with_socks' : 'no_socks', isPrinted: printed, siteId };
       }
-      if (siteId === 'cfs') {
+      if (['kfk', 'cfs', 'rfk'].includes(siteId)) {
         const baseProductType = isShirtOnly
           ? "Men's Shirt / Women's Shirt"
           : isAdult && !isKids
@@ -2228,14 +2228,6 @@
           isPrinted: printed,
           siteId
         };
-      }
-      if (siteId === 'rfk') {
-        const baseProductType = isShirtOnly
-          ? "Men's Shirt / Women's Shirt"
-          : isAdult && !isKids
-            ? (withSocks ? 'Adult Kit - With Socks' : 'Adult Kit - No Socks')
-            : (withSocks ? 'Kids Kit - With Socks' : 'Kids Kit - No Socks');
-        return { productType: 'Retro Shirt / Retro Kids Kit', baseProductType, priceAdjustment: 1, isBundle, socks: withSocks ? 'with_socks' : 'no_socks', isPrinted: printed, siteId };
       }
       return { productType: 'Retro Shirt / Retro Kids Kit', isBundle, socks: withSocks ? 'with_socks' : 'no_socks', isPrinted: printed, reason: 'Retro products use +GBP 1 on top of base price; base reference is not available yet.' };
     }

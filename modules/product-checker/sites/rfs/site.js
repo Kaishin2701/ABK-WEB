@@ -19,6 +19,7 @@ window.ProductCheckerSiteRegistry.register({
       'Kids Bundle - With Socks': 47.99,
       "Men's Shirt Bundle": 47.99
     },
+    longSleeveAdjustment: 1,
     printedUpgrade: 10,
     printedBundleUpgrade: 20,
     addOns: {

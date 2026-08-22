@@ -18,7 +18,7 @@ window.ProductCheckerSiteRegistry.register({
       'Printed Bundle': 64.99
     },
     printedUpgrade: 10,
-    skipRetro: true
+    longSleeveAdjustment: 1
   },
   parser: 'woocommerce-kfk'
 });
