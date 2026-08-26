@@ -132,7 +132,14 @@
         image_id: Number(id) || null, role: result.length ? 'gallery' : 'main'
       });
     };
-    doc.querySelectorAll('.woocommerce-product-gallery img, .product-gallery img, .product-images img').forEach(add);
+    // Only read the actual WooCommerce gallery slides.  RFK's page also has
+    // recommendation carousels with generic `product-gallery` classes; using
+    // that broad selector pulled unrelated products into the check results.
+    doc.querySelectorAll([
+      '.woocommerce-product-gallery__wrapper > .woocommerce-product-gallery__image > img',
+      '.woocommerce-product-gallery__wrapper > .woocommerce-product-gallery__image > a > img',
+      '.woocommerce-product-gallery .woocommerce-product-gallery__image > img'
+    ].join(', ')).forEach(add);
     if (!result.length) doc.querySelectorAll('meta[property="og:image"]').forEach(add);
     return result;
   }

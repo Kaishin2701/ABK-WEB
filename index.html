@@ -29,7 +29,7 @@
             </div>
             <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
         </nav>
-        <div class="app-version">Ver 5.4.1 Web</div>
+        <div class="app-version">Ver 5.4.5 Web</div>
     </header>
 
     <main>
@@ -232,12 +232,7 @@
             <div class="header-title">INFORMATION</div>
             <div class="group-box update-log">
                 <div class="lbl-title">UPDATE LOG</div>
-                <article class="update-entry">
-                    <div class="update-entry-meta"><strong>Ver 5.4.1</strong><span>Current release</span></div>
-                    <h3>Tool navigation and information hub</h3>
-                    <p>Tools are now grouped under the horizontal Tool menu. This Information tab records future app updates.</p>
-                </article>
-                <p class="muted">Future entries will follow the sequence 5.4.2, 5.4.3, and so on.</p>
+                <div id="update-log-list" class="update-log-list" aria-live="polite"></div>
             </div>
         </div>
     </main>
@@ -256,9 +251,9 @@
     <script src="modules/product-checker/sites/rfs/site.js"></script>
     <script src="modules/product-checker/sites/rfs/parser.js"></script>
     <script src="modules/product-checker/sites/cfs/site.js"></script>
-    <script src="modules/product-checker/sites/cfs/parser.js"></script>
+    <script src="modules/product-checker/sites/cfs/parser.js?v=1.1"></script>
     <script src="modules/product-checker/sites/rfk/site.js"></script>
-    <script src="modules/productChecker.js?v=6.8"></script>
+    <script src="modules/productChecker.js?v=6.9"></script>
 </body>
 </html>
 

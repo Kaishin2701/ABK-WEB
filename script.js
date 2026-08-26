@@ -1,3 +1,37 @@
+const UPDATE_LOG_ENTRIES = [
+    {
+        version: '5.4.5',
+        label: 'Current release',
+        title: 'Player data synchronization',
+        description: 'Player names now match across all websites when EI includes a shirt number and AI provides the player’s full name.'
+    },
+    {
+        version: '5.4.4',
+        label: 'Previous release',
+        title: 'RFK product data reliability',
+        description: 'RFK now restores Additional Information and uses only the product gallery, even when the page is fetched through a text fallback.'
+    },
+    {
+        version: '5.4.3',
+        label: 'Previous release',
+        title: 'Simplified Update Log',
+        description: 'Removed the version-sequence note to keep the Information page focused on release history.'
+    },
+];
+
+function renderUpdateLog() {
+    const list = document.getElementById('update-log-list');
+    if (!list) return;
+
+    list.innerHTML = UPDATE_LOG_ENTRIES.slice(0, 3).map((entry) => `
+        <article class="update-entry">
+            <div class="update-entry-meta"><strong>Ver ${entry.version}</strong><span>${entry.label}</span></div>
+            <h3>${entry.title}</h3>
+            <p>${entry.description}</p>
+        </article>
+    `).join('');
+}
+
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     const activeTab = document.getElementById(tabId);
@@ -102,6 +136,7 @@ function skuExportCsv() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderUpdateLog();
     const toolToggle = document.getElementById('tool-menu-toggle');
     const toolMenu = document.getElementById('tool-menu');
     if (!toolToggle || !toolMenu) return;

@@ -95,7 +95,10 @@
     if (isNotFoundPageContent(page.content)) return buildNotFoundProduct(url, page.provider);
     const product = parseProductContent(page.content, url, page.type, page.provider, siteHint);
     product.site = identifyProductSite(product, url);
-    if (product.site.id === 'kfk') await enrichProductWithStoreApi(product, url);
+    // RFK exposes the same public WooCommerce Store API as KFK.  It is a
+    // reliable fallback when browser CORS proxies can only return Jina's text
+    // rendition, which omits the attributes tab and mixes related images in.
+    if (['kfk', 'rfk'].includes(product.site.id)) await enrichProductWithStoreApi(product, url);
     if (product.site.id === 'rfs') await enrichWordPressMediaAltText(product, url);
     product.site = identifyProductSite(product, url);
     applyProductCaseTests(product);
@@ -206,8 +209,9 @@
     if (!slug) return product;
 
     try {
+      const origin = new URL(url).origin;
       setStatus('Fetching variation details from Store API...');
-      const apiProduct = await fetchJson(`https://kidsfootballkit.co.uk/wp-json/wc/store/v1/products?slug=${encodeURIComponent(slug)}`);
+      const apiProduct = await fetchJson(`${origin}/wp-json/wc/store/v1/products?slug=${encodeURIComponent(slug)}`);
       const parent = Array.isArray(apiProduct) ? apiProduct[0] : apiProduct;
       if (!parent || !parent.id) return product;
 
@@ -235,7 +239,7 @@
       );
 
       const variations = Array.isArray(parent.variations) ? parent.variations : [];
-      const variationDetails = await fetchVariationDetails(variations, product.size_prices);
+      const variationDetails = await fetchVariationDetails(variations, product.size_prices, origin);
       const sizePrices = variationDetails.filter(Boolean).map((variation) => normalizeVariationDetail(variation));
       if (sizePrices.length) product.size_prices = mergeSizePrices(product.size_prices, sizePrices);
     } catch (error) {
@@ -245,13 +249,13 @@
     return product;
   }
 
-  async function fetchVariationDetail(variation) {
+  async function fetchVariationDetail(variation, origin) {
     const id = variation && variation.id;
     if (!id) return null;
-    const cacheKey = String(id);
+    const cacheKey = `${origin || ''}:${id}`;
     if (variationDetailCache.has(cacheKey)) return variationDetailCache.get(cacheKey);
 
-    const request = fetchVariationDetailFromApi(variation);
+    const request = fetchVariationDetailFromApi(variation, origin);
     variationDetailCache.set(cacheKey, request);
     return request;
   }
@@ -284,13 +288,13 @@
     return [...htmlFirst, ...textFallback];
   }
 
-  async function fetchVariationDetailFromApi(variation) {
+  async function fetchVariationDetailFromApi(variation, origin) {
     const id = variation && variation.id;
     let lastError = null;
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const detail = await fetchJson(`https://kidsfootballkit.co.uk/wp-json/wc/store/v1/products/${id}`);
+        const detail = await fetchJson(`${origin || 'https://kidsfootballkit.co.uk'}/wp-json/wc/store/v1/products/${id}`);
         if (hasVariationPrice(detail)) return detail;
         return buildMissingVariationPriceResult(variation, 'Variation response did not include a price.');
       } catch (error) {
@@ -317,7 +321,7 @@
     return /timeout|network|failed to fetch|http (?:429|5\d\d)|service unavailable|internal server error/i.test(message);
   }
 
-  async function fetchVariationDetails(variations, existingPrices) {
+  async function fetchVariationDetails(variations, existingPrices, origin) {
     const missingVariations = (Array.isArray(variations) ? variations : []).filter((variation) => !hasExistingVariationPrice(variation, existingPrices));
     if (!missingVariations.length) return [];
 
@@ -329,7 +333,7 @@
     const worker = async () => {
       while (nextIndex < missingVariations.length) {
         const currentIndex = nextIndex++;
-        details[currentIndex] = await fetchVariationDetail(missingVariations[currentIndex]);
+        details[currentIndex] = await fetchVariationDetail(missingVariations[currentIndex], origin);
         completed += 1;
         setStatus(`Fetching missing size prices ${completed}/${missingVariations.length}...`);
       }
@@ -573,6 +577,7 @@
     return (Array.isArray(images) ? images : []).map((image, index) => ({
       index,
       id: image.id || null,
+      image_id: image.id || null,
       src: image.src || '',
       thumbnail: image.thumbnail || '',
       alt: image.alt || '',
@@ -1001,10 +1006,12 @@
     if (!left || !right) return false;
     if (left === right) return true;
 
-    // EI commonly stores "SURNAME 25", while AI stores the player's full
-    // name. A complete surname is sufficient when it appears as a full word.
+    // EI commonly stores a surname (or a multi-word surname) plus a shirt
+    // number, while AI stores the player's full name.  Accept a complete
+    // trailing name segment, e.g. "DE BRUYNE 11" = "Kevin De Bruyne".
     const [shorter, longer] = left.length <= right.length ? [left, right] : [right, left];
     const shorterWords = shorter.split(' ').filter(Boolean);
+    if (shorterWords.length >= 2 && longer.endsWith(` ${shorter}`)) return true;
     return shorterWords.length === 1
       && shorterWords[0].length >= 4
       && new RegExp(`(^|\\s)${escapeRegex(shorterWords[0])}(?=\\s|$)`, 'i').test(longer);
