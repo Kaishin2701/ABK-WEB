@@ -1,21 +1,21 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '5.4.5',
+        version: '5.4.9',
         label: 'Current release',
-        title: 'Player data synchronization',
-        description: 'Player names now match across all websites when EI includes a shirt number and AI provides the player’s full name.'
+        title: 'Reliable text fallback price',
+        description: 'Text fallback no longer displays mistaken prices; it uses a valid Store API price or shows the price as unavailable.'
     },
     {
-        version: '5.4.4',
+        version: '5.4.8',
         label: 'Previous release',
-        title: 'RFK product data reliability',
-        description: 'RFK now restores Additional Information and uses only the product gallery, even when the page is fetched through a text fallback.'
+        title: 'RFS product ID fallback',
+        description: 'RFS now resolves products by WordPress ID when Store API cannot find a slug, keeping AI and gallery data available.'
     },
     {
-        version: '5.4.3',
+        version: '5.4.7',
         label: 'Previous release',
-        title: 'Simplified Update Log',
-        description: 'Removed the version-sequence note to keep the Information page focused on release history.'
+        title: 'Player name matching',
+        description: 'Data Sync now understands joined surnames, short player names and first-name initials across all websites.'
     },
 ];
 

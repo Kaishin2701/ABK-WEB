@@ -61,17 +61,26 @@
       || {};
   }
 
-  function extractAdditionalInformation(schemaProduct) {
+  function extractAdditionalInformation(doc, schemaProduct) {
     const properties = Array.isArray(schemaProduct.additionalProperty) ? schemaProduct.additionalProperty : [];
     const seen = new Set();
-    return properties.map((property) => {
-      const sourceName = clean(property.name || '');
+    const items = [];
+    const add = (rawName, rawValue) => {
+      const sourceName = clean(rawName);
       const key = normaliseKey(sourceName);
-      const value = clean(property.value || '');
-      if (!key || !value || seen.has(`${key}:${value}`)) return null;
+      const value = clean(rawValue);
+      if (!key || !value || seen.has(`${key}:${value}`)) return;
       seen.add(`${key}:${value}`);
-      return { key, label: labelForAttribute(key, sourceName), value, source_name: sourceName };
-    }).filter(Boolean);
+      items.push({ key, label: labelForAttribute(key, sourceName), value, source_name: sourceName });
+    };
+
+    properties.forEach((property) => add(property.name, property.value));
+    // Some RFS product pages expose attributes only in the WooCommerce tab,
+    // rather than in JSON-LD. Read that tab as an AI source as well.
+    doc.querySelectorAll('.woocommerce-product-attributes tr, #tab-additional_information tr, .woocommerce-Tabs-panel--additional_information tr').forEach((row) => {
+      add(row.querySelector('th')?.textContent, row.querySelector('td')?.textContent);
+    });
+    return items;
   }
 
   function extractVariationPrices(doc) {
@@ -123,7 +132,13 @@
 
     // WooCommerce prints the same gallery image in full and thumbnail sizes.
     // Keep one representative image per attachment, not both DOM renderings.
-    doc.querySelectorAll('.woocommerce-product-gallery img, .product-gallery img').forEach(addImage);
+    // Do not query broad `product-gallery` containers: RFS uses them in
+    // recommendation sections, which caused unrelated products to be tested.
+    doc.querySelectorAll([
+      '.woocommerce-product-gallery__wrapper > .woocommerce-product-gallery__image > img',
+      '.woocommerce-product-gallery__wrapper > .woocommerce-product-gallery__image > a > img',
+      '.woocommerce-product-gallery .woocommerce-product-gallery__image > img'
+    ].join(', ')).forEach(addImage);
     // OG image is a sharing fallback, not a content image with an Alt attribute.
     if (!images.length) doc.querySelectorAll('meta[property="og:image"]').forEach(addImage);
     return images;
@@ -202,7 +217,7 @@
   function parseHtml(html, url) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const schemaProduct = extractSchemaProduct(doc);
-    const additionalInformation = extractAdditionalInformation(schemaProduct);
+    const additionalInformation = extractAdditionalInformation(doc, schemaProduct);
     const sizePrices = extractVariationPrices(doc);
     const variationForm = doc.querySelector('form.variations_form[data-product_id]');
     const images = extractImages(doc);

@@ -98,7 +98,7 @@
     // RFK exposes the same public WooCommerce Store API as KFK.  It is a
     // reliable fallback when browser CORS proxies can only return Jina's text
     // rendition, which omits the attributes tab and mixes related images in.
-    if (['kfk', 'rfk'].includes(product.site.id)) await enrichProductWithStoreApi(product, url);
+    if (['kfk', 'rfs', 'rfk'].includes(product.site.id)) await enrichProductWithStoreApi(product, url);
     if (product.site.id === 'rfs') await enrichWordPressMediaAltText(product, url);
     product.site = identifyProductSite(product, url);
     applyProductCaseTests(product);
@@ -211,8 +211,20 @@
     try {
       const origin = new URL(url).origin;
       setStatus('Fetching variation details from Store API...');
-      const apiProduct = await fetchJson(`${origin}/wp-json/wc/store/v1/products?slug=${encodeURIComponent(slug)}`);
-      const parent = Array.isArray(apiProduct) ? apiProduct[0] : apiProduct;
+      let apiProduct = await fetchJson(`${origin}/wp-json/wc/store/v1/products?slug=${encodeURIComponent(slug)}`);
+      let parent = Array.isArray(apiProduct) ? apiProduct[0] : apiProduct;
+      // RFS sometimes has a published WordPress product whose Store API slug
+      // index is temporarily empty. Resolve its canonical WordPress ID, then
+      // ask Store API for that exact product so AI and gallery data are kept.
+      if (!parent || !parent.id) {
+        setStatus('Resolving product details by WordPress ID...');
+        const wordpressProducts = await fetchJson(`${origin}/wp-json/wp/v2/product?slug=${encodeURIComponent(slug)}`);
+        const wordpressProduct = Array.isArray(wordpressProducts) ? wordpressProducts[0] : wordpressProducts;
+        if (wordpressProduct && wordpressProduct.id) {
+          apiProduct = await fetchJson(`${origin}/wp-json/wc/store/v1/products/${wordpressProduct.id}`);
+          parent = Array.isArray(apiProduct) ? apiProduct[0] : apiProduct;
+        }
+      }
       if (!parent || !parent.id) return product;
 
       product.url = product.sourceUrl || url;
@@ -223,8 +235,17 @@
       product.sku = cleanText(parent.sku || product.sku || '');
       product.store_api_price = priceToNumber(parent.prices && parent.prices.price, parent.prices);
       product.base_price = product.store_api_price;
-      product.price = product.page_price || product.store_api_price || product.price;
-      product.regularPrice = product.page_regular_price || priceToNumber(parent.prices && parent.prices.regular_price, parent.prices) || product.regularPrice;
+      const storeRegularPrice = priceToNumber(parent.prices && parent.prices.regular_price, parent.prices);
+      const isTextFallback = product.rawFormat === 'text' || product.fetchProvider === 'Jina Reader Text';
+      // Reader text can mistake an age, rating or image filename for a price.
+      // Prefer a positive Store API price when available; otherwise leave the
+      // price unknown rather than displaying a fabricated amount.
+      product.price = isTextFallback
+        ? (product.store_api_price > 0 ? product.store_api_price : '')
+        : product.page_price || product.store_api_price || product.price;
+      product.regularPrice = isTextFallback
+        ? (storeRegularPrice > 0 ? storeRegularPrice : '')
+        : product.page_regular_price || storeRegularPrice || product.regularPrice;
       product.currency = (parent.prices && parent.prices.currency_code) || product.currency || '';
       product.review_count = Number(parent.review_count || 0);
       product.categories = Array.isArray(parent.categories) ? parent.categories.map((item) => item.name).filter(Boolean) : product.categories;
@@ -1006,15 +1027,30 @@
     if (!left || !right) return false;
     if (left === right) return true;
 
-    // EI commonly stores a surname (or a multi-word surname) plus a shirt
-    // number, while AI stores the player's full name.  Accept a complete
-    // trailing name segment, e.g. "DE BRUYNE 11" = "Kevin De Bruyne".
-    const [shorter, longer] = left.length <= right.length ? [left, right] : [right, left];
+    // EI often stores surname + shirt number, while AI stores a full name.
+    // Support joined surnames (VANDEVEN = van de Ven) and abbreviated first
+    // names (G. JESUS = Gabriel Jesus) without maintaining player-specific
+    // exceptions.
+    const compact = (value) => value.replace(/\s+/g, '');
+    const [shorter, longer] = compact(left).length <= compact(right).length ? [left, right] : [right, left];
+    const shorterCompact = compact(shorter);
+    const longerCompact = compact(longer);
     const shorterWords = shorter.split(' ').filter(Boolean);
-    if (shorterWords.length >= 2 && longer.endsWith(` ${shorter}`)) return true;
-    return shorterWords.length === 1
-      && shorterWords[0].length >= 4
-      && new RegExp(`(^|\\s)${escapeRegex(shorterWords[0])}(?=\\s|$)`, 'i').test(longer);
+    const longerWords = longer.split(' ').filter(Boolean);
+
+    if (shorterCompact.length >= 4 && longerCompact.endsWith(shorterCompact)) return true;
+    if (shorterWords.length === 1) {
+      return shorterWords[0].length >= 3
+        && new RegExp(`(^|\\s)${escapeRegex(shorterWords[0])}(?=\\s|$)`, 'i').test(longer);
+    }
+
+    // Compare name words from the end. A one-letter EI token can be the
+    // initial for the full first name supplied by AI.
+    if (shorterWords.length > longerWords.length || shorterWords[shorterWords.length - 1].length < 3) return false;
+    return shorterWords.every((word, index) => {
+      const fullWord = longerWords[longerWords.length - shorterWords.length + index];
+      return word === fullWord || (word.length === 1 && fullWord.startsWith(word));
+    });
   }
 
   function normalizeDataSyncValue(field, value) {
