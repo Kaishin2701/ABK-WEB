@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KFK Description Builder</title>
+    <link rel="stylesheet" href="./styles.css?v=6.0.1">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">KFK 2026/27</p>
+        <h1>Description Builder</h1>
+        <div class="mode-tabs" aria-label="Builder mode">
+          <button class="mode-tab active" type="button" data-mode="product">Product</button>
+          <button class="mode-tab" type="button" data-mode="bundle">Bundle</button>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="loadSampleBtn" type="button">Load sample</button>
+        <button id="clearAllBtn" type="button">Clear all</button>
+        <button id="generateBtn" type="button" class="primary">Generate</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel input-panel" aria-labelledby="input-title">
+        <div class="section-heading">
+          <h2 id="input-title">Verified Fact Input</h2>
+          <span id="branchBadge" class="badge neutral">No branch yet</span>
+        </div>
+
+        <form id="factForm" class="fact-grid">
+          <label class="span-2">
+            Product name
+            <input name="product_name" type="text" placeholder="Inter Miami Home Kids Football Kit 2026/27" required>
+          </label>
+
+          <label>
+            Team
+            <input name="team" type="text" placeholder="Inter Miami" required>
+          </label>
+
+          <label>
+            Season
+            <input name="season" type="text" placeholder="2026/27" required>
+          </label>
+
+          <label>
+            Sleeve badge option
+            <select name="badge_status" aria-label="Sleeve badge option">
+              <option value="unavailable">Unavailable</option>
+              <option value="available">Available</option>
+            </select>
+          </label>
+
+          <label id="badgeLeagueField" class="hidden">
+            Badge league (when available)
+            <span class="badge-league-autocomplete">
+              <span class="badge-league-control">
+                <input name="badge_league" type="text" autocomplete="off" placeholder="Search a league, e.g. LaLiga" aria-autocomplete="list" aria-controls="badgeLeagueSuggestions" aria-expanded="false">
+                <button id="badgeChampionToggle" class="badge-champion-toggle" type="button" aria-label="Champion badge: off" aria-pressed="false" title="Mark this as a champions badge">&#127942;</button>
+              </span>
+              <span id="badgeLeagueSuggestions" class="badge-league-suggestions hidden" role="listbox" aria-label="Badge league suggestions"></span>
+            </span>
+            <input name="badge_champion_status" type="hidden" value="not_champion">
+          </label>
+
+          <div class="span-2 product-selection-field">
+            <span class="field-label">Product selection</span>
+            <input name="audience" type="hidden">
+            <input name="product_type" type="hidden">
+            <input name="kit_type" type="hidden">
+            <input name="sleeve_length" type="hidden">
+            <input name="included_items" type="hidden">
+            <input name="socks_status" type="hidden">
+            <input name="listing_configuration" type="hidden">
+            <div class="product-item-controls">
+              <select id="productAudienceSelect" aria-label="Product audience">
+                <option value="kids">Kids</option>
+                <option value="men">Men</option>
+                <option value="adult">Adult</option>
+                <option value="women">Women</option>
+                <option value="baby">Baby</option>
+              </select>
+              <select id="productKindSelect" aria-label="Product kind">
+                <option value="Kit">Kit</option>
+                <option value="Long Sleeve Kit">Long Sleeve Kit</option>
+                <option value="Shirt">Shirt</option>
+                <option value="Long Sleeve Shirt">Long Sleeve Shirt</option>
+                <option value="Suit">Suit</option>
+              </select>
+              <select id="productKitTypeSelect" aria-label="Product kit type">
+                <option value="home">Home</option>
+                <option value="away">Away</option>
+                <option value="third">Third</option>
+                <option value="fourth">Fourth</option>
+                <option value="fifth">Fifth</option>
+                <option value="goalkeeper">Goalkeeper</option>
+                <option value="training">Training</option>
+                <option value="pre_match">Pre Match</option>
+                <option value="special_edition">Special Edition</option>
+                <option value="retro">Retro</option>
+                <option value="other">Other kit type</option>
+              </select>
+              <select id="productSocksSelect" aria-label="Product socks option">
+                <option value="unavailable">No Socks</option>
+                <option value="included">With Socks</option>
+              </select>
+              <select id="productPrintSelect" aria-label="Product print option">
+                <option value="plain_customisable">No Printed</option>
+                <option value="pre_applied_player">Printed</option>
+              </select>
+              <input id="productOtherKitType" name="kit_type_another" class="another-input" type="text" placeholder="Enter other kit type">
+              <div id="productPrintFields" class="product-print-fields">
+                <input id="productPrintName" name="pre_applied_name" type="text" placeholder="Name, e.g. MESSI">
+                <input id="productPrintNumber" name="pre_applied_number" type="text" placeholder="Number, e.g. 10">
+              </div>
+            </div>
+          </div>
+
+          <div class="span-2 image-colour-assistant" id="imageColourAssistant">
+            <div class="assistant-heading">
+              <div>
+                <span class="field-label">Image colour assistant</span>
+                <p class="assistant-copy">Optional browser-only helper. Select a colour field, then click the product image or a palette colour. The colour is applied directly and can be edited as text.</p>
+              </div>
+              <span id="imageColourStatus" class="badge neutral">Not used</span>
+            </div>
+
+            <div class="assistant-upload-row">
+              <label>
+                Upload product image
+                <input id="imageColourFile" type="file" accept="image/*">
+              </label>
+              <button id="useImageTitleBtn" type="button" disabled title="Use the image filename as the product title">Title</button>
+              <button id="clearImageColourBtn" type="button" disabled>Clear image</button>
+            </div>
+
+            <div class="image-colour-fields" aria-label="Product colours">
+              <label id="mainColourShirtField" class="colour-target" data-colour-target="shirt">
+                Main shirt colour
+                <input name="main_colour_shirt" type="text" placeholder="White" data-colour-target-select="shirt">
+              </label>
+
+              <label id="mainColourShortsField" class="colour-target" data-colour-target="shorts">
+                Main shorts colour (kits only)
+                <input name="main_colour_shorts" type="text" placeholder="Navy" data-colour-target-select="shorts">
+              </label>
+
+              <label id="mainColourSocksField" class="colour-target" data-colour-target="socks">
+                Main socks colour (with socks only)
+                <input name="main_colour_socks" type="text" placeholder="White" data-colour-target-select="socks">
+              </label>
+            </div>
+
+            <div id="imageColourWorkspace" class="image-colour-workspace hidden">
+              <div class="image-colour-preview">
+                <canvas id="imageColourCanvas" aria-label="Product image colour sampler"></canvas>
+                <p id="imageColourInstruction" class="assistant-note">Choose a colour field, then click the garment's main colour in the image.</p>
+              </div>
+
+              <div class="image-colour-review">
+                <p class="assistant-note"><strong>Choose a colour field above,</strong> then click the product image or a palette colour to fill it automatically. You can also type a colour directly.</p>
+
+                <div id="imageColourPalette" class="image-colour-palette hidden" aria-live="polite">
+                  <span class="palette-label">Image colour candidates:</span>
+                  <div id="imageColourPaletteButtons" class="palette-buttons" aria-label="Image colour candidates"></div>
+                  <button id="viewMoreImageColoursBtn" class="view-more-colours hidden" type="button" aria-expanded="false">View more</button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="span-2 fixed-facts-panel" aria-label="Fixed KFK facts">
+            <span class="field-label">Fixed KFK facts</span>
+            <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester &middot; League-specific sleeve badge add-on: &pound;3.99 when available</div>
+          </div>
+
+        </form>
+
+        <form id="bundleForm" class="fact-grid hidden">
+          <label>
+            Bundle name
+            <input name="bundle_name" type="text" placeholder="Inter Miami Dad &amp; Son Bundle 2026/27" required>
+          </label>
+
+          <label>
+            Bundle label
+            <input name="bundle_label" type="text" placeholder="e.g. Birthday Gift Pack">
+          </label>
+
+          <div class="span-2 bundle-piece-editor" aria-labelledby="bundle-piece-title">
+            <div class="piece-editor-heading">
+              <div>
+                <span id="bundle-piece-title" class="field-label">Piece editor</span>
+                <p class="assistant-copy">Configure one complete product, choose who it is for, then add it to the bundle. Repeat for every piece.</p>
+              </div>
+              <span id="bundlePieceEditorBadge" class="badge neutral">New piece</span>
+            </div>
+
+            <input name="bundle_items" type="hidden">
+
+            <div class="piece-identity-grid">
+              <label>
+                This piece is for
+                <select id="bundleRecipientSelect" aria-label="Piece recipient">
+                  <option value="">Select recipient...</option>
+                  <option value="dad">Dad</option>
+                  <option value="mum">Mum</option>
+                  <option value="son">Son</option>
+                  <option value="daughter">Daughter</option>
+                  <option value="child">Child</option>
+                  <option value="partner">Partner</option>
+                  <option value="adult">Adult</option>
+                  <option value="kid">Kid</option>
+                  <option value="none">None</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label id="bundleRecipientLabelField">
+                Recipient label (optional)
+                <input id="bundleRecipientLabel" type="text" placeholder="e.g. Son 1, Son 2 or Coach">
+              </label>
+              <label>
+                Audience
+                <select id="bundleAudienceSelect" aria-label="Piece audience">
+                  <option value="">Select audience...</option>
+                  <option value="kids">Kids</option>
+                  <option value="men">Men</option>
+                  <option value="adult">Adult</option>
+                  <option value="women">Women</option>
+                  <option value="baby">Baby</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="piece-fact-grid">
+              <label class="span-2">
+                Product name
+                <input id="bundleProductName" type="text" placeholder="Inter Miami Home Men's Shirt 2026/27">
+              </label>
+              <label>
+                Team
+                <input id="bundleItemTheme" type="text" placeholder="Inter Miami">
+              </label>
+              <label>
+                Season
+                <input id="bundleItemSeason" type="text" placeholder="2026/27">
+              </label>
+              <label>
+                Sleeve badge option
+                <select id="bundleBadgeStatusSelect" aria-label="Piece sleeve badge option">
+                  <option value="unavailable">Unavailable</option>
+                  <option value="available">Available</option>
+                </select>
+              </label>
+              <label id="bundleBadgeLeagueField" class="hidden">
+                Badge league
+                <span class="badge-league-control">
+                  <input id="bundleBadgeLeague" type="text" list="bundleBadgeLeagueOptions" placeholder="e.g. Premier League">
+                  <button id="bundleBadgeChampionToggle" class="badge-champion-toggle" type="button" aria-label="Champion badge: off" aria-pressed="false" title="Mark this as a champions badge">&#127942;</button>
+                </span>
+                <datalist id="bundleBadgeLeagueOptions">
+                  <option value="Premier League"></option>
+                  <option value="LaLiga"></option>
+                  <option value="Serie A"></option>
+                  <option value="Bundesliga"></option>
+                  <option value="Ligue 1"></option>
+                  <option value="UEFA Champions League"></option>
+                  <option value="UEFA Europa League"></option>
+                </datalist>
+              </label>
+            </div>
+
+            <div class="piece-product-controls">
+              <select id="bundleProductSelect" aria-label="Piece product kind">
+                <option value="Kit">Kit</option>
+                <option value="Long Sleeve Kit">Long Sleeve Kit</option>
+                <option value="Shirt">Shirt</option>
+                <option value="Long Sleeve Shirt">Long Sleeve Shirt</option>
+                <option value="Suit">Suit</option>
+              </select>
+              <select id="bundleKitTypeSelect" aria-label="Piece kit type">
+                <option value="home">Home</option>
+                <option value="away">Away</option>
+                <option value="third">Third</option>
+                <option value="fourth">Fourth</option>
+                <option value="fifth">Fifth</option>
+                <option value="goalkeeper">Goalkeeper</option>
+                <option value="training">Training</option>
+                <option value="pre_match">Pre Match</option>
+                <option value="special_edition">Special Edition</option>
+                <option value="retro">Retro</option>
+                <option value="other">Other kit type</option>
+              </select>
+              <select id="bundleSocksSelect" aria-label="Piece socks option">
+                <option value="unavailable">No Socks</option>
+                <option value="included">With Socks</option>
+              </select>
+              <select id="bundlePrintSelect" aria-label="Piece print option">
+                <option value="plain_customisable">No Printed</option>
+                <option value="pre_applied_player">Printed</option>
+              </select>
+              <select id="bundlePersonalisationSelect" aria-label="Piece personalisation availability">
+                <option value="available">Personalisation Available</option>
+                <option value="unavailable">Personalisation Unavailable</option>
+              </select>
+              <input id="bundleItemAnother" class="another-input" type="text" placeholder="Enter other kit type">
+              <div id="bundlePrintFields" class="bundle-print-fields">
+                <input id="bundlePrintName" type="text" placeholder="Name, e.g. MESSI">
+                <input id="bundlePrintNumber" type="text" placeholder="Number, e.g. 10">
+              </div>
+            </div>
+
+            <div class="piece-size-controls">
+              <label>
+                Size range mode
+                <select id="bundleSizeRangeModeSelect" aria-label="Piece size range mode">
+                  <option value="standard">Standard for audience</option>
+                  <option value="custom">Custom range</option>
+                </select>
+              </label>
+              <label>
+                Visible size range
+                <input id="bundleVisibleSizeRange" type="text" placeholder="Choose an audience to derive the standard range" readonly>
+              </label>
+            </div>
+
+            <div class="image-colour-assistant bundle-colour-assistant">
+              <div class="assistant-heading">
+                <div>
+                  <span class="field-label">Piece image &amp; colour assistant</span>
+                  <p class="assistant-copy">Upload this piece's product image, select a garment field, then click the image or a palette colour.</p>
+                </div>
+                <span id="bundleImageColourStatus" class="badge neutral">Not used</span>
+              </div>
+              <div class="assistant-upload-row">
+                <label>
+                  Upload piece image
+                  <input id="bundleImageColourFile" type="file" accept="image/*">
+                </label>
+                <button id="bundleUseImageTitleBtn" type="button" disabled>Title</button>
+                <button id="bundleClearImageColourBtn" type="button" disabled>Clear image</button>
+              </div>
+              <div class="image-colour-fields" aria-label="Piece colours">
+                <label id="bundleMainColourShirtField" class="colour-target active" data-bundle-colour-target="shirt">
+                  Main shirt colour
+                  <input id="bundleMainColourShirt" type="text" placeholder="White" data-bundle-colour-target-select="shirt">
+                </label>
+                <label id="bundleMainColourShortsField" class="colour-target" data-bundle-colour-target="shorts">
+                  Main shorts colour (kits only)
+                  <input id="bundleMainColourShorts" type="text" placeholder="Navy" data-bundle-colour-target-select="shorts">
+                </label>
+                <label id="bundleMainColourSocksField" class="colour-target" data-bundle-colour-target="socks">
+                  Main socks colour (with socks only)
+                  <input id="bundleMainColourSocks" type="text" placeholder="White" data-bundle-colour-target-select="socks">
+                </label>
+              </div>
+              <div id="bundleImageColourWorkspace" class="image-colour-workspace hidden">
+                <div class="image-colour-preview">
+                  <canvas id="bundleImageColourCanvas" aria-label="Bundle piece image colour sampler"></canvas>
+                  <p id="bundleImageColourInstruction" class="assistant-note">Choose a colour field, then click the garment's main colour in the image.</p>
+                </div>
+                <div class="image-colour-review">
+                  <p class="assistant-note"><strong>Each saved Piece keeps its own colours.</strong> The image is used only as a browser-local helper.</p>
+                  <div id="bundleImageColourPalette" class="image-colour-palette hidden" aria-live="polite">
+                    <span class="palette-label">Image colour candidates:</span>
+                    <div id="bundleImageColourPaletteButtons" class="palette-buttons" aria-label="Bundle piece image colour candidates"></div>
+                    <button id="bundleViewMoreImageColoursBtn" class="view-more-colours hidden" type="button" aria-expanded="false">View more</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="bundlePieceValidation" class="piece-validation hidden" role="alert"></div>
+            <div class="piece-editor-actions">
+              <button id="cancelBundlePieceEditBtn" class="hidden" type="button">Cancel edit</button>
+              <button id="addBundleItemBtn" class="primary" type="button">Add Piece</button>
+            </div>
+            <div class="fixed-facts-panel" aria-label="Fixed KFK facts for every bundle piece">
+              <span class="field-label">Fixed KFK facts for every Piece</span>
+              <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester &middot; League-specific sleeve badge add-on: &pound;3.99 when available</div>
+            </div>
+          </div>
+
+          <div class="span-2 bundle-items-field">
+            <div class="piece-list-heading">
+              <span class="field-label">Bundle Pieces</span>
+              <span id="bundleItemsSummary" class="bundle-items-summary">Pieces added: 0</span>
+            </div>
+            <div id="bundleItemsList" class="bundle-items-list bundle-piece-list" aria-live="polite"></div>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel output-panel" aria-labelledby="output-title">
+        <div class="section-heading">
+          <h2 id="output-title">Output</h2>
+          <div class="status-line">
+            <span id="qaBadge" class="badge neutral">not run</span>
+            <button id="copyBtn" type="button">Copy HTML</button>
+          </div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Output views">
+          <button class="tab active" type="button" data-view="preview">Preview</button>
+          <button class="tab" type="button" data-view="html">HTML</button>
+          <button class="tab" type="button" data-view="audit">Audit</button>
+        </div>
+
+        <div id="previewView" class="view active">
+          <article id="descriptionPreview" class="description-preview empty">
+            Generate a description to preview it here.
+          </article>
+        </div>
+
+        <div id="htmlView" class="view">
+          <textarea id="htmlOutput" readonly rows="18"></textarea>
+        </div>
+
+        <div id="auditView" class="view">
+          <pre id="auditOutput">qa_status: not_run</pre>
+        </div>
+      </section>
+    </main>
+
+    <script src="./data/national-teams.js?v=20260804h"></script>
+    <script src="./data/football-clubs.js?v=20260804h"></script>
+    <script src="./templates/product/product-templates.js?v=20260804h"></script>
+    <script src="./templates/bundle/bundle-templates.js?v=20260804h"></script>
+    <script src="./templates/template-registry.js?v=20260804h"></script>
+    <script src="./app.js?v=20260804h"></script>
+  </body>
+</html>

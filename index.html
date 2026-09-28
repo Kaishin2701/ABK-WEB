@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK App V3</title>
-    <link rel="stylesheet" href="style.css?v=3.1">
+    <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 
@@ -25,11 +25,12 @@
                     <button type="button" role="menuitem" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
                     <button type="button" role="menuitem" onclick="switchTab('tab-sku')">SKU Generator</button>
                     <button type="button" role="menuitem" onclick="switchTab('tab-product')">Product Checker</button>
+                    <button type="button" role="menuitem" onclick="switchTab('tab-create-description')">Create Description</button>
                 </div>
             </div>
             <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
         </nav>
-        <div class="app-version">Ver 5.4.9 Web</div>
+        <div class="app-version">Ver 6.0.1 Web</div>
     </header>
 
     <main>
@@ -228,6 +229,20 @@
                 </div>
             </div>        </div>
 
+        <div id="tab-create-description" class="tab-content description-tool-tab">
+            <div class="header-title">CREATE DESCRIPTION</div>
+            <div class="description-tool-shell">
+                <iframe
+                    id="create-description-frame"
+                    class="description-tool-frame"
+                    src="tools/create-description/index.html"
+                    title="Create Description"
+                    loading="lazy"
+                    allow="clipboard-write"
+                ></iframe>
+            </div>
+        </div>
+
         <div id="tab-information" class="tab-content active">
             <div class="header-title">INFORMATION</div>
             <div class="group-box update-log">
@@ -241,7 +256,7 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=3.1"></script>
+    <script src="script.js?v=3.2"></script>
     <script src="modules/watermark.js?v=1.1"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>

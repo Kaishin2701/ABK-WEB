@@ -1,21 +1,21 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '5.4.9',
+        version: '6.0.1',
         label: 'Current release',
+        title: 'Create Description dark theme',
+        description: 'Create Description now follows the ABK black and neon-green interface, including panels, forms, tabs, actions and status colours.'
+    },
+    {
+        version: '6.0.0',
+        label: 'Previous release',
+        title: 'Create Description integration',
+        description: 'Create Description is now available from the Tool menu, with its verified-facts, HTML generation and audit workflow kept intact.'
+    },
+    {
+        version: '5.4.9',
+        label: 'Previous release',
         title: 'Reliable text fallback price',
         description: 'Text fallback no longer displays mistaken prices; it uses a valid Store API price or shows the price as unavailable.'
-    },
-    {
-        version: '5.4.8',
-        label: 'Previous release',
-        title: 'RFS product ID fallback',
-        description: 'RFS now resolves products by WordPress ID when Store API cannot find a slug, keeping AI and gallery data available.'
-    },
-    {
-        version: '5.4.7',
-        label: 'Previous release',
-        title: 'Player name matching',
-        description: 'Data Sync now understands joined surnames, short player names and first-name initials across all websites.'
     },
 ];
 
