@@ -30,6 +30,14 @@ In **Bundle** mode, enter a Bundle name and optional customer-facing label,
 then configure and add each Piece independently. Every Piece keeps its own
 recipient, product facts, colours, size range, personalisation and badge
 settings. Add at least two valid Pieces before generating the Bundle HTML.
+Men and Women can be selected directly as Piece recipients for couple bundles
+or bundles containing multiple adult shirts.
+
+Product and Bundle badge selectors share one maintained league list. This list
+includes FIFA World Cup, FIFA Club World Cup, Saudi Pro League and MLS alongside
+the supported European competitions. National-team titles may use a standalone
+tournament year, for example `Spain World Cup Champions 2026` maps to season
+`2026`; club-season titles continue to use the `YYYY/YY` format.
 
 The **Load sample** button is for testing the builder only. Do not use sample
 facts as evidence for a real product.

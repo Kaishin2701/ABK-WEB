@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK App V3</title>
-    <link rel="stylesheet" href="style.css?v=3.2">
+    <link rel="stylesheet" href="style.css?v=3.5">
 </head>
 <body>
 
@@ -17,20 +17,20 @@
             <span>ABK TOOL</span>
         </div>
         <nav class="top-nav" aria-label="Main navigation">
+            <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
             <div class="tool-menu-wrap">
-                <button id="tool-menu-toggle" class="top-tab" type="button" data-section="tools" aria-expanded="false" aria-controls="tool-menu">Tool <span aria-hidden="true">⌄</span></button>
+                <button id="tool-menu-toggle" class="top-tab" type="button" data-section="tools" aria-expanded="false" aria-controls="tool-menu">Tools</button>
                 <div id="tool-menu" class="tool-menu" role="menu">
-                    <button type="button" role="menuitem" onclick="switchTab('tab-watermark')">Auto Watermark</button>
-                    <button type="button" role="menuitem" onclick="switchTab('tab-linkcheck')">Link Checker</button>
-                    <button type="button" role="menuitem" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
-                    <button type="button" role="menuitem" onclick="switchTab('tab-sku')">SKU Generator</button>
-                    <button type="button" role="menuitem" onclick="switchTab('tab-product')">Product Checker</button>
-                    <button type="button" role="menuitem" onclick="switchTab('tab-create-description')">Create Description</button>
+                    <button type="button" role="menuitem" data-tab-target="tab-watermark" onclick="switchTab('tab-watermark')">Auto Watermark</button>
+                    <button type="button" role="menuitem" data-tab-target="tab-linkcheck" onclick="switchTab('tab-linkcheck')">Link Checker</button>
+                    <button type="button" role="menuitem" data-tab-target="tab-cleaner" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
+                    <button type="button" role="menuitem" data-tab-target="tab-sku" onclick="switchTab('tab-sku')">SKU Generator</button>
+                    <button type="button" role="menuitem" data-tab-target="tab-product" onclick="switchTab('tab-product')">Product Checker</button>
+                    <button type="button" role="menuitem" data-tab-target="tab-create-description" onclick="switchTab('tab-create-description')">Create Description</button>
                 </div>
             </div>
-            <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
         </nav>
-        <div class="app-version">Ver 6.0.1 Web</div>
+        <div class="app-version">Ver 6.0.4 Web</div>
     </header>
 
     <main>
@@ -235,7 +235,7 @@
                 <iframe
                     id="create-description-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html"
+                    src="tools/create-description/index.html?v=6.0.2"
                     title="Create Description"
                     loading="lazy"
                     allow="clipboard-write"
@@ -248,6 +248,10 @@
             <div class="group-box update-log">
                 <div class="lbl-title">UPDATE LOG</div>
                 <div id="update-log-list" class="update-log-list" aria-live="polite"></div>
+                <div class="update-carousel-help">
+                    <span id="update-carousel-status">1 / 5</span>
+                    <span>Scroll, swipe, or use the Up and Down arrow keys</span>
+                </div>
             </div>
         </div>
     </main>
@@ -256,7 +260,7 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=3.2"></script>
+    <script src="script.js?v=3.6"></script>
     <script src="modules/watermark.js?v=1.1"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>

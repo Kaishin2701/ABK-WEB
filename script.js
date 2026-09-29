@@ -1,7 +1,25 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.0.1',
+        version: '6.0.4',
         label: 'Current release',
+        title: 'Circular update carousel',
+        description: 'The five most recent updates now rotate through an infinite vertical carousel using scroll, swipe or keyboard controls, with a reduced-motion fallback.'
+    },
+    {
+        version: '6.0.3',
+        label: 'Previous release',
+        title: 'Navigation refresh',
+        description: 'The ABK header now uses a centred glass-style navigation pill, a responsive two-column Tools menu and clearer active-tool states. Information now keeps the five most recent updates.'
+    },
+    {
+        version: '6.0.2',
+        label: 'Previous release',
+        title: 'Bundle facts and season inference',
+        description: 'Badge leagues now include FIFA World Cup, Saudi Pro League and MLS; Bundle Pieces support Men and Women recipients; national-team titles can infer a standalone tournament year.'
+    },
+    {
+        version: '6.0.1',
+        label: 'Previous release',
         title: 'Create Description dark theme',
         description: 'Create Description now follows the ABK black and neon-green interface, including panels, forms, tabs, actions and status colours.'
     },
@@ -11,25 +29,123 @@ const UPDATE_LOG_ENTRIES = [
         title: 'Create Description integration',
         description: 'Create Description is now available from the Tool menu, with its verified-facts, HTML generation and audit workflow kept intact.'
     },
-    {
-        version: '5.4.9',
-        label: 'Previous release',
-        title: 'Reliable text fallback price',
-        description: 'Text fallback no longer displays mistaken prices; it uses a valid Store API price or shows the price as unavailable.'
-    },
 ];
 
 function renderUpdateLog() {
     const list = document.getElementById('update-log-list');
     if (!list) return;
 
-    list.innerHTML = UPDATE_LOG_ENTRIES.slice(0, 3).map((entry) => `
-        <article class="update-entry">
+    list.innerHTML = UPDATE_LOG_ENTRIES.slice(0, 5).map((entry, index) => `
+        <article class="update-entry" data-update-card data-update-index="${index}">
             <div class="update-entry-meta"><strong>Ver ${entry.version}</strong><span>${entry.label}</span></div>
             <h3>${entry.title}</h3>
             <p>${entry.description}</p>
         </article>
     `).join('');
+}
+
+let activeUpdateIndex = 0;
+let updateWheelDelta = 0;
+let updateCarouselLocked = false;
+let updateCarouselUnlockTimer = null;
+let updatePointerStartY = null;
+
+function circularUpdateOffset(index, activeIndex, total) {
+    let offset = (index - activeIndex + total) % total;
+    if (offset > Math.floor(total / 2)) offset -= total;
+    return offset;
+}
+
+function renderUpdateCarousel() {
+    const cards = [...document.querySelectorAll('[data-update-card]')];
+    if (!cards.length) return;
+
+    const total = cards.length;
+    const isMobile = window.innerWidth <= 768;
+    const cardStep = isMobile ? 70 : 92;
+    activeUpdateIndex = ((activeUpdateIndex % total) + total) % total;
+
+    cards.forEach((card, index) => {
+        const offset = circularUpdateOffset(index, activeUpdateIndex, total);
+        const distance = Math.abs(offset);
+        const isActive = offset === 0;
+        card.style.setProperty('--carousel-y', `${offset * cardStep}px`);
+        card.style.setProperty('--carousel-scale', Math.max(0.82, 1 - (distance * (isMobile ? 0.065 : 0.055))).toFixed(3));
+        card.style.setProperty('--carousel-opacity', Math.max(0.28, 1 - (distance * 0.3)).toFixed(2));
+        card.style.setProperty('--carousel-depth', `${distance * -90}px`);
+        card.style.setProperty('--carousel-tilt', `${offset * -2.5}deg`);
+        card.style.zIndex = String(30 - distance);
+        card.classList.toggle('active', isActive);
+        card.setAttribute('aria-hidden', String(!isActive));
+    });
+
+    const currentEntry = UPDATE_LOG_ENTRIES[activeUpdateIndex];
+    const status = document.getElementById('update-carousel-status');
+    if (status && currentEntry) {
+        status.textContent = `${activeUpdateIndex + 1} / ${total} · Ver ${currentEntry.version}`;
+    }
+
+    const list = document.getElementById('update-log-list');
+    if (list && currentEntry) {
+        list.setAttribute('aria-label', `Update history carousel. Showing version ${currentEntry.version}.`);
+    }
+}
+
+function moveUpdateCarousel(direction) {
+    const total = document.querySelectorAll('[data-update-card]').length;
+    if (!total) return;
+    activeUpdateIndex = (activeUpdateIndex + direction + total) % total;
+    renderUpdateCarousel();
+}
+
+function handleUpdateCarouselWheel(event) {
+    if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    if (updateCarouselLocked) return;
+
+    updateWheelDelta += event.deltaY;
+    if (Math.abs(updateWheelDelta) < 35) return;
+
+    moveUpdateCarousel(updateWheelDelta > 0 ? 1 : -1);
+    updateWheelDelta = 0;
+    updateCarouselLocked = true;
+    window.clearTimeout(updateCarouselUnlockTimer);
+    updateCarouselUnlockTimer = window.setTimeout(() => {
+        updateCarouselLocked = false;
+    }, 380);
+}
+
+function initialiseUpdateLogCarousel() {
+    const list = document.getElementById('update-log-list');
+    if (!list) return;
+
+    list.tabIndex = 0;
+    list.setAttribute('role', 'region');
+    list.setAttribute('aria-roledescription', 'carousel');
+    list.addEventListener('wheel', handleUpdateCarouselWheel, { passive: false });
+    list.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+            event.preventDefault();
+            moveUpdateCarousel(1);
+        } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+            event.preventDefault();
+            moveUpdateCarousel(-1);
+        }
+    });
+    list.addEventListener('pointerdown', (event) => {
+        if (event.pointerType !== 'mouse') updatePointerStartY = event.clientY;
+    });
+    list.addEventListener('pointerup', (event) => {
+        if (updatePointerStartY === null) return;
+        const movement = event.clientY - updatePointerStartY;
+        updatePointerStartY = null;
+        if (Math.abs(movement) >= 38) moveUpdateCarousel(movement < 0 ? 1 : -1);
+    });
+    list.addEventListener('pointercancel', () => {
+        updatePointerStartY = null;
+    });
+    window.addEventListener('resize', renderUpdateCarousel);
+    renderUpdateCarousel();
 }
 
 function switchTab(tabId) {
@@ -41,6 +157,12 @@ function switchTab(tabId) {
     const section = tabId === 'tab-information' ? 'information' : 'tools';
     document.querySelectorAll('[data-section]').forEach((button) => {
         button.classList.toggle('active', button.dataset.section === section);
+    });
+    document.querySelectorAll('#tool-menu [data-tab-target]').forEach((button) => {
+        const isCurrent = button.dataset.tabTarget === tabId;
+        button.classList.toggle('active', isCurrent);
+        if (isCurrent) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
     });
     closeToolMenu();
 }
@@ -137,6 +259,7 @@ function skuExportCsv() {
 
 document.addEventListener('DOMContentLoaded', () => {
     renderUpdateLog();
+    initialiseUpdateLogCarousel();
     const toolToggle = document.getElementById('tool-menu-toggle');
     const toolMenu = document.getElementById('tool-menu');
     if (!toolToggle || !toolMenu) return;
@@ -144,6 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
     toolToggle.addEventListener('click', toggleToolMenu);
     document.addEventListener('click', (event) => {
         if (!event.target.closest('.tool-menu-wrap')) closeToolMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeToolMenu();
+            toolToggle.focus();
+        }
     });
 });
 

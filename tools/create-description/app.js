@@ -51,6 +51,7 @@ const bundleItemSeason = document.querySelector("#bundleItemSeason");
 const bundleBadgeStatusSelect = document.querySelector("#bundleBadgeStatusSelect");
 const bundleBadgeLeagueField = document.querySelector("#bundleBadgeLeagueField");
 const bundleBadgeLeague = document.querySelector("#bundleBadgeLeague");
+const bundleBadgeLeagueOptionsList = document.querySelector("#bundleBadgeLeagueOptions");
 const bundleBadgeChampionToggle = document.querySelector("#bundleBadgeChampionToggle");
 const bundleProductSelect = document.querySelector("#bundleProductSelect");
 const bundleKitTypeSelect = document.querySelector("#bundleKitTypeSelect");
@@ -160,8 +161,19 @@ const badgeLeagueOptions = [
   "UEFA Champions League",
   "UEFA Europa League",
   "UEFA Conference League",
+  "FIFA World Cup",
+  "Saudi Pro League",
+  "MLS",
   "FIFA Club World Cup"
 ];
+
+function renderBundleBadgeLeagueOptions() {
+  bundleBadgeLeagueOptionsList.replaceChildren(...badgeLeagueOptions.map((league) => {
+    const option = document.createElement("option");
+    option.value = league;
+    return option;
+  }));
+}
 
 function getFacts() {
   syncProductSelectionFields();
@@ -213,27 +225,39 @@ function selectProductKitType(value) {
 }
 
 function findFootballTeam(productName) {
-  const matches = [...nationalTeams, ...footballClubs].flatMap((team) => team.aliases
+  const teamSources = [
+    { teams: nationalTeams, team_type: "national" },
+    { teams: footballClubs, team_type: "club" }
+  ];
+  const matches = teamSources.flatMap(({ teams, team_type }) => teams.flatMap((team) => team.aliases
     .filter((alias) => hasStandaloneKeyword(productName, alias))
-    .map((alias) => ({ name: team.name, alias })));
+    .map((alias) => ({ name: team.name, alias, team_type }))));
 
   matches.sort((left, right) => right.alias.length - left.alias.length);
   return matches[0] || null;
+}
+
+function inferSeasonFromProductName(productName, matchedTeam = findFootballTeam(productName)) {
+  const standardSeason = productName.match(/\b(20\d{2}|2\d)\s*[\/._-]\s*(\d{2})\b/);
+  if (standardSeason) {
+    return standardSeason[1].length === 2
+      ? `20${standardSeason[1]}/${standardSeason[2]}`
+      : `${standardSeason[1]}/${standardSeason[2]}`;
+  }
+
+  if (matchedTeam?.team_type !== "national") return "";
+  const tournamentYears = [...productName.matchAll(/\b(20\d{2})\b/g)];
+  return tournamentYears.at(-1)?.[1] || "";
 }
 
 function inferProductSelectionFromName() {
   const productName = productNameInput.value.trim();
   if (!productName) return;
 
-  const seasonMatch = productName.match(/\b(20\d{2}|2\d)\/(\d{2})\b/);
-  if (seasonMatch) {
-    form.elements.season.value = seasonMatch[1].length === 2
-      ? `20${seasonMatch[1]}/${seasonMatch[2]}`
-      : seasonMatch[0];
-  }
-
   const matchedTeam = findFootballTeam(productName);
   if (matchedTeam) form.elements.team.value = matchedTeam.name;
+  const season = inferSeasonFromProductName(productName, matchedTeam);
+  if (season) form.elements.season.value = season;
 
   const audienceMatch = [
     ["baby", "baby"],
@@ -1165,10 +1189,10 @@ function useBundleImageTitle() {
 function inferBundlePieceFromName() {
   const name = bundleProductName.value.trim();
   if (!name) return;
-  const seasonMatch = name.match(/\b(20\d{2}|2\d)\/(\d{2})\b/);
-  if (seasonMatch) bundleItemSeason.value = seasonMatch[1].length === 2 ? `20${seasonMatch[1]}/${seasonMatch[2]}` : seasonMatch[0];
   const team = findFootballTeam(name);
   if (team) bundleItemTheme.value = team.name;
+  const season = inferSeasonFromProductName(name, team);
+  if (season) bundleItemSeason.value = season;
   const audience = [
     ["baby", "baby"], ["women's", "women"], ["womens", "women"], ["women", "women"],
     ["men's", "men"], ["mens", "men"], ["men", "men"], ["kids", "kids"], ["kid", "kids"], ["adult", "adult"]
@@ -1286,7 +1310,9 @@ function bundleRecipientLabelForPiece(piece) {
     child: "Child",
     partner: "Partner",
     adult: "Adult",
-    kid: "Kid"
+    kid: "Kid",
+    men: "Men",
+    women: "Women"
   };
   if (piece.recipient_role === "none") return openingAudienceLabel(piece.audience) || "No recipient";
   if (piece.recipient_role === "other") return piece.recipient_label || "Other";
@@ -1599,11 +1625,17 @@ function loadBundlePieceIntoEditor(pieceId) {
 function productTitleFromImageName(fileName) {
   const stem = String(fileName || "").replace(/\.[^.]+$/, "");
   const cleaned = stem
+    .replace(/(^|[^a-z0-9])(20\d{2}|2\d)[_-](\d{2})(?=$|[^a-z0-9])/gi, "$1$2/$3")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .replace(/^kfk\b\s*/i, "")
     .trim();
-  const seasonMatch = cleaned.match(/\b(20\d{2}|2\d)\s*[\/._-]?\s*(\d{2})\b/);
+  const matchedTeam = findFootballTeam(cleaned);
+  const standardSeasonMatch = cleaned.match(/\b(20\d{2}|2\d)\/(\d{2})\b/);
+  const nationalYearMatches = matchedTeam?.team_type === "national"
+    ? [...cleaned.matchAll(/\b(20\d{2})\b/g)]
+    : [];
+  const seasonMatch = standardSeasonMatch || nationalYearMatches.at(-1) || null;
   const socksMatch = cleaned.match(/\bwith\s+socks\b/i);
 
   if (!seasonMatch || seasonMatch.index === undefined) {
@@ -1614,7 +1646,12 @@ function productTitleFromImageName(fileName) {
   }
 
   const seasonEnd = seasonMatch.index + seasonMatch[0].length;
-  const title = `${cleaned.slice(0, seasonMatch.index)}${seasonMatch[1]}/${seasonMatch[2]}`.trim();
+  const season = standardSeasonMatch
+    ? standardSeasonMatch[1].length === 2
+      ? `20${standardSeasonMatch[1]}/${standardSeasonMatch[2]}`
+      : `${standardSeasonMatch[1]}/${standardSeasonMatch[2]}`
+    : seasonMatch[1];
+  const title = `${cleaned.slice(0, seasonMatch.index)}${season}`.trim();
   const afterSeason = cleaned.slice(seasonEnd);
   const playerPrintMatch = afterSeason.match(/\b([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})\b/);
   const playerPrint = playerPrintMatch ? ` ${playerPrintMatch[1]} ${playerPrintMatch[2]}` : "";
@@ -3346,6 +3383,8 @@ bundleRecipientSelect.addEventListener("change", () => {
   const suggestedAudience = {
     dad: "men",
     mum: "women",
+    men: "men",
+    women: "women",
     son: "kids",
     daughter: "kids",
     child: "kids",
@@ -3386,6 +3425,7 @@ bundleViewMoreImageColoursBtn.addEventListener("click", () => {
   renderBundleImageColourPalette();
 });
 
+renderBundleBadgeLeagueOptions();
 enhanceSelects();
 loadSample();
 syncProductTypeDefaults();
