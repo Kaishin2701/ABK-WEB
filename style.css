@@ -33,10 +33,21 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); co
   to { box-shadow: 0 0 12px rgba(0, 255, 136, 0.6); }
 }
 
+@keyframes brandFloat {
+  0%, 100% { transform: translateY(0) skewX(-9deg) scale(1); filter: drop-shadow(0 0 5px rgba(0, 255, 136, 0.28)); }
+  50% { transform: translateY(-2px) skewX(-9deg) scale(1.025); filter: drop-shadow(0 0 12px rgba(0, 255, 136, 0.5)); }
+}
+
+@keyframes brandShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
 /* Horizontal navigation */
 .top-toolbar { position: sticky; top: 0; z-index: 100; min-height: 72px; padding: 10px 24px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 28px; background: radial-gradient(circle at 50% -120%, rgba(0, 255, 136, 0.16), transparent 56%), linear-gradient(100deg, rgba(0, 25, 14, 0.98), rgba(3, 3, 3, 0.98) 32%, rgba(3, 3, 3, 0.98) 68%, rgba(0, 25, 14, 0.98)); border-bottom: 1px solid rgba(0, 255, 136, 0.16); box-shadow: 0 10px 32px rgba(0, 0, 0, 0.32); backdrop-filter: blur(16px); }
-.app-brand { justify-self: start; display: flex; align-items: center; gap: 10px; color: var(--green); font-size: 18px; font-weight: 800; letter-spacing: 0.6px; white-space: nowrap; }
-.app-brand img { width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.18)); }
+.app-brand { justify-self: start; display: flex; align-items: center; min-width: 86px; min-height: 42px; white-space: nowrap; }
+.brand-wordmark { position: relative; display: inline-block; background: linear-gradient(110deg, #00b968 0%, #00ff88 32%, #d7ffe9 48%, #00ff88 62%, #00a95f 100%); background-size: 200% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif; font-size: 31px; font-style: italic; font-weight: 900; letter-spacing: 1.5px; line-height: 1; -webkit-text-stroke: 0.35px rgba(208, 255, 231, 0.35); animation: brandFloat 4.2s ease-in-out infinite, brandShimmer 6s linear infinite; transform-origin: center; }
+.brand-wordmark::after { content: ""; position: absolute; right: -8px; bottom: -7px; width: 38px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, transparent, var(--green)); box-shadow: 0 0 9px rgba(0, 255, 136, 0.42); opacity: 0.72; transform: skewX(-24deg); }
 .top-nav { position: relative; justify-self: center; display: grid; min-width: 224px; min-height: 52px; padding: 5px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; background: rgba(31, 31, 31, 0.68); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 26px rgba(0, 0, 0, 0.3); backdrop-filter: blur(18px); transition: min-width 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, box-shadow 0.25s ease; }
 .nav-primary { grid-area: 1 / 1; display: flex; align-items: stretch; gap: 4px; opacity: 1; transform: translateX(0) scale(1); transition: opacity 0.2s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
 .top-tab { min-height: 40px; padding: 0 18px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: #aaa; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
@@ -149,6 +160,7 @@ main { scroll-behavior: smooth; }
 
 @media (prefers-reduced-motion: reduce) {
   .update-entry, .nav-primary, .nav-back, .top-nav, .tool-card { transition: none; }
+  .brand-wordmark { animation: none; }
 }
 /* Product Checker */
 #product-status { color: #666; font-size: 12px; margin-top: 5px; }
@@ -248,8 +260,8 @@ main { scroll-behavior: smooth; }
 @media (max-width: 768px) {
   body { min-height: 100dvh; overflow-y: auto; }
   .top-toolbar { min-height: 60px; padding: 8px 14px; display: flex; gap: 10px; }
-  .app-brand { font-size: 14px; }
-  .app-brand img { width: 34px; height: 34px; }
+  .app-brand { min-width: 62px; min-height: 34px; }
+  .brand-wordmark { font-size: 25px; }
   .top-nav { margin-left: auto; padding: 3px; }
   .top-tab { min-height: 36px; padding: 0 11px; font-size: 13px; }
   .app-version { display: none; }
@@ -287,7 +299,6 @@ main { scroll-behavior: smooth; }
 }
 
 @media (max-width: 520px) {
-  .app-brand span { display: none; }
   .top-nav { min-width: 202px; }
   .top-nav.tool-open { min-width: 118px; }
   .tool-library-hero h1 { font-size: 38px; }

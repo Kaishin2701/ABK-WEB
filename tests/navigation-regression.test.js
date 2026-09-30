@@ -34,7 +34,10 @@ assert.match(script, /activeUpdateIndex = \(activeUpdateIndex \+ direction \+ to
 assert.match(script, /addEventListener\('wheel', handleUpdateCarouselWheel, \{ passive: false \}\)/);
 
 assert.match(html, /Ver 6\.0\.5 Web/);
-assert.match(html, /style\.css\?v=3\.6/);
+assert.match(html, /<title>ABK<\/title>/);
+assert.doesNotMatch(html, /assets\/logo\.png/);
+assert.match(html, /class="brand-wordmark"[\s\S]*?>ABK<\/span>/);
+assert.match(html, /style\.css\?v=3\.7/);
 assert.match(html, /script\.js\?v=3\.7/);
 assert.match(css, /grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\)/);
 assert.match(css, /\.tool-library-grid \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
@@ -43,5 +46,7 @@ assert.match(css, /@media \(max-width: 768px\)[\s\S]*?grid-template-columns: 1fr
 assert.match(css, /\.update-log-list \{[\s\S]*?perspective: 1400px/);
 assert.match(css, /\.update-entry \{[\s\S]*?position: absolute/);
 assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+assert.match(css, /@keyframes brandFloat/);
+assert.match(css, /@keyframes brandShimmer/);
 
 console.log("ABK navigation regression tests passed.");
