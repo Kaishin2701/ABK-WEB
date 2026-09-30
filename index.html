@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK App V3</title>
-    <link rel="stylesheet" href="style.css?v=3.5">
+    <link rel="stylesheet" href="style.css?v=3.6">
 </head>
 <body>
 
@@ -16,21 +16,14 @@
             <img src="assets/logo.png" alt="ABK" onerror="this.style.display='none'">
             <span>ABK TOOL</span>
         </div>
-        <nav class="top-nav" aria-label="Main navigation">
-            <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
-            <div class="tool-menu-wrap">
-                <button id="tool-menu-toggle" class="top-tab" type="button" data-section="tools" aria-expanded="false" aria-controls="tool-menu">Tools</button>
-                <div id="tool-menu" class="tool-menu" role="menu">
-                    <button type="button" role="menuitem" data-tab-target="tab-watermark" onclick="switchTab('tab-watermark')">Auto Watermark</button>
-                    <button type="button" role="menuitem" data-tab-target="tab-linkcheck" onclick="switchTab('tab-linkcheck')">Link Checker</button>
-                    <button type="button" role="menuitem" data-tab-target="tab-cleaner" onclick="switchTab('tab-cleaner')">HTML Cleaner</button>
-                    <button type="button" role="menuitem" data-tab-target="tab-sku" onclick="switchTab('tab-sku')">SKU Generator</button>
-                    <button type="button" role="menuitem" data-tab-target="tab-product" onclick="switchTab('tab-product')">Product Checker</button>
-                    <button type="button" role="menuitem" data-tab-target="tab-create-description" onclick="switchTab('tab-create-description')">Create Description</button>
-                </div>
+        <nav id="top-navigation" class="top-nav" aria-label="Main navigation">
+            <div class="nav-primary">
+                <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
+                <button class="top-tab" type="button" data-section="tools" onclick="switchTab('tab-tool-library')">Tools</button>
             </div>
+            <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
         </nav>
-        <div class="app-version">Ver 6.0.4 Web</div>
+        <div class="app-version">Ver 6.0.5 Web</div>
     </header>
 
     <main>
@@ -243,6 +236,34 @@
             </div>
         </div>
 
+        <div id="tab-tool-library" class="tab-content tool-library-page">
+            <section class="tool-library-hero">
+                <p class="tool-library-eyebrow">ABK WORKSPACE</p>
+                <h1>All your tools in one place.</h1>
+                <p>Choose a workspace below. Your selected tool opens without leaving ABK Web.</p>
+            </section>
+            <div class="tool-library-grid" aria-label="Available tools">
+                <button class="tool-card" type="button" data-tab-target="tab-watermark" onclick="openTool('tab-watermark')">
+                    <span class="tool-card-icon" aria-hidden="true">◈</span><span class="tool-card-copy"><strong>Auto Watermark</strong><small>Process and watermark product images.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
+                </button>
+                <button class="tool-card" type="button" data-tab-target="tab-linkcheck" onclick="openTool('tab-linkcheck')">
+                    <span class="tool-card-icon" aria-hidden="true">↗</span><span class="tool-card-copy"><strong>Link Checker</strong><small>Check product URLs in bulk.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
+                </button>
+                <button class="tool-card" type="button" data-tab-target="tab-cleaner" onclick="openTool('tab-cleaner')">
+                    <span class="tool-card-icon" aria-hidden="true">&lt;/&gt;</span><span class="tool-card-copy"><strong>HTML Cleaner</strong><small>Clean and prepare HTML content.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
+                </button>
+                <button class="tool-card" type="button" data-tab-target="tab-sku" onclick="openTool('tab-sku')">
+                    <span class="tool-card-icon" aria-hidden="true">#</span><span class="tool-card-copy"><strong>SKU Generator</strong><small>Create product SKU variations.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
+                </button>
+                <button class="tool-card" type="button" data-tab-target="tab-product" onclick="openTool('tab-product')">
+                    <span class="tool-card-icon" aria-hidden="true">✓</span><span class="tool-card-copy"><strong>Product Checker</strong><small>Audit listings across supported websites.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
+                </button>
+                <button class="tool-card" type="button" data-tab-target="tab-create-description" onclick="openTool('tab-create-description')">
+                    <span class="tool-card-icon" aria-hidden="true">✦</span><span class="tool-card-copy"><strong>Create Description</strong><small>Generate and audit product descriptions.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
+                </button>
+            </div>
+        </div>
+
         <div id="tab-information" class="tab-content active">
             <div class="header-title">INFORMATION</div>
             <div class="group-box update-log">
@@ -260,7 +281,7 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=3.6"></script>
+    <script src="script.js?v=3.7"></script>
     <script src="modules/watermark.js?v=1.1"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>

@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.0.4',
+        version: '6.0.5',
         label: 'Current release',
+        title: 'Dedicated Tool Library',
+        description: 'Tools now live on a dedicated visual library page. Opening a tool smoothly transforms the navigation pill into a Back button for a focused workspace.'
+    },
+    {
+        version: '6.0.4',
+        label: 'Previous release',
         title: 'Circular update carousel',
         description: 'The five most recent updates now rotate through an infinite vertical carousel using scroll, swipe or keyboard controls, with a reduced-motion fallback.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Create Description dark theme',
         description: 'Create Description now follows the ABK black and neon-green interface, including panels, forms, tabs, actions and status colours.'
-    },
-    {
-        version: '6.0.0',
-        label: 'Previous release',
-        title: 'Create Description integration',
-        description: 'Create Description is now available from the Tool menu, with its verified-facts, HTML generation and audit workflow kept intact.'
     },
 ];
 
@@ -154,33 +154,31 @@ function switchTab(tabId) {
     if (!activeTab) return;
     activeTab.classList.add('active');
 
+    const isToolWorkspace = !['tab-information', 'tab-tool-library'].includes(tabId);
     const section = tabId === 'tab-information' ? 'information' : 'tools';
     document.querySelectorAll('[data-section]').forEach((button) => {
         button.classList.toggle('active', button.dataset.section === section);
     });
-    document.querySelectorAll('#tool-menu [data-tab-target]').forEach((button) => {
-        const isCurrent = button.dataset.tabTarget === tabId;
-        button.classList.toggle('active', isCurrent);
-        if (isCurrent) button.setAttribute('aria-current', 'page');
-        else button.removeAttribute('aria-current');
-    });
-    closeToolMenu();
+    updateNavigationMode(isToolWorkspace);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function closeToolMenu() {
-    const menu = document.getElementById('tool-menu');
-    const toggle = document.getElementById('tool-menu-toggle');
-    if (menu) menu.classList.remove('open');
-    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+function updateNavigationMode(showBackButton) {
+    const navigation = document.getElementById('top-navigation');
+    const backButton = document.getElementById('tool-back-button');
+    if (!navigation || !backButton) return;
+
+    navigation.classList.toggle('tool-open', showBackButton);
+    backButton.setAttribute('aria-hidden', String(!showBackButton));
+    backButton.tabIndex = showBackButton ? 0 : -1;
 }
 
-function toggleToolMenu() {
-    const menu = document.getElementById('tool-menu');
-    const toggle = document.getElementById('tool-menu-toggle');
-    if (!menu || !toggle) return;
-    const willOpen = !menu.classList.contains('open');
-    menu.classList.toggle('open', willOpen);
-    toggle.setAttribute('aria-expanded', String(willOpen));
+function openTool(tabId) {
+    switchTab(tabId);
+}
+
+function returnToToolLibrary() {
+    switchTab('tab-tool-library');
 }
 
 // ============= SKU GENERATOR FUNCTIONS =============
@@ -260,18 +258,9 @@ function skuExportCsv() {
 document.addEventListener('DOMContentLoaded', () => {
     renderUpdateLog();
     initialiseUpdateLogCarousel();
-    const toolToggle = document.getElementById('tool-menu-toggle');
-    const toolMenu = document.getElementById('tool-menu');
-    if (!toolToggle || !toolMenu) return;
-
-    toolToggle.addEventListener('click', toggleToolMenu);
-    document.addEventListener('click', (event) => {
-        if (!event.target.closest('.tool-menu-wrap')) closeToolMenu();
-    });
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            closeToolMenu();
-            toolToggle.focus();
+        if (event.key === 'Escape' && document.getElementById('top-navigation')?.classList.contains('tool-open')) {
+            returnToToolLibrary();
         }
     });
 });
