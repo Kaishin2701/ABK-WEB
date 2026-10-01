@@ -19,7 +19,9 @@ const context = vm.createContext({
   nationalTeams: [{ name: "Spain", aliases: ["Spain"] }],
   footballClubs: [
     { name: "Barcelona", aliases: ["Barcelona"] },
-    { name: "Inter Miami", aliases: ["Inter Miami"] }
+    { name: "Inter Miami", aliases: ["Inter Miami"] },
+    { name: "Nottingham Forest", aliases: ["Nottingham Forest"] },
+    { name: "Arsenal", aliases: ["Arsenal"] }
   ],
   openingAudienceLabel: (audience) => audience,
   bundlePieceKindLabel: (piece) => piece.product_type === "full_kit" ? "kit" : "shirt",
@@ -34,6 +36,13 @@ const context = vm.createContext({
   allowedTags: new Set(["P", "H3", "UL", "LI", "STRONG", "A"]),
   forbiddenTerms: [],
   recommendedActions: () => [],
+  standardBundleSizeFacts: (audience) => ({
+    kids: { visible_size_range: "Kids sizes 16-28, suggested ages 3-13", size_profile: "kids_16_28" },
+    men: { visible_size_range: "Men sizes S-XXL", size_profile: "adult_s_2xl" },
+    women: { visible_size_range: "Women sizes Sâ€“2XL", size_profile: "women_s_2xl" },
+    adult: { visible_size_range: "Adult sizes S-XXL", size_profile: "adult_s_2xl" },
+    baby: { visible_size_range: "Baby sizes 9 and 12 (3â€“24 months)", size_profile: "baby_9_12" }
+  }[audience] || { visible_size_range: "", size_profile: "unknown" }),
   maxBundlePieces: 4
 });
 
@@ -86,7 +95,7 @@ const invalidDadKidsPiece = {
   product_name: "Nottingham Forest Home Kids Football Kit 2026/27", team: "Nottingham Forest", season: "2026/27",
   product_kind: "Kit", product_type: "full_kit", kit_type: "home", sleeve_length: "short_sleeve",
   socks_status: "unavailable", included_items: "shirt_and_shorts", listing_configuration: "plain_customisable",
-  personalisation_status: "available", pre_applied_name: "", pre_applied_number: "", size_range_mode: "standard",
+  personalisation_status: "available", print_price_included: "not_applicable", pre_applied_name: "", pre_applied_number: "", size_range_mode: "standard",
   visible_size_range: "Men sizes S-XXL", size_profile: "adult_s_2xl", main_colour_shirt: "Red",
   main_colour_shorts: "White", main_colour_socks: "", badge_status: "unavailable"
 };
@@ -103,6 +112,28 @@ const validGiftPackPiece = {
 };
 assert.deepEqual(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece)), []);
 assert.match(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece, [{ ...validGiftPackPiece, piece_id: "piece-other" }])).join(" "), /different kit type/);
+assert.deepEqual(Array.from(context.validateBundlePiece(validGiftPackPiece)), []);
+
+function validationErrors(mutation) {
+  return Array.from(context.validateBundlePiece({ ...validGiftPackPiece, ...mutation })).join(" ");
+}
+
+assert.match(validationErrors({ personalisation_status: "unavailable" }), /must offer name-and-number personalisation/);
+assert.match(validationErrors({
+  listing_configuration: "pre_applied_player", personalisation_status: "unavailable", print_price_included: "no",
+  pre_applied_name: "MESSI", pre_applied_number: "10"
+}), /must include the player print/);
+assert.match(validationErrors({ size_profile: "adult_s_2xl" }), /Standard size range does not match/);
+assert.match(validationErrors({ product_name: "Nottingham Forest Home Kids Long Sleeve Football Kit 2026\/27" }), /Long Sleeve Kit/);
+assert.match(validationErrors({ kit_type: "away" }), /indicates Home kit type/);
+assert.match(validationErrors({ season: "2025/26" }), /indicates season 2026\/27/);
+assert.match(validationErrors({ team: "Arsenal" }), /Team field is Arsenal/);
+assert.match(validationErrors({ product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27" }), /configured as No Printed/);
+assert.match(validationErrors({
+  product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27",
+  listing_configuration: "pre_applied_player", personalisation_status: "unavailable", print_price_included: "yes",
+  pre_applied_name: "RONALDO", pre_applied_number: "7"
+}), /configured player print is RONALDO 7/);
 
 const standardPieces = [
   {

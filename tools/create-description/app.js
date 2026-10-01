@@ -1208,6 +1208,27 @@ function inferBundleProductKindFromName(name) {
   return "";
 }
 
+function inferBundleKitTypeFromName(name) {
+  return [
+    ["special edition", "special_edition"], ["pre match", "pre_match"], ["goalkeeper", "goalkeeper"],
+    ["training", "training"], ["fifth", "fifth"], ["fourth", "fourth"], ["third", "third"],
+    ["away", "away"], ["home", "home"], ["retro", "retro"]
+  ].find(([keyword]) => hasStandaloneKeyword(name, keyword))?.[1] || "";
+}
+
+function inferBundlePlayerPrintFromName(name) {
+  const match = name.match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
+  return match ? { name: match[1].trim(), number: match[2] } : null;
+}
+
+function normalizedFactValue(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function normalizedSizeRange(value) {
+  return normalizedFactValue(value).replace(/[–—]/g, "-");
+}
+
 function inferBundlePieceFromName() {
   const name = bundleProductName.value.trim();
   if (!name) return;
@@ -1219,16 +1240,15 @@ function inferBundlePieceFromName() {
   if (audience) setEnhancedSelectValue(bundleAudienceSelect, audience);
   const kind = inferBundleProductKindFromName(name);
   if (kind) setEnhancedSelectValue(bundleProductSelect, kind);
-  const kitType = [["special edition", "special_edition"], ["pre match", "pre_match"], ["goalkeeper", "goalkeeper"], ["training", "training"], ["third", "third"], ["away", "away"], ["home", "home"], ["retro", "retro"]]
-    .find(([keyword]) => hasStandaloneKeyword(name, keyword));
-  if (kitType) setEnhancedSelectValue(bundleKitTypeSelect, kitType[1]);
+  const kitType = inferBundleKitTypeFromName(name);
+  if (kitType) setEnhancedSelectValue(bundleKitTypeSelect, kitType);
   if (hasStandaloneKeyword(name, "with socks")) setEnhancedSelectValue(bundleSocksSelect, "included");
   if (hasStandaloneKeyword(name, "no socks") || hasStandaloneKeyword(name, "without socks")) setEnhancedSelectValue(bundleSocksSelect, "unavailable");
-  const print = name.match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
+  const print = inferBundlePlayerPrintFromName(name);
   if (print) {
     setEnhancedSelectValue(bundlePrintSelect, "pre_applied_player");
-    bundlePrintName.value = print[1];
-    bundlePrintNumber.value = print[2];
+    bundlePrintName.value = print.name;
+    bundlePrintNumber.value = print.number;
   }
   syncBundleItemControls();
 }
@@ -1454,16 +1474,53 @@ function validateBundlePiece(piece) {
   const titleIsShirt = ["Shirt", "Long Sleeve Shirt"].includes(titleProductKind);
   if (titleIsKit && piece.product_type !== "full_kit") errors.push("Product name indicates a Kit, but the Piece is configured as a Shirt.");
   if (titleIsShirt && piece.product_type !== "shirt_only") errors.push("Product name indicates a Shirt, but the Piece is configured as a Kit.");
+  if (titleProductKind && piece.product_kind && titleProductKind !== piece.product_kind) {
+    errors.push(`Product name indicates ${titleProductKind}, but the Piece is configured as ${piece.product_kind}.`);
+  }
   if (!piece.team) errors.push("Team is required.");
   if (!piece.season) errors.push("Season is required.");
   if (!piece.kit_type) errors.push("Enter the other kit type.");
+  const titleTeam = findFootballTeam(piece.product_name);
+  const selectedTeam = findFootballTeam(piece.team);
+  const selectedTeamName = selectedTeam?.name || piece.team;
+  if (titleTeam && piece.team && normalizedFactValue(titleTeam.name) !== normalizedFactValue(selectedTeamName)) {
+    errors.push(`Product name indicates ${titleTeam.name}, but the Team field is ${piece.team}.`);
+  }
+  const titleSeason = inferSeasonFromProductName(piece.product_name, titleTeam);
+  if (titleSeason && piece.season && normalizedFactValue(titleSeason) !== normalizedFactValue(piece.season)) {
+    errors.push(`Product name indicates season ${titleSeason}, but the Season field is ${piece.season}.`);
+  }
+  const titleKitType = inferBundleKitTypeFromName(piece.product_name);
+  if (titleKitType && piece.kit_type && titleKitType !== piece.kit_type) {
+    errors.push(`Product name indicates ${titleCaseToken(titleKitType)} kit type, but the Piece uses ${titleCaseToken(piece.kit_type)}.`);
+  }
   if (piece.badge_status === "available" && !piece.badge_league) errors.push("Badge league is required when the badge is available.");
+  const titlePlayerPrint = inferBundlePlayerPrintFromName(piece.product_name);
+  if (titlePlayerPrint && piece.listing_configuration !== "pre_applied_player") {
+    errors.push(`Product name includes ${titlePlayerPrint.name} ${titlePlayerPrint.number}, but the Piece is configured as No Printed.`);
+  }
+  if (titlePlayerPrint && piece.listing_configuration === "pre_applied_player" && (
+    normalizedFactValue(titlePlayerPrint.name) !== normalizedFactValue(piece.pre_applied_name)
+    || String(titlePlayerPrint.number) !== String(piece.pre_applied_number)
+  )) {
+    errors.push(`Product name includes ${titlePlayerPrint.name} ${titlePlayerPrint.number}, but the configured player print is ${piece.pre_applied_name || "missing"} ${piece.pre_applied_number || "missing"}.`);
+  }
   if (piece.listing_configuration === "pre_applied_player" && !piece.pre_applied_name) errors.push("Player name is required for a Printed Piece.");
   if (piece.listing_configuration === "pre_applied_player" && !piece.pre_applied_number) errors.push("Player number is required for a Printed Piece.");
   if (piece.listing_configuration === "pre_applied_player" && piece.personalisation_status !== "unavailable") errors.push("A fixed-player Piece cannot offer additional personalisation.");
+  if (piece.listing_configuration === "pre_applied_player" && piece.print_price_included !== "yes") errors.push("A fixed-player Piece must include the player print in its configured price.");
+  if (piece.listing_configuration === "plain_customisable" && piece.personalisation_status !== "available") errors.push("A No Printed Piece must offer name-and-number personalisation.");
+  if (piece.listing_configuration === "plain_customisable" && (piece.pre_applied_name || piece.pre_applied_number)) errors.push("A No Printed Piece cannot contain a fixed player name or number.");
+  if (piece.listing_configuration === "plain_customisable" && piece.print_price_included !== "not_applicable") errors.push("A No Printed Piece cannot include a fixed-player print price.");
   if (!piece.personalisation_status) errors.push("Choose whether personalisation is available for this Piece.");
   if (!piece.visible_size_range) errors.push("Visible size range is required.");
   if (piece.size_range_mode === "custom" && piece.size_profile !== "custom_pending_review") errors.push("Custom size range must use the custom review profile.");
+  if (piece.size_range_mode === "standard" && piece.audience) {
+    const expectedSizeFacts = standardBundleSizeFacts(piece.audience);
+    if (piece.size_profile !== expectedSizeFacts.size_profile || normalizedSizeRange(piece.visible_size_range) !== normalizedSizeRange(expectedSizeFacts.visible_size_range)) {
+      errors.push(`Standard size range does not match the ${titleCaseToken(piece.audience)} audience.`);
+    }
+  }
   if (piece.product_type === "shirt_only" && piece.socks_status !== "not_applicable") errors.push("A Shirt cannot include socks.");
   if (piece.product_type === "full_kit" && !["included", "unavailable"].includes(piece.socks_status)) errors.push("A Kit must use With Socks or No Socks.");
   const expectedIncludedItems = piece.product_type === "shirt_only"
@@ -1702,10 +1759,8 @@ function syncBundleItemControls() {
     bundlePrintName.value = "";
     bundlePrintNumber.value = "";
   }
-  if (usesPrint) {
-    setEnhancedSelectValue(bundlePersonalisationSelect, "unavailable");
-  }
-  bundlePersonalisationSelect.disabled = usesPrint;
+  setEnhancedSelectValue(bundlePersonalisationSelect, usesPrint ? "unavailable" : "available");
+  bundlePersonalisationSelect.disabled = true;
 
   bundleMainColourShortsInput.disabled = !isKit;
   bundleMainColourShortsField.classList.toggle("hidden", !isKit);
