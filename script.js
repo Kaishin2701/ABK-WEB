@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.1.0',
+        version: '6.1.1',
         label: 'Current release',
+        title: 'Independent Bundle Pieces',
+        description: 'Bundle Pieces can now use different teams, seasons and kit types. Each Piece is validated independently, while its product, audience, size, socks, personalisation and player-print facts must remain internally consistent.'
+    },
+    {
+        version: '6.1.0',
+        label: 'Previous release',
         title: 'Validated Bundle Description workflow',
         description: 'Bundle Description now supports 2–4 Piece Standard Bundles and KFK Birthday Gift Packs. Approved Gift Pack policies are applied automatically, while incompatible audience, size, product, socks, print, team, season, kit type and sleeve combinations are hidden or blocked before Add or Save.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Navigation refresh',
         description: 'The ABK header now uses a centred glass-style navigation pill, a responsive two-column Tools menu and clearer active-tool states. Information now keeps the five most recent updates.'
-    },
-    {
-        version: '6.0.2',
-        label: 'Previous release',
-        title: 'Bundle facts and season inference',
-        description: 'Badge leagues now include FIFA World Cup, Saudi Pro League and MLS; Bundle Pieces support Men and Women recipients; national-team titles can infer a standalone tournament year.'
     },
 ];
 
