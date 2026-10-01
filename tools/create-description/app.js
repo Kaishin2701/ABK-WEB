@@ -41,6 +41,8 @@ const productPrintSelect = document.querySelector("#productPrintSelect");
 const productPrintFields = document.querySelector("#productPrintFields");
 const productPrintName = document.querySelector("#productPrintName");
 const productPrintNumber = document.querySelector("#productPrintNumber");
+const bundleTypeSelect = document.querySelector("#bundleTypeSelect");
+const bundleTypeChoices = document.querySelector("#bundleTypeChoices");
 const bundleRecipientSelect = document.querySelector("#bundleRecipientSelect");
 const bundleRecipientLabelField = document.querySelector("#bundleRecipientLabelField");
 const bundleRecipientLabel = document.querySelector("#bundleRecipientLabel");
@@ -62,7 +64,10 @@ const bundlePrintFields = document.querySelector("#bundlePrintFields");
 const bundlePrintName = document.querySelector("#bundlePrintName");
 const bundlePrintNumber = document.querySelector("#bundlePrintNumber");
 const bundleSizeRangeModeSelect = document.querySelector("#bundleSizeRangeModeSelect");
+const bundleCustomSizeRangeToggle = document.querySelector("#bundleCustomSizeRangeToggle");
+const bundleCustomSizeRangeField = document.querySelector("#bundleCustomSizeRangeField");
 const bundleVisibleSizeRange = document.querySelector("#bundleVisibleSizeRange");
+const bundleStandardSizeSummary = document.querySelector("#bundleStandardSizeSummary");
 const bundleItemAnother = document.querySelector("#bundleItemAnother");
 const addBundleItemBtn = document.querySelector("#addBundleItemBtn");
 const cancelBundlePieceEditBtn = document.querySelector("#cancelBundlePieceEditBtn");
@@ -102,6 +107,7 @@ let activeEnhancedSelect = null;
 let tabSuggestionContext = null;
 let isApplyingTabSuggestion = false;
 const imageColourPreviewLimit = 4;
+const maxBundlePieces = 4;
 const imageColourState = {
   objectUrl: "",
   fileName: "",
@@ -460,7 +466,7 @@ function setBadgeChampionStatus(isChampion) {
 }
 
 function enhanceSelects() {
-  document.querySelectorAll("#factForm select, #bundleForm select").forEach((select) => {
+  document.querySelectorAll('#factForm select:not([data-enhance="false"]), #bundleForm select:not([data-enhance="false"])').forEach((select) => {
     if (select.dataset.enhanced === "true") return;
 
     const wrapper = document.createElement("div");
@@ -1236,15 +1242,31 @@ function syncProductControlsFromFacts(facts) {
 }
 
 function getBundleFacts() {
+  const isGiftPack = bundleTypeSelect.value === "birthday_gift_pack_home_away_kids";
   return {
     ...defaultFacts,
     product_type: "bundle",
+    bundle_type: bundleTypeSelect.value || "piece_bundle",
     bundle_name: bundleForm.elements.bundle_name.value.trim(),
-    bundle_label: bundleForm.elements.bundle_label.value.trim(),
+    bundle_label: isGiftPack ? "KFK Birthday Gift Pack" : "Standard Bundle",
+    gift_pack_returns_policy: isGiftPack ? "approved" : "",
+    gift_pack_promotion_policy: isGiftPack ? "approved" : "",
+    gift_pack_packaging_policy: isGiftPack ? "approved" : "",
     bundle_items_list: bundleItems.map((piece) => ({ ...piece })),
     visible_size_range: "Varies by Piece",
     size_profile: "bundle_mixed"
   };
+}
+
+function syncBundleTypeControls() {
+  const isGiftPack = bundleTypeSelect.value === "birthday_gift_pack_home_away_kids";
+  bundleForm.elements.bundle_label.value = isGiftPack ? "KFK Birthday Gift Pack" : "Standard Bundle";
+  bundleTypeChoices.querySelectorAll("[data-bundle-type]").forEach((button) => {
+    const active = button.dataset.bundleType === bundleTypeSelect.value;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  refreshEnhancedSelects();
 }
 
 function applyDerivedSizeFacts(facts) {
@@ -1398,7 +1420,7 @@ function showBundlePieceErrors(errors) {
 
 function renderBundleItemsList() {
   syncBundleItemsInput();
-  bundleItemsSummaryEl.textContent = `Pieces added: ${bundleItems.length}`;
+  bundleItemsSummaryEl.textContent = `Pieces added: ${bundleItems.length} / ${maxBundlePieces}`;
   bundleItemsList.innerHTML = "";
 
   if (!bundleItems.length) {
@@ -1451,7 +1473,12 @@ function renderBundleItemsList() {
     const duplicateButton = document.createElement("button");
     duplicateButton.type = "button";
     duplicateButton.textContent = "Duplicate";
+    duplicateButton.disabled = bundleItems.length >= maxBundlePieces;
     duplicateButton.addEventListener("click", () => {
+      if (bundleItems.length >= maxBundlePieces) {
+        showBundlePieceErrors([`A Bundle can contain up to ${maxBundlePieces} Pieces.`]);
+        return;
+      }
       bundleItems.push({ ...piece, piece_id: `piece-${nextBundlePieceId++}` });
       variantOffset = 0;
       renderBundleItemsList();
@@ -1475,10 +1502,13 @@ function renderBundleItemsList() {
 function addSelectedBundleItem() {
   const piece = bundlePieceFactsFromEditor();
   const errors = validateBundlePiece(piece);
+  const existingIndex = bundleItems.findIndex((item) => item.piece_id === piece.piece_id);
+  if (existingIndex < 0 && bundleItems.length >= maxBundlePieces) {
+    errors.push(`A Bundle can contain up to ${maxBundlePieces} Pieces.`);
+  }
   showBundlePieceErrors(errors);
   if (errors.length) return;
 
-  const existingIndex = bundleItems.findIndex((item) => item.piece_id === piece.piece_id);
   if (existingIndex >= 0) bundleItems[existingIndex] = piece;
   else {
     bundleItems.push(piece);
@@ -1496,13 +1526,15 @@ function standardBundleSizeFacts(audience) {
 }
 
 function syncBundleSizeControls() {
-  const usesCustomRange = bundleSizeRangeModeSelect.value === "custom";
-  bundleVisibleSizeRange.readOnly = !usesCustomRange;
-  bundleVisibleSizeRange.placeholder = usesCustomRange
-    ? "e.g. Kids sizes 18-28"
-    : "Choose an audience to derive the standard range";
+  const usesCustomRange = bundleCustomSizeRangeToggle.checked;
+  bundleSizeRangeModeSelect.value = usesCustomRange ? "custom" : "standard";
+  bundleCustomSizeRangeField.classList.toggle("hidden", !usesCustomRange);
+  const standardRange = standardBundleSizeFacts(bundleAudienceSelect.value).visible_size_range || "";
+  bundleStandardSizeSummary.textContent = usesCustomRange
+    ? "Custom size range enabled"
+    : standardRange ? `Auto size: ${standardRange}` : "Choose an audience to derive the standard range.";
   if (!usesCustomRange) {
-    bundleVisibleSizeRange.value = standardBundleSizeFacts(bundleAudienceSelect.value).visible_size_range || "";
+    bundleVisibleSizeRange.value = standardRange;
   }
 }
 
@@ -1557,7 +1589,9 @@ function syncBundleItemControls() {
 
   const customRecipient = bundleRecipientSelect.value === "other";
   bundleRecipientLabel.required = customRecipient;
+  bundleRecipientLabelField.classList.toggle("hidden", !customRecipient);
   bundleRecipientLabelField.classList.toggle("required-field", customRecipient);
+  if (!customRecipient) bundleRecipientLabel.value = "";
 
   syncBundleSizeControls();
   updateBundleImageColourAssistantUi();
@@ -1576,7 +1610,8 @@ function resetBundlePieceEditor() {
   setEnhancedSelectValue(bundleSocksSelect, "unavailable");
   setEnhancedSelectValue(bundlePrintSelect, "plain_customisable");
   setEnhancedSelectValue(bundlePersonalisationSelect, "available");
-  setEnhancedSelectValue(bundleSizeRangeModeSelect, "standard");
+  bundleCustomSizeRangeToggle.checked = false;
+  bundleSizeRangeModeSelect.value = "standard";
   setBundleBadgeChampionStatus(false);
   resetBundleImageColourAssistant({ clearFile: true });
   showBundlePieceErrors([]);
@@ -1608,7 +1643,8 @@ function loadBundlePieceIntoEditor(pieceId) {
   setEnhancedSelectValue(bundlePersonalisationSelect, piece.personalisation_status || (piece.listing_configuration === "pre_applied_player" ? "unavailable" : "available"));
   bundlePrintName.value = piece.pre_applied_name || "";
   bundlePrintNumber.value = piece.pre_applied_number || "";
-  setEnhancedSelectValue(bundleSizeRangeModeSelect, piece.size_range_mode || "standard");
+  bundleCustomSizeRangeToggle.checked = piece.size_range_mode === "custom";
+  bundleSizeRangeModeSelect.value = piece.size_range_mode || "standard";
   bundleVisibleSizeRange.value = piece.visible_size_range || "";
   bundleMainColourShirtInput.value = piece.main_colour_shirt || "";
   bundleMainColourShortsInput.value = piece.main_colour_shorts || "";
@@ -2634,8 +2670,12 @@ function bundleFactsSignature(facts) {
     visible_size_range: piece.visible_size_range
   }));
   return bundleHash(JSON.stringify({
+    bundle_type: facts.bundle_type,
     bundle_name: facts.bundle_name,
     bundle_label: facts.bundle_label,
+    gift_pack_returns_policy: facts.gift_pack_returns_policy,
+    gift_pack_promotion_policy: facts.gift_pack_promotion_policy,
+    gift_pack_packaging_policy: facts.gift_pack_packaging_policy,
     pieces
   }));
 }
@@ -2688,7 +2728,7 @@ function bundlePieceKindLabel(piece) {
 
 function bundlePieceAudienceLabel(audience) {
   const labels = {
-    kids: "kids’",
+    kids: "kids",
     men: "men's",
     adult: "adult",
     women: "women's",
@@ -2800,44 +2840,56 @@ function bundlePieceIdentity(piece) {
     .trim();
 }
 
+function bundleFixedPrintSentence(piece) {
+  if (piece.listing_configuration !== "pre_applied_player") return "";
+  return `${displayName(piece.pre_applied_name)} name and number ${piece.pre_applied_number} are already applied to the back.`;
+}
+
 function renderBundlePieceIncluded(piece) {
   let contents;
   if (piece.product_type === "full_kit" && piece.socks_status === "included") {
-    contents = "a shirt, matching shorts and matching socks";
+    contents = "shirt, matching shorts and socks";
   } else if (piece.product_type === "full_kit") {
-    contents = "a shirt and matching shorts; socks are not included";
+    contents = "shirt and matching shorts; socks are not included";
   } else if (piece.sleeve_length === "baby_suit") {
     contents = "one baby suit";
   } else {
     contents = `${piece.sleeve_length === "long_sleeve" ? "one long-sleeve" : "one short-sleeve"} football shirt; shorts and socks are not included`;
   }
-  const playerPrint = piece.listing_configuration === "pre_applied_player"
-    ? ` ${displayName(piece.pre_applied_name)} name and number ${piece.pre_applied_number} are already applied to the back.`
-    : "";
-  return `<li><strong>${esc(piece.reference)}:</strong> ${esc(bundlePieceIdentity(piece))} with ${esc(contents)}.${esc(playerPrint)}</li>`;
+  const fixedPrint = bundleFixedPrintSentence(piece);
+  const playerPrint = fixedPrint ? ` ${fixedPrint}` : "";
+  const recipient = piece.recipient_role === "none" ? "" : `<strong>${esc(piece.reference)}:</strong> `;
+  const identity = `${piece.team} ${titleCaseToken(piece.kit_type)} ${bundlePieceAudienceLabel(piece.audience)} ${bundlePieceKindLabel(piece)}`
+    .replace(/\s+/g, " ")
+    .trim();
+  return `<li>${recipient}1 &times; ${esc(identity)}: ${esc(contents)}.${esc(playerPrint)}</li>`;
 }
 
-function renderBundleColours(summary, revision) {
+function renderBundleColours(summary) {
   const entries = summary.pieces.map((piece) => {
-    const colours = [`${sentenceStart(piece.main_colour_shirt)} shirt`];
-    if (piece.main_colour_shorts) colours.push(`${sentenceStart(piece.main_colour_shorts)} shorts`);
-    if (piece.main_colour_socks) colours.push(`${sentenceStart(piece.main_colour_socks)} socks`);
-    return `${piece.reference} — ${humanList(colours)}`;
+    const colours = [`${String(piece.main_colour_shirt).toLowerCase()} shirt`];
+    if (piece.main_colour_shorts) colours.push(`${String(piece.main_colour_shorts).toLowerCase()} shorts`);
+    if (piece.main_colour_socks) colours.push(`${String(piece.main_colour_socks).toLowerCase()} socks`);
+    return `${piece.reference}: ${colours.join(", ")}`;
   });
-  const note = pickBundleModule("shadeNotes", summary, revision, 2);
-  return `<li><strong>Main colours:</strong> ${esc(entries.join("; "))}. ${esc(note)}</li>`;
+  return `<li><strong>Main colours:</strong> ${esc(entries.join("; "))}.</li>`;
 }
 
-function renderBundleSizes(summary, revision) {
-  const separate = pickBundleModule("sizeSeparate", summary, revision, 3);
+function bundleRangeHtml(value) {
+  return esc(value)
+    .replace(/(\d)\s*-\s*(\d)/g, "$1&ndash;$2")
+    .replace(/\bS\s*-\s*XXL\b/gi, "S&ndash;XXL");
+}
+
+function renderBundleSizes(summary) {
   const rangeText = summary.sharedSizeRange
-    ? `${summary.sharedSizeRange} are available for each Piece.`
-    : summary.pieces.map((piece) => `${piece.reference} — ${piece.visible_size_range}`).join("; ") + ".";
+    ? `${bundleRangeHtml(summary.sharedSizeRange)} for each Piece.`
+    : summary.pieces.map((piece) => `${esc(piece.reference)}: ${bundleRangeHtml(piece.visible_size_range)}`).join("; ") + ".";
   const sizeGuideDirection = summary.customSizes.length ? "" : " Check the Size Guide tab for measurements.";
-  return `<li><strong>Sizes:</strong> ${esc(rangeText)} ${esc(separate)}${sizeGuideDirection}</li>`;
+  return `<li><strong>Sizes:</strong> ${rangeText} Choose a size separately for every Piece.${sizeGuideDirection}</li>`;
 }
 
-function renderBundleProductDetails(summary, revision) {
+function renderBundleProductDetails(summary) {
   const lines = [];
   if (summary.sharedTeam) lines.push(`<li><strong>Team:</strong> ${esc(summary.sharedTeam)}.</li>`);
   else lines.push(`<li><strong>Teams:</strong> ${esc(humanList(uniqueTextValues(summary.pieces.map((piece) => piece.team))))}.</li>`);
@@ -2852,8 +2904,13 @@ function renderBundleProductDetails(summary, revision) {
   if (summary.sharedSleeve) lines.push(`<li><strong>Sleeve length:</strong> ${esc(sleeveLengthLabel({ sleeve_length: summary.sharedSleeve }) || titleCaseToken(summary.sharedSleeve))}.</li>`);
   else lines.push(`<li><strong>Sleeve lengths:</strong> ${esc(summary.pieces.map((piece) => `${piece.reference} — ${sleeveLengthLabel(piece) || titleCaseToken(piece.sleeve_length)}`).join("; "))}.</li>`);
   lines.push("<li><strong>Version:</strong> Fan version.</li>");
-  lines.push(renderBundleColours(summary, revision));
-  lines.push(renderBundleSizes(summary, revision));
+  summary.fixedPrint.forEach((piece) => {
+    lines.push(`<li><strong>${esc(piece.reference)} player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`);
+  });
+  lines.push(renderBundleColours(summary));
+  lines.push(renderBundleSizes(summary));
+  lines.push("<li><strong>Material:</strong> Made from lightweight polyester fabric</li>");
+  lines.push("<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>");
   return lines;
 }
 
@@ -2861,18 +2918,14 @@ function refsForPieces(pieces) {
   return humanList(pieces.map((piece) => piece.reference));
 }
 
-function renderBundlePersonalisationOptions(summary, revision) {
+function renderBundlePersonalisationOptions(summary) {
   const lines = [];
   const available = summary.personalisable;
   if (available.length === summary.pieces.length) {
-    lines.push(`<li><strong>Name and number:</strong> ${esc(pickBundleModule("personalisationAll", summary, revision, 4))} Names can be up to 13 letters and numbers up to 2 digits.</li>`);
+    lines.push("<li><strong>Name and number:</strong> optional on any eligible Piece. Select it separately for each Piece and enter the details in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>");
   } else if (available.length) {
-    lines.push(`<li><strong>Name and number:</strong> Optional personalisation is available for ${esc(refsForPieces(available))}. Select it separately using the matching product options. Names can be up to 13 letters and numbers up to 2 digits.</li>`);
+    lines.push(`<li><strong>Name and number:</strong> optional on ${esc(refsForPieces(available))}. Select it separately using the matching product options. Names up to 13 letters, numbers up to 2 digits.</li>`);
   }
-
-  summary.fixedPrint.forEach((piece) => {
-    lines.push(`<li><strong>${esc(piece.reference)} player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included. Additional name-and-number personalisation is not available for this Piece.</li>`);
-  });
 
   const unavailablePlain = summary.pieces.filter((piece) => (
     piece.personalisation_status === "unavailable" && piece.listing_configuration !== "pre_applied_player"
@@ -2887,7 +2940,7 @@ function bundleBadgeDisplay(piece) {
   return `${piece.badge_league}${piece.badge_champion_status === "champion" ? " Champions" : ""}`;
 }
 
-function renderBundleBadgeOptions(summary, revision) {
+function renderBundleBadgeOptions(summary) {
   if (!summary.badgeEligible.length) return [];
   const groups = new Map();
   summary.badgeEligible.forEach((piece) => {
@@ -2898,18 +2951,17 @@ function renderBundleBadgeOptions(summary, revision) {
   });
   if (groups.size === 1 && summary.badgeEligible.length === summary.pieces.length) {
     const [label] = groups.keys();
-    const template = pickBundleModule("badgeAll", summary, revision, 5);
-    return [`<li><strong>Sleeve badges:</strong> ${interpolateBundleModule(template, { badge_label: label })}</li>`];
+    return [`<li><strong>Sleeve badges:</strong> optional ${esc(label)} sleeve badges can be added separately to every Piece using the matching product options.</li>`];
   }
   return [...groups.entries()].map(([label, pieces]) => (
     `<li><strong>${esc(label)} sleeve badge:</strong> Available for ${esc(refsForPieces(pieces))} using the matching product option.</li>`
   ));
 }
 
-function renderBundleBeforeOrder(summary, revision) {
-  const lines = [`<li>${esc(pickBundleModule("sizeChecks", summary, revision, 6))}</li>`];
+function renderBundleBeforeOrder(summary) {
+  const lines = ["<li>Check that a size has been selected separately for each Piece before ordering.</li>"];
   if (summary.personalisable.length) {
-    lines.push(`<li>${esc(pickBundleModule("personalisationCheck", summary, revision, 7))}</li>`);
+    lines.push("<li>Double-check the spelling of each name and number in the personalisation fields.</li>");
   }
   summary.fixedPrint.forEach((piece) => {
     lines.push(`<li>${esc(piece.reference)} includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this Piece.</li>`);
@@ -2923,16 +2975,14 @@ function renderBundleBeforeOrder(summary, revision) {
   return lines;
 }
 
-function renderPieceBasedBundleDescription(summary, revision) {
+function renderPieceBasedBundleDescription(summary) {
   const options = [
-    ...renderBundlePersonalisationOptions(summary, revision),
-    ...renderBundleBadgeOptions(summary, revision)
+    ...renderBundlePersonalisationOptions(summary),
+    ...renderBundleBadgeOptions(summary)
   ];
   if (!options.length) options.push("<li>No additional name-and-number personalisation or sleeve-badge option is available for the listed Pieces.</li>");
 
   const html = [
-    `<p>${renderBundleOpening(summary, revision)}</p>`,
-    "",
     "<h3>What's Included</h3>",
     "<ul>",
     summary.pieces.map(renderBundlePieceIncluded).join("\n"),
@@ -2940,7 +2990,7 @@ function renderPieceBasedBundleDescription(summary, revision) {
     "",
     "<h3>Product Details</h3>",
     "<ul>",
-    renderBundleProductDetails(summary, revision).join("\n"),
+    renderBundleProductDetails(summary).join("\n"),
     "</ul>",
     "",
     "<h3>Options You Can Add</h3>",
@@ -2950,11 +3000,235 @@ function renderPieceBasedBundleDescription(summary, revision) {
     "",
     "<h3>Before You Order</h3>",
     "<ul>",
-    renderBundleBeforeOrder(summary, revision).join("\n"),
+    renderBundleBeforeOrder(summary).join("\n"),
     "</ul>"
   ].join("\n");
 
-  return removeDescriptionDashes(html);
+  return html;
+}
+
+function isBirthdayGiftPack(facts) {
+  return facts.bundle_type === "birthday_gift_pack_home_away_kids";
+}
+
+function validateBirthdayGiftPackFacts(facts) {
+  const blockers = [];
+  const pieces = facts.bundle_items_list;
+  if (facts.site !== "KFK") blockers.push("Birthday Gift Pack branch is approved only for KFK.");
+  if (pieces.length < 2 || pieces.length > maxBundlePieces) blockers.push(`Birthday Gift Pack requires between 2 and ${maxBundlePieces} Pieces.`);
+  const kitTypes = pieces.map((piece) => piece.kit_type);
+  if (uniqueTextValues(kitTypes).length !== kitTypes.length) blockers.push("Birthday Gift Pack Pieces must use different kit types so each kit remains identifiable.");
+  if (pieces.some((piece) => piece.audience !== "kids")) blockers.push("Birthday Gift Pack Pieces must use the Kids audience.");
+  if (pieces.some((piece) => piece.product_type !== "full_kit")) {
+    blockers.push("Each Birthday Gift Pack Piece must be a full kids kit.");
+  }
+  if (pieces.some((piece) => !["included", "unavailable"].includes(piece.socks_status))) {
+    blockers.push("Choose With Socks or No Socks for every Birthday Gift Pack Piece.");
+  }
+  if (pieces.some((piece) => (
+    piece.socks_status === "included"
+      ? piece.included_items !== "shirt_shorts_and_socks"
+      : piece.included_items !== "shirt_and_shorts"
+  ))) {
+    blockers.push("Each Birthday Gift Pack Piece must keep its contents consistent with the selected socks option.");
+  }
+  if (pieces.some((piece) => piece.sleeve_length !== "short_sleeve")) blockers.push("Birthday Gift Pack Pieces must be short sleeve.");
+  if (pieces.some((piece) => piece.size_profile !== "kids_16_28")) blockers.push("Birthday Gift Pack Pieces must use the kids 16 to 28 size profile.");
+  if (uniqueTextValues(pieces.map((piece) => piece.team)).length !== 1) blockers.push("Birthday Gift Pack Pieces must use the same team.");
+  if (uniqueTextValues(pieces.map((piece) => piece.season)).length !== 1) blockers.push("Birthday Gift Pack Pieces must use the same season.");
+  const policiesApproved = [
+    facts.gift_pack_returns_policy,
+    facts.gift_pack_promotion_policy,
+    facts.gift_pack_packaging_policy
+  ].every((policy) => policy === "approved");
+  if (!policiesApproved) blockers.push("Confirm all Birthday Gift Pack policies.");
+  return blockers;
+}
+
+function birthdayGiftPackPieces(summary) {
+  const order = ["home", "away", "third", "fourth", "fifth", "goalkeeper", "training", "pre_match", "special_edition", "retro"];
+  return [...summary.pieces].sort((left, right) => {
+    const leftIndex = order.indexOf(left.kit_type);
+    const rightIndex = order.indexOf(right.kit_type);
+    return (leftIndex < 0 ? order.length : leftIndex) - (rightIndex < 0 ? order.length : rightIndex);
+  });
+}
+
+function birthdayGiftPackColours(piece) {
+  const colours = [
+    `${String(piece.main_colour_shirt).toLowerCase()} shirt`,
+    `${String(piece.main_colour_shorts).toLowerCase()} shorts`
+  ];
+  if (piece.socks_status === "included" && piece.main_colour_socks) {
+    colours.push(`${String(piece.main_colour_socks).toLowerCase()} socks`);
+  }
+  return colours.join(", ");
+}
+
+function birthdayGiftPackIncludedLine(piece) {
+  const fixedPrint = bundleFixedPrintSentence(piece);
+  const contents = piece.socks_status === "included"
+    ? "shirt, matching shorts and socks"
+    : "shirt and matching shorts; socks are not included";
+  return `<li>1 &times; ${esc(piece.team)} ${esc(titleCaseToken(piece.kit_type))} kids kit: ${contents}.${fixedPrint ? ` ${esc(fixedPrint)}` : ""}</li>`;
+}
+
+function renderBirthdayGiftPackOptions(summary) {
+  const lines = [];
+  const available = summary.personalisable;
+  if (available.length === summary.pieces.length) {
+    const kitNames = birthdayGiftPackPieces(summary).map((piece) => `${titleCaseToken(piece.kit_type)} kit`);
+    const availability = kitNames.length === 2 ? `the ${kitNames[0]}, the ${kitNames[1]} or both` : "any eligible kit";
+    lines.push(`<li><strong>Name and number:</strong> optional on ${esc(availability)}. Select it separately for each kit and enter the details in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>`);
+  } else if (available.length) {
+    const kitNames = available.map((piece) => `${titleCaseToken(piece.kit_type)} kit`);
+    lines.push(`<li><strong>Name and number:</strong> optional on the ${esc(humanList(kitNames))}. Select it in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>`);
+  }
+
+  const badges = summary.badgeEligible;
+  if (badges.length === summary.pieces.length && badges.every((piece) => piece.badge_league === "Premier League")) {
+    const shirtCount = badges.length === 2 ? "both shirts" : `all ${badges.length} shirts`;
+    lines.push(`<li><strong>EPL badges:</strong> Premier League sleeve badges added to ${shirtCount}.</li>`);
+  } else if (badges.length === summary.pieces.length && uniqueTextValues(badges.map(bundleBadgeDisplay)).length === 1) {
+    const shirtCount = badges.length === 2 ? "both shirts" : `all ${badges.length} shirts`;
+    lines.push(`<li><strong>Sleeve badges:</strong> ${esc(bundleBadgeDisplay(badges[0]))} sleeve badges added to ${shirtCount}.</li>`);
+  } else {
+    badges.forEach((piece) => {
+      lines.push(`<li><strong>${esc(titleCaseToken(piece.kit_type))} kit sleeve badge:</strong> ${esc(bundleBadgeDisplay(piece))} sleeve badge available for this shirt.</li>`);
+    });
+  }
+  return lines;
+}
+
+function renderBirthdayGiftPackDescription(summary) {
+  const pieces = birthdayGiftPackPieces(summary);
+  const options = renderBirthdayGiftPackOptions(summary);
+  const printDetails = (summary.fixedPrint || []).map((piece) => (
+    `<li><strong>${esc(titleCaseToken(piece.kit_type))} kit player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`
+  ));
+  const beforeOrder = [];
+  if (summary.personalisable.length) {
+    beforeOrder.push("<li>Double-check the spelling of each name and number in the personalisation fields.</li>");
+    beforeOrder.push("<li>Personalised shirts can&rsquo;t be returned for a change of mind or wrong size, unless we made an error.</li>");
+  }
+  (summary.fixedPrint || []).forEach((piece) => {
+    beforeOrder.push(`<li>The ${esc(titleCaseToken(piece.kit_type))} kit includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this kit.</li>`);
+  });
+  pieces.filter((piece) => piece.socks_status === "unavailable").forEach((piece) => {
+    beforeOrder.push(`<li>The ${esc(titleCaseToken(piece.kit_type))} kit includes the shirt and matching shorts. Socks are not included.</li>`);
+  });
+  beforeOrder.push("<li>Gift packs are already discounted, so promo codes can&rsquo;t be applied.</li>");
+  beforeOrder.push("<li><strong>Packaging:</strong> sent in standard packaging, not gift-wrapped.</li>");
+  const kitTypes = pieces.map((piece) => titleCaseToken(piece.kit_type));
+  const sizeSelection = pieces.length === 2 && pieces[0].kit_type === "home" && pieces[1].kit_type === "away"
+    ? "Choose the Home and Away sizes separately."
+    : "Choose each kit size separately.";
+
+  return [
+    "<h3>What's Included</h3>",
+    "<ul>",
+    ...pieces.map(birthdayGiftPackIncludedLine),
+    "</ul>",
+    "",
+    "<h3>Product Details</h3>",
+    "<ul>",
+    `<li><strong>Season:</strong> ${esc(summary.sharedSeason)}.</li>`,
+    `<li><strong>Kit types:</strong> ${esc(humanList(kitTypes))}.</li>`,
+    "<li><strong>Version:</strong> Fan version.</li>",
+    "<li><strong>Sleeve length:</strong> Short sleeve.</li>",
+    ...printDetails,
+    ...pieces.map((piece) => `<li><strong>${esc(titleCaseToken(piece.kit_type))} kit colours:</strong> ${esc(birthdayGiftPackColours(piece))}.</li>`),
+    `<li><strong>Sizes:</strong> kids sizes 16&ndash;28 (ages 3&ndash;13) for each kit. ${sizeSelection} See the Size Guide tab for measurements.</li>`,
+    "<li><strong>Material:</strong> Made from lightweight polyester fabric.</li>",
+    "<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>",
+    "</ul>",
+    "",
+    "<h3>Options You Can Add</h3>",
+    "<ul>",
+    options.join("\n"),
+    "</ul>",
+    "",
+    "<h3>Before You Order</h3>",
+    "<ul>",
+    beforeOrder.join("\n"),
+    "</ul>"
+  ].join("\n");
+}
+
+function auditBirthdayGiftPackDescription(html, summary, fingerprint) {
+  const blockers = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div id="gift-pack-audit-root">${html}</div>`, "text/html");
+  const root = doc.querySelector("#gift-pack-audit-root");
+  const textValue = root.textContent.toLowerCase();
+  const headings = [...root.querySelectorAll("h3")].map((node) => node.textContent.trim());
+  const expectedHeadings = ["What's Included", "Product Details", "Options You Can Add", "Before You Order"];
+  const sectionText = (heading) => [...root.querySelectorAll("h3")]
+    .find((node) => node.textContent.trim() === heading)?.nextElementSibling?.textContent.toLowerCase() || "";
+  const includedText = sectionText("What's Included");
+  const productDetailsText = sectionText("Product Details");
+  const optionsText = sectionText("Options You Can Add");
+  const beforeOrderText = sectionText("Before You Order");
+  const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
+  if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
+  if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Birthday Gift Pack must use the four approved sections in order.");
+  if (root.querySelector("p")) blockers.push("Birthday Gift Pack must not add an opening paragraph before What's Included.");
+  if (textValue.includes("key buying details")) blockers.push("Birthday Gift Pack must not use the legacy Key Buying Details section.");
+  ["lightweight polyester fabric", "standard packaging, not gift-wrapped"].forEach((phrase) => {
+    if (!textValue.includes(phrase)) blockers.push(`Birthday Gift Pack is missing required copy: ${phrase}.`);
+  });
+  summary.pieces.forEach((piece) => {
+    const kitLabel = `${piece.kit_type} kit`;
+    if (!includedText.includes(`${piece.kit_type} kids kit`)) blockers.push(`${titleCaseToken(piece.kit_type)} kit is missing from What's Included.`);
+    if (!productDetailsText.includes(`${kitLabel} colours:`)) blockers.push(`${titleCaseToken(piece.kit_type)} kit colours are missing from Product Details.`);
+    const expectedContents = piece.socks_status === "included"
+      ? "shirt, matching shorts and socks"
+      : "shirt and matching shorts; socks are not included";
+    if (!includedText.includes(expectedContents)) blockers.push(`${titleCaseToken(piece.kit_type)} kit contents or socks status is missing from What's Included.`);
+    [piece.main_colour_shirt, piece.main_colour_shorts, piece.socks_status === "included" ? piece.main_colour_socks : ""].filter(Boolean).forEach((colour) => {
+      if (!textValue.includes(String(colour).toLowerCase())) blockers.push(`${titleCaseToken(piece.kit_type)} kit colour ${colour} is missing.`);
+    });
+    if (piece.socks_status === "unavailable" && !beforeOrderText.includes(`the ${piece.kit_type} kit includes the shirt and matching shorts. socks are not included`)) {
+      blockers.push(`${titleCaseToken(piece.kit_type)} kit no-socks warning is missing from Before You Order.`);
+    }
+    if (piece.listing_configuration === "pre_applied_player") {
+      const playerName = displayName(piece.pre_applied_name).toLowerCase();
+      const playerNumber = String(piece.pre_applied_number).toLowerCase();
+      if (!textValue.includes(`${playerName} name and number ${playerNumber} are already applied to the back`)) {
+        blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print is missing from What's Included.`);
+      }
+      if (!textValue.includes(`fixed ${playerName} ${playerNumber} print`) || !textValue.includes("another name or number cannot be selected")) {
+        blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print warning is missing from Before You Order.`);
+      }
+      if (!productDetailsText.includes(`${piece.kit_type} kit player print:`) || !productDetailsText.includes(`${playerName} name and number ${playerNumber} are already applied and included`)) {
+        blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print is missing from Product Details.`);
+      }
+      if (optionsText.includes(`${piece.kit_type} kit player print:`)) {
+        blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print must not appear under Options You Can Add.`);
+      }
+    }
+  });
+  if (summary.personalisable.length && (!textValue.includes("13 letters") || !textValue.includes("2 digits") || !textValue.includes("double-check"))) {
+    blockers.push("Birthday Gift Pack personalisation limits or spelling check are missing.");
+  }
+  const unsupported = forbiddenTerms.filter((term) => textValue.includes(term));
+  if (unsupported.length) blockers.push(`Description contains unsupported claim term(s): ${unsupported.join(", ")}.`);
+  const qaStatus = blockers.length ? "block" : "pass";
+  return {
+    qa_status: qaStatus,
+    bundle_ref: summary.facts.bundle_name,
+    site: summary.facts.site,
+    piece_count: summary.pieces.length,
+    facts_signature: summary.signature,
+    description_fingerprint: fingerprint,
+    branch_profile: "kfk_birthday_gift_pack_home_away_kids",
+    checks_run: ["fact_consistency", "gift_pack_piece_coverage", "html_structure", "configuration_logic", "policy_confirmation", "unsupported_claims"],
+    blockers,
+    review_flags: [],
+    recommended_actions: recommendedActions(qaStatus, blockers, []),
+    generated_at: new Date().toISOString(),
+    generator_version: "kfk_birthday_gift_pack_0.1.0"
+  };
 }
 
 function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) {
@@ -2965,12 +3239,20 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
   const root = doc.querySelector("#bundle-audit-root");
   const rootText = root.textContent;
   const textValue = rootText.toLowerCase();
+  const headings = [...root.querySelectorAll("h3")].map((node) => node.textContent.trim());
+  const expectedHeadings = ["What's Included", "Product Details", "Options You Can Add", "Before You Order"];
+  const sectionText = (heading) => [...root.querySelectorAll("h3")]
+    .find((node) => node.textContent.trim() === heading)?.nextElementSibling?.textContent.toLowerCase() || "";
+  const productDetailsText = sectionText("Product Details");
+  const optionsText = sectionText("Options You Can Add");
   const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
   if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
-  if (descriptionDashCheckPattern.test(rootText)) blockers.push("Description text must not contain dash characters.");
+  if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Bundle descriptions must use the four approved sections in order.");
+  if (root.querySelector("p")) blockers.push("The approved Bundle format starts directly with What's Included.");
   const unsupported = forbiddenTerms.filter((term) => textValue.includes(term));
   if (unsupported.length) blockers.push(`Description contains unsupported claim term(s): ${unsupported.join(", ")}.`);
-  if (!textValue.includes(removeDashesFromText(summary.facts.bundle_name).toLowerCase())) blockers.push("Opening must contain the exact Bundle name.");
+  if (!textValue.includes("material: made from lightweight polyester fabric")) blockers.push("Bundle Product Details must include the approved polyester material wording.");
+  if (!textValue.includes("exact shades may vary slightly between screens and production batches")) blockers.push("Bundle Product Details must include the approved shade note.");
 
   summary.pieces.forEach((piece, index) => {
     const prefix = `Piece ${index + 1} — ${piece.reference}`;
@@ -2984,9 +3266,18 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
     if (piece.socks_status === "unavailable" && !textValue.includes(`${comparableReference} includes the shirt and matching shorts. socks are not included`)) {
       blockers.push(`${prefix}: no-socks warning is missing from Before You Order.`);
     }
+    if (piece.product_type === "shirt_only" && !textValue.includes(`${comparableReference} is a shirt-only product. shorts and socks are not included`)) {
+      blockers.push(`${prefix}: shirt-only warning is missing from Before You Order.`);
+    }
     if (piece.listing_configuration === "pre_applied_player") {
       if (!textValue.includes(removeDashesFromText(piece.pre_applied_name).toLowerCase()) || !textValue.includes(String(piece.pre_applied_number).toLowerCase())) {
         blockers.push(`${prefix}: fixed player print is missing.`);
+      }
+      if (!productDetailsText.includes(`${comparableReference} player print:`)) {
+        blockers.push(`${prefix}: fixed player print is missing from Product Details.`);
+      }
+      if (optionsText.includes(`${comparableReference} player print:`)) {
+        blockers.push(`${prefix}: fixed player print must not appear under Options You Can Add.`);
       }
     }
   });
@@ -3007,12 +3298,12 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
     generation_revision: revision,
     description_fingerprint: fingerprint,
     branch_profile: `piece_based_${summary.pieces.every((piece) => piece.product_type === "full_kit") ? "all_kits" : "mixed"}`,
-    checks_run: ["fact_consistency", "piece_coverage", "html_structure", "configuration_logic", "unsupported_claims", "duplicate_copy", "dash_free_text"],
+    checks_run: ["fact_consistency", "piece_coverage", "html_structure", "configuration_logic", "unsupported_claims", "duplicate_copy"],
     blockers,
     review_flags: reviewFlags,
     recommended_actions: recommendedActions(qaStatus, blockers, reviewFlags),
     generated_at: new Date().toISOString(),
-    generator_version: "kfk_piece_bundle_0.1.0"
+    generator_version: "kfk_piece_bundle_0.2.0"
   };
 }
 
@@ -3021,9 +3312,12 @@ function generateBundle() {
   const blockers = [];
   if (!facts.bundle_name) blockers.push("Bundle name is required.");
   if (facts.bundle_items_list.length < 2) blockers.push("Add at least two complete Pieces.");
+  if (facts.bundle_items_list.length > maxBundlePieces) blockers.push(`A Bundle can contain up to ${maxBundlePieces} Pieces.`);
   facts.bundle_items_list.forEach((piece, index) => {
     validateBundlePiece(piece).forEach((error) => blockers.push(`Piece ${index + 1} — ${bundleRecipientLabelForPiece(piece)}: ${error}`));
   });
+
+  if (isBirthdayGiftPack(facts)) blockers.push(...validateBirthdayGiftPackFacts(facts));
 
   if (blockers.length) {
     preview.className = "description-preview empty";
@@ -3036,31 +3330,28 @@ function generateBundle() {
   }
 
   const summary = buildBundleSummary(facts);
-  const history = readBundleDescriptionHistory();
-  const knownFingerprints = new Set(history.map((entry) => entry.description_fingerprint));
-  let revision = Math.max(0, variantOffset);
-  let html = "";
-  let fingerprint = "";
-  let uniquenessExhausted = false;
-
-  for (let attempt = 0; attempt < 96; attempt += 1) {
-    const candidateRevision = revision + attempt;
-    const candidateHtml = renderPieceBasedBundleDescription(summary, candidateRevision);
-    const candidateFingerprint = bundleHash(candidateHtml.replace(/\s+/g, " ").trim().toLowerCase());
-    html = candidateHtml;
-    fingerprint = candidateFingerprint;
-    revision = candidateRevision;
-    if (!knownFingerprints.has(candidateFingerprint)) break;
-    if (attempt === 95) uniquenessExhausted = true;
+  if (isBirthdayGiftPack(facts)) {
+    const html = renderBirthdayGiftPackDescription(summary);
+    const fingerprint = bundleHash(html.replace(/\s+/g, " ").trim().toLowerCase());
+    const audit = auditBirthdayGiftPackDescription(html, summary, fingerprint);
+    if (audit.qa_status === "block") {
+      preview.className = "description-preview empty";
+      preview.textContent = "BLOCK: generated Birthday Gift Pack HTML failed its branch audit.";
+      htmlOutput.value = "";
+    } else {
+      preview.className = "description-preview";
+      preview.innerHTML = html;
+      htmlOutput.value = html;
+    }
+    setBadge(branchBadge, "KFK Birthday Gift Pack", audit.qa_status === "block" ? "block" : "pass");
+    setBadge(qaBadge, audit.qa_status, audit.qa_status);
+    auditOutput.textContent = formatAuditOutput(audit);
+    return;
   }
 
-  variantOffset = revision;
-  const audit = auditPieceBasedBundleDescription(html, summary, fingerprint, revision);
-  if (uniquenessExhausted) {
-    audit.review_flags.push("All checked approved wording combinations have already been used in local history.");
-    if (audit.qa_status === "pass") audit.qa_status = "review";
-    audit.recommended_actions = recommendedActions(audit.qa_status, audit.blockers, audit.review_flags);
-  }
+  const html = renderPieceBasedBundleDescription(summary);
+  const fingerprint = bundleHash(html.replace(/\s+/g, " ").trim().toLowerCase());
+  const audit = auditPieceBasedBundleDescription(html, summary, fingerprint, 0);
 
   if (audit.qa_status === "block") {
     preview.className = "description-preview empty";
@@ -3070,13 +3361,6 @@ function generateBundle() {
     preview.className = "description-preview";
     preview.innerHTML = html;
     htmlOutput.value = html;
-    history.push({
-      facts_signature: summary.signature,
-      generation_revision: revision,
-      description_fingerprint: fingerprint,
-      generated_at: audit.generated_at
-    });
-    writeBundleDescriptionHistory(history);
   }
 
   setBadge(branchBadge, `Piece Bundle · ${summary.pieces.length}`, audit.qa_status === "block" ? "block" : "pass");
@@ -3154,31 +3438,32 @@ function loadSample() {
 
 function loadBundleSample() {
   variantOffset = 0;
-  bundleForm.elements.bundle_name.value = "Inter Miami Dad & Son Bundle 2026/27";
-  bundleForm.elements.bundle_label.value = "Family Bundle";
+  setEnhancedSelectValue(bundleTypeSelect, "birthday_gift_pack_home_away_kids");
+  bundleForm.elements.bundle_name.value = "Nottingham Forest Birthday Gift Pack Home and Away Kids Football Kit 2026/27";
   bundleItems = [
     {
-      piece_id: "piece-1", recipient_role: "dad", recipient_label: "", audience: "men",
-      product_name: "Inter Miami Home Men's Shirt 2026/27", team: "Inter Miami", season: "2026/27",
-      badge_status: "unavailable", badge_league: "", badge_champion_status: "not_champion",
-      product_kind: "Shirt", product_type: "shirt_only", kit_type: "home", sleeve_length: "short_sleeve",
-      socks_status: "not_applicable", included_items: "shirt_only", listing_configuration: "plain_customisable",
+      piece_id: "piece-1", recipient_role: "none", recipient_label: "", audience: "kids",
+      product_name: "Nottingham Forest Home Kids Football Kit 2026/27", team: "Nottingham Forest", season: "2026/27",
+      badge_status: "available", badge_league: "Premier League", badge_champion_status: "not_champion",
+      product_kind: "Kit", product_type: "full_kit", kit_type: "home", sleeve_length: "short_sleeve",
+      socks_status: "included", included_items: "shirt_shorts_and_socks", listing_configuration: "plain_customisable",
       personalisation_status: "available", print_price_included: "not_applicable", size_range_mode: "standard",
-      pre_applied_name: "", pre_applied_number: "", main_colour_shirt: "Pink", main_colour_shorts: "", main_colour_socks: "",
-      visible_size_range: "Men sizes S-XXL", size_profile: "adult_s_2xl", ...fixedKfkFacts
+      pre_applied_name: "", pre_applied_number: "", main_colour_shirt: "Red", main_colour_shorts: "White", main_colour_socks: "Red",
+      visible_size_range: "Kids sizes 16-28, suggested ages 3-13", size_profile: "kids_16_28", ...fixedKfkFacts
     },
     {
-      piece_id: "piece-2", recipient_role: "son", recipient_label: "", audience: "kids",
-      product_name: "Inter Miami Away Kids Football Kit 2026/27 MESSI 10", team: "Inter Miami", season: "2026/27",
-      badge_status: "unavailable", badge_league: "", badge_champion_status: "not_champion",
+      piece_id: "piece-2", recipient_role: "none", recipient_label: "", audience: "kids",
+      product_name: "Nottingham Forest Away Kids Football Kit 2026/27", team: "Nottingham Forest", season: "2026/27",
+      badge_status: "available", badge_league: "Premier League", badge_champion_status: "not_champion",
       product_kind: "Kit", product_type: "full_kit", kit_type: "away", sleeve_length: "short_sleeve",
-      socks_status: "included", included_items: "shirt_shorts_and_socks", listing_configuration: "pre_applied_player",
-      personalisation_status: "unavailable", print_price_included: "yes", size_range_mode: "standard",
-      pre_applied_name: "MESSI", pre_applied_number: "10", main_colour_shirt: "Black", main_colour_shorts: "Black", main_colour_socks: "Pink",
+      socks_status: "included", included_items: "shirt_shorts_and_socks", listing_configuration: "plain_customisable",
+      personalisation_status: "available", print_price_included: "not_applicable", size_range_mode: "standard",
+      pre_applied_name: "", pre_applied_number: "", main_colour_shirt: "Green", main_colour_shorts: "Green", main_colour_socks: "Green",
       visible_size_range: "Kids sizes 16-28, suggested ages 3-13", size_profile: "kids_16_28", ...fixedKfkFacts
     }
   ];
   nextBundlePieceId = 3;
+  syncBundleTypeControls();
   renderBundleItemsList();
   resetBundlePieceEditor();
   generateBundle();
@@ -3198,7 +3483,11 @@ function clearAll() {
     currentForm.querySelectorAll('input[type="hidden"]').forEach((field) => {
       field.value = "";
     });
+    currentForm.querySelectorAll('input[type="checkbox"]').forEach((field) => {
+      field.checked = false;
+    });
   });
+  setEnhancedSelectValue(bundleTypeSelect, "piece_bundle");
 
   bundleItems = [];
   editingBundlePieceId = null;
@@ -3214,6 +3503,7 @@ function clearAll() {
   renderBundleItemsList();
   syncProductSelectionFields();
   resetBundlePieceEditor();
+  syncBundleTypeControls();
   refreshEnhancedSelects();
 
   generateBtn.disabled = false;
@@ -3255,6 +3545,7 @@ function setMode(mode) {
   auditOutput.textContent = "qa_status: not_run";
   syncAnotherInputs();
   syncProductSelectionFields();
+  syncBundleTypeControls();
 }
 
 function syncProductTypeDefaults() {
@@ -3394,12 +3685,21 @@ bundleRecipientSelect.addEventListener("change", () => {
   if (suggestedAudience) setEnhancedSelectValue(bundleAudienceSelect, suggestedAudience);
   syncBundleItemControls();
 });
-[bundleForm.elements.bundle_name, bundleForm.elements.bundle_label].forEach((field) => {
-  field.addEventListener("input", () => { variantOffset = 0; });
+bundleForm.elements.bundle_name.addEventListener("input", () => { variantOffset = 0; });
+bundleTypeChoices.querySelectorAll("[data-bundle-type]").forEach((button) => {
+  button.addEventListener("click", () => {
+    bundleTypeSelect.value = button.dataset.bundleType;
+    bundleTypeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+});
+bundleTypeSelect.addEventListener("change", () => {
+  variantOffset = 0;
+  syncBundleTypeControls();
 });
 bundleProductName.addEventListener("input", inferBundlePieceFromName);
-[bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleSizeRangeModeSelect, bundleBadgeStatusSelect]
+[bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect]
   .forEach((field) => field.addEventListener("change", syncBundleItemControls));
+bundleCustomSizeRangeToggle.addEventListener("change", syncBundleItemControls);
 bundleBadgeChampionToggle.addEventListener("click", () => {
   if (bundleBadgeStatusSelect.value !== "available") return;
   setBundleBadgeChampionStatus(!bundleBadgeChampionToggle.classList.contains("active"));
@@ -3431,4 +3731,5 @@ loadSample();
 syncProductTypeDefaults();
 syncAnotherInputs();
 syncBundleItemControls();
+syncBundleTypeControls();
 renderBundleItemsList();

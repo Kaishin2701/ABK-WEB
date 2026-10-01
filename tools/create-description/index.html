@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KFK Description Builder</title>
-    <link rel="stylesheet" href="./styles.css?v=6.0.1">
+    <link rel="stylesheet" href="./styles.css?v=20261001c">
   </head>
   <body>
     <header class="topbar">
@@ -181,21 +181,30 @@
         </form>
 
         <form id="bundleForm" class="fact-grid hidden">
-          <label>
+          <div class="span-2 compact-choice-field">
+            <span class="field-label">Bundle type</span>
+            <div id="bundleTypeChoices" class="segmented-choice" role="group" aria-label="Bundle type">
+              <button type="button" data-bundle-type="piece_bundle">Standard Bundle</button>
+              <button type="button" data-bundle-type="birthday_gift_pack_home_away_kids">KFK Birthday Gift Pack</button>
+            </div>
+            <select id="bundleTypeSelect" class="hidden" name="bundle_type" data-enhance="false" aria-hidden="true" tabindex="-1">
+              <option value="piece_bundle">Standard Bundle</option>
+              <option value="birthday_gift_pack_home_away_kids">KFK Birthday Gift Pack</option>
+            </select>
+          </div>
+
+          <label class="span-2">
             Bundle name
             <input name="bundle_name" type="text" placeholder="Inter Miami Dad &amp; Son Bundle 2026/27" required>
           </label>
 
-          <label>
-            Bundle label
-            <input name="bundle_label" type="text" placeholder="e.g. Birthday Gift Pack">
-          </label>
+          <input name="bundle_label" type="hidden">
 
           <div class="span-2 bundle-piece-editor" aria-labelledby="bundle-piece-title">
             <div class="piece-editor-heading">
               <div>
                 <span id="bundle-piece-title" class="field-label">Piece editor</span>
-                <p class="assistant-copy">Configure one complete product, choose who it is for, then add it to the bundle. Repeat for every piece.</p>
+                <p class="assistant-copy">Configure one complete product, choose who it is for, then add it to the bundle. Repeat until the bundle contains 2–4 Pieces.</p>
               </div>
               <span id="bundlePieceEditorBadge" class="badge neutral">New piece</span>
             </div>
@@ -221,9 +230,9 @@
                   <option value="other">Other</option>
                 </select>
               </label>
-              <label id="bundleRecipientLabelField">
-                Recipient label (optional)
-                <input id="bundleRecipientLabel" type="text" placeholder="e.g. Son 1, Son 2 or Coach">
+              <label id="bundleRecipientLabelField" class="hidden">
+                Custom recipient label
+                <input id="bundleRecipientLabel" type="text" placeholder="e.g. Coach">
               </label>
               <label>
                 Audience
@@ -308,19 +317,28 @@
               </div>
             </div>
 
-            <div class="piece-size-controls">
-              <label>
-                Size range mode
-                <select id="bundleSizeRangeModeSelect" aria-label="Piece size range mode">
+            <div class="piece-size-summary" aria-live="polite">
+              <span class="field-label">Size range</span>
+              <strong id="bundleStandardSizeSummary">Choose an audience to derive the standard range.</strong>
+            </div>
+
+            <details class="piece-advanced-options">
+              <summary>Advanced options</summary>
+              <div class="advanced-options-content">
+                <label class="confirmation-control">
+                  <input id="bundleCustomSizeRangeToggle" type="checkbox">
+                  <span>Use a custom size range</span>
+                </label>
+                <select id="bundleSizeRangeModeSelect" class="hidden" data-enhance="false" aria-hidden="true" tabindex="-1">
                   <option value="standard">Standard for audience</option>
                   <option value="custom">Custom range</option>
                 </select>
-              </label>
-              <label>
-                Visible size range
-                <input id="bundleVisibleSizeRange" type="text" placeholder="Choose an audience to derive the standard range" readonly>
-              </label>
-            </div>
+                <label id="bundleCustomSizeRangeField" class="hidden">
+                  Visible custom size range
+                  <input id="bundleVisibleSizeRange" type="text" placeholder="e.g. Kids sizes 18–28">
+                </label>
+              </div>
+            </details>
 
             <div class="image-colour-assistant bundle-colour-assistant">
               <div class="assistant-heading">
@@ -382,7 +400,7 @@
           <div class="span-2 bundle-items-field">
             <div class="piece-list-heading">
               <span class="field-label">Bundle Pieces</span>
-              <span id="bundleItemsSummary" class="bundle-items-summary">Pieces added: 0</span>
+              <span id="bundleItemsSummary" class="bundle-items-summary">Pieces added: 0 / 4</span>
             </div>
             <div id="bundleItemsList" class="bundle-items-list bundle-piece-list" aria-live="polite"></div>
           </div>
@@ -423,8 +441,8 @@
     <script src="./data/national-teams.js?v=20260804h"></script>
     <script src="./data/football-clubs.js?v=20260804h"></script>
     <script src="./templates/product/product-templates.js?v=20260804h"></script>
-    <script src="./templates/bundle/bundle-templates.js?v=20260804h"></script>
-    <script src="./templates/template-registry.js?v=20260804h"></script>
-    <script src="./app.js?v=6.0.2"></script>
+    <script src="./templates/bundle/bundle-templates.js?v=20261001a"></script>
+    <script src="./templates/template-registry.js?v=20261001a"></script>
+    <script src="./app.js?v=20261001c"></script>
   </body>
 </html>

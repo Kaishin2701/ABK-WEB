@@ -320,6 +320,53 @@ label.disabled {
   font-weight: 600;
 }
 
+.compact-choice-field,
+.advanced-options-content {
+  display: grid;
+  gap: 10px;
+}
+
+.segmented-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.segmented-choice button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.segmented-choice button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.confirmation-control {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.confirmation-control input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
 .image-colour-assistant {
   display: grid;
   gap: 14px;
@@ -556,15 +603,39 @@ input:disabled {
   gap: 8px;
 }
 
-.piece-size-controls {
-  display: grid;
-  grid-template-columns: minmax(190px, 0.7fr) minmax(260px, 1.3fr);
+.piece-size-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
 }
 
-.piece-size-controls input[readonly] {
+.piece-size-summary strong {
+  color: var(--accent-dark);
+  font-size: 13px;
+  text-align: right;
+}
+
+.piece-advanced-options {
+  border: 1px solid var(--border);
+  border-radius: 7px;
   background: var(--surface);
+}
+
+.piece-advanced-options summary {
+  padding: 11px 12px;
   color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.advanced-options-content {
+  padding: 0 12px 12px;
 }
 
 .piece-product-controls .another-input.visible,
@@ -932,16 +1003,23 @@ input:disabled {
 
   .piece-identity-grid,
   .piece-fact-grid,
-  .piece-product-controls,
-  .piece-size-controls {
+  .piece-product-controls {
     grid-template-columns: 1fr;
   }
 
   .piece-identity-grid > *,
   .piece-fact-grid > *,
-  .piece-product-controls > *,
-  .piece-size-controls > * {
+  .piece-product-controls > * {
     grid-column: 1;
+  }
+
+  .piece-size-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .piece-size-summary strong {
+    text-align: left;
   }
 
   .piece-editor-heading,
@@ -1123,8 +1201,7 @@ textarea:focus,
 }
 
 input:disabled,
-.enhanced-select-option:disabled,
-.piece-size-controls input[readonly] {
+.enhanced-select-option:disabled {
   background: #202020;
   color: #777777;
 }

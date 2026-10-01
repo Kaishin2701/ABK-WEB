@@ -29,9 +29,18 @@ There is nothing to install. Open [`index.html`](./index.html) in a browser.
 In **Bundle** mode, enter a Bundle name and optional customer-facing label,
 then configure and add each Piece independently. Every Piece keeps its own
 recipient, product facts, colours, size range, personalisation and badge
-settings. Add at least two valid Pieces before generating the Bundle HTML.
+settings. Add between two and four valid Pieces before generating the Bundle
+HTML.
 Men and Women can be selected directly as Piece recipients for couple bundles
 or bundles containing multiple adult shirts.
+
+Use the explicit **KFK Birthday Gift Pack: 2–4 Kids Kits** Bundle type only for
+the Boss-approved gift-pack configuration. It requires two to four Kids kits
+with distinct kit types for the same team and season. Each Piece may be With
+Socks or No Socks; its generated contents, colours and order warning follow the
+saved selection. The branch also requires confirmation
+of the controlled personalised-returns, promotion and packaging statements;
+these policies are never inherited by a Standard Piece Bundle.
 
 Product and Bundle badge selectors share one maintained league list. This list
 includes FIFA World Cup, FIFA Club World Cup, Saudi Pro League and MLS alongside
@@ -113,7 +122,14 @@ short, approved sizing and personalisation warnings used by this builder. The
 KFK content knowledge base remains the source of truth for claim safety and
 publishing approval.
 
-Bundle descriptions are assembled from the verified Piece records. Controlled
-wording pools provide reproducible variations, while a facts signature and
-description fingerprint prevent exact repeats within the available local
-history. Critical product facts and warnings do not change between variants.
+Bundle descriptions are assembled from the verified Piece records using the
+Boss-approved deterministic four-section structure: What's Included, Product
+Details, Options You Can Add and Before You Order. Standard Bundles and the
+Birthday Gift Pack branch now share this structure; Gift Pack returns,
+promotion and packaging statements remain exclusive to the explicitly selected
+and confirmed Birthday Gift Pack branch.
+When a Bundle Piece uses the pre-applied-player configuration, its exact player
+name and number are shown on that Piece under What's Included and Product
+Details. It is never presented as an option the customer can add. Before You
+Order makes clear that another name and number cannot be selected for that
+Piece.

@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.0.5',
+        version: '6.0.6',
         label: 'Current release',
+        title: 'Boss-approved Bundle descriptions',
+        description: 'Standard Bundles and KFK Birthday Gift Packs now use the approved four-section format with concise Piece inclusions, product details, options and order checks. Gift Pack policies remain isolated behind explicit confirmations.'
+    },
+    {
+        version: '6.0.5',
+        label: 'Previous release',
         title: 'Dedicated Tool Library',
         description: 'Tools now live on a dedicated visual library page. Opening a tool smoothly transforms the navigation pill into a Back button for a focused workspace.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Bundle facts and season inference',
         description: 'Badge leagues now include FIFA World Cup, Saudi Pro League and MLS; Bundle Pieces support Men and Women recipients; national-team titles can infer a standalone tournament year.'
-    },
-    {
-        version: '6.0.1',
-        label: 'Previous release',
-        title: 'Create Description dark theme',
-        description: 'Create Description now follows the ABK black and neon-green interface, including panels, forms, tabs, actions and status colours.'
     },
 ];
 
