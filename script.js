@@ -1,9 +1,9 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.0.6',
+        version: '6.1.0',
         label: 'Current release',
-        title: 'Boss-approved Bundle descriptions',
-        description: 'Standard Bundles and KFK Birthday Gift Packs now use the approved four-section format with concise Piece inclusions, product details, options and order checks. Gift Pack policies remain isolated behind explicit confirmations.'
+        title: 'Validated Bundle Description workflow',
+        description: 'Bundle Description now supports 2–4 Piece Standard Bundles and KFK Birthday Gift Packs. Approved Gift Pack policies are applied automatically, while incompatible audience, size, product, socks, print, team, season, kit type and sleeve combinations are hidden or blocked before Add or Save.'
     },
     {
         version: '6.0.5',
