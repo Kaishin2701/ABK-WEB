@@ -35,7 +35,8 @@ assert.match(script, /addEventListener\('wheel', handleUpdateCarouselWheel, \{ p
 
 assert.match(html, /Ver 6\.1\.1 Web/);
 assert.match(html, /<title>ABK<\/title>/);
-assert.doesNotMatch(html, /assets\/logo\.png/);
+assert.match(html, /<link rel="icon" type="image\/png" href="assets\/logo\.png\?v=6\.1\.1">/);
+assert.doesNotMatch(html, /<img[^>]+assets\/logo\.png/i);
 assert.match(html, /class="brand-wordmark"[\s\S]*?>ABK<\/span>/);
 assert.match(html, /style\.css\?v=6\.1\.1/);
 assert.match(html, /script\.js\?v=6\.1\.1/);
