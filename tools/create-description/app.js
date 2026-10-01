@@ -68,6 +68,7 @@ const bundleCustomSizeRangeToggle = document.querySelector("#bundleCustomSizeRan
 const bundleCustomSizeRangeField = document.querySelector("#bundleCustomSizeRangeField");
 const bundleVisibleSizeRange = document.querySelector("#bundleVisibleSizeRange");
 const bundleStandardSizeSummary = document.querySelector("#bundleStandardSizeSummary");
+const bundleAdvancedOptions = document.querySelector("#bundleAdvancedOptions");
 const bundleItemAnother = document.querySelector("#bundleItemAnother");
 const addBundleItemBtn = document.querySelector("#addBundleItemBtn");
 const cancelBundlePieceEditBtn = document.querySelector("#cancelBundlePieceEditBtn");
@@ -566,7 +567,7 @@ function renderEnhancedSelectOptions(wrapper) {
   const input = wrapper.querySelector(".enhanced-select-input");
   const options = wrapper.querySelector(".enhanced-select-options");
   const matches = [...select.options].filter((option) => (
-    option.dataset.customOption !== "true"
+    option.dataset.customOption !== "true" && !option.hidden
   ));
 
   options.replaceChildren();
@@ -1192,6 +1193,21 @@ function useBundleImageTitle() {
   inferBundlePieceFromName();
 }
 
+function inferBundleAudienceFromName(name) {
+  return [
+    ["baby", "baby"], ["women's", "women"], ["womens", "women"], ["women", "women"],
+    ["men's", "men"], ["mens", "men"], ["men", "men"], ["kids", "kids"], ["kid", "kids"], ["adult", "adult"]
+  ].find(([keyword]) => hasStandaloneKeyword(name, keyword))?.[1] || "";
+}
+
+function inferBundleProductKindFromName(name) {
+  const isLongSleeve = hasStandaloneKeyword(name, "long sleeve") || hasStandaloneKeyword(name, "long-sleeve");
+  if (isLongSleeve) return hasStandaloneKeyword(name, "kit") ? "Long Sleeve Kit" : "Long Sleeve Shirt";
+  if (hasStandaloneKeyword(name, "kit")) return "Kit";
+  if (hasStandaloneKeyword(name, "shirt")) return "Shirt";
+  return "";
+}
+
 function inferBundlePieceFromName() {
   const name = bundleProductName.value.trim();
   if (!name) return;
@@ -1199,14 +1215,9 @@ function inferBundlePieceFromName() {
   if (team) bundleItemTheme.value = team.name;
   const season = inferSeasonFromProductName(name, team);
   if (season) bundleItemSeason.value = season;
-  const audience = [
-    ["baby", "baby"], ["women's", "women"], ["womens", "women"], ["women", "women"],
-    ["men's", "men"], ["mens", "men"], ["men", "men"], ["kids", "kids"], ["kid", "kids"], ["adult", "adult"]
-  ].find(([keyword]) => hasStandaloneKeyword(name, keyword));
-  if (audience) setEnhancedSelectValue(bundleAudienceSelect, audience[1]);
-  const kind = hasStandaloneKeyword(name, "long sleeve") || hasStandaloneKeyword(name, "long-sleeve")
-    ? hasStandaloneKeyword(name, "kit") ? "Long Sleeve Kit" : "Long Sleeve Shirt"
-    : hasStandaloneKeyword(name, "kit") ? "Kit" : hasStandaloneKeyword(name, "shirt") ? "Shirt" : "";
+  const audience = inferBundleAudienceFromName(name);
+  if (audience) setEnhancedSelectValue(bundleAudienceSelect, audience);
+  const kind = inferBundleProductKindFromName(name);
   if (kind) setEnhancedSelectValue(bundleProductSelect, kind);
   const kitType = [["special edition", "special_edition"], ["pre match", "pre_match"], ["goalkeeper", "goalkeeper"], ["training", "training"], ["third", "third"], ["away", "away"], ["home", "home"], ["retro", "retro"]]
     .find(([keyword]) => hasStandaloneKeyword(name, keyword));
@@ -1266,6 +1277,7 @@ function syncBundleTypeControls() {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  syncBundleItemControls();
   refreshEnhancedSelects();
 }
 
@@ -1389,12 +1401,59 @@ function bundlePieceFactsFromEditor() {
   return facts;
 }
 
+function expectedAudienceForRecipient(recipientRole) {
+  return {
+    dad: "men",
+    mum: "women",
+    men: "men",
+    women: "women",
+    son: "kids",
+    daughter: "kids",
+    child: "kids",
+    kid: "kids",
+    adult: "adult"
+  }[recipientRole] || "";
+}
+
+function validateBirthdayGiftPackPiece(piece, otherPieces = []) {
+  const errors = [];
+  if (piece.audience !== "kids") errors.push("KFK Birthday Gift Pack Pieces must use the Kids audience.");
+  if (piece.product_type !== "full_kit") errors.push("KFK Birthday Gift Pack Pieces must be short-sleeve Kits.");
+  if (piece.sleeve_length !== "short_sleeve") errors.push("KFK Birthday Gift Pack Pieces cannot use long sleeves or baby suits.");
+  if (piece.size_profile !== "kids_16_28" || piece.size_range_mode !== "standard") {
+    errors.push("KFK Birthday Gift Pack Pieces must use the standard Kids 16–28 size range.");
+  }
+  if (otherPieces.some((item) => item.kit_type === piece.kit_type)) {
+    errors.push("Choose a different kit type for each Birthday Gift Pack Piece.");
+  }
+  if (otherPieces.some((item) => item.team.trim().toLowerCase() !== piece.team.trim().toLowerCase())) {
+    errors.push("All Birthday Gift Pack Pieces must use the same team.");
+  }
+  if (otherPieces.some((item) => item.season.trim().toLowerCase() !== piece.season.trim().toLowerCase())) {
+    errors.push("All Birthday Gift Pack Pieces must use the same season.");
+  }
+  return errors;
+}
+
 function validateBundlePiece(piece) {
   const errors = [];
   if (!piece.recipient_role) errors.push("Choose who this Piece is for. Use None when no recipient applies.");
   if (piece.recipient_role === "other" && !piece.recipient_label) errors.push("Enter a recipient label for Other.");
   if (!piece.audience) errors.push("Choose an audience.");
+  const expectedAudience = expectedAudienceForRecipient(piece.recipient_role);
+  if (expectedAudience && piece.audience && piece.audience !== expectedAudience) {
+    errors.push(`${bundleRecipientLabelForPiece(piece)} must use the ${titleCaseToken(expectedAudience)} audience.`);
+  }
   if (!piece.product_name) errors.push("Product name is required.");
+  const titleAudience = inferBundleAudienceFromName(piece.product_name);
+  if (titleAudience && piece.audience && titleAudience !== piece.audience) {
+    errors.push(`Product name indicates ${titleCaseToken(titleAudience)}, but the Piece audience is ${titleCaseToken(piece.audience)}.`);
+  }
+  const titleProductKind = inferBundleProductKindFromName(piece.product_name);
+  const titleIsKit = ["Kit", "Long Sleeve Kit"].includes(titleProductKind);
+  const titleIsShirt = ["Shirt", "Long Sleeve Shirt"].includes(titleProductKind);
+  if (titleIsKit && piece.product_type !== "full_kit") errors.push("Product name indicates a Kit, but the Piece is configured as a Shirt.");
+  if (titleIsShirt && piece.product_type !== "shirt_only") errors.push("Product name indicates a Shirt, but the Piece is configured as a Kit.");
   if (!piece.team) errors.push("Team is required.");
   if (!piece.season) errors.push("Season is required.");
   if (!piece.kit_type) errors.push("Enter the other kit type.");
@@ -1405,10 +1464,24 @@ function validateBundlePiece(piece) {
   if (!piece.personalisation_status) errors.push("Choose whether personalisation is available for this Piece.");
   if (!piece.visible_size_range) errors.push("Visible size range is required.");
   if (piece.size_range_mode === "custom" && piece.size_profile !== "custom_pending_review") errors.push("Custom size range must use the custom review profile.");
+  if (piece.product_type === "shirt_only" && piece.socks_status !== "not_applicable") errors.push("A Shirt cannot include socks.");
+  if (piece.product_type === "full_kit" && !["included", "unavailable"].includes(piece.socks_status)) errors.push("A Kit must use With Socks or No Socks.");
+  const expectedIncludedItems = piece.product_type === "shirt_only"
+    ? "shirt_only"
+    : piece.socks_status === "included" ? "shirt_shorts_and_socks" : "shirt_and_shorts";
+  if (piece.included_items !== expectedIncludedItems) errors.push("Piece contents do not match the selected product and socks options.");
   if (!piece.main_colour_shirt) errors.push("Main shirt colour is required.");
   if (piece.product_type === "full_kit" && !piece.main_colour_shorts) errors.push("Main shorts colour is required for a Kit.");
   if (piece.socks_status === "included" && !piece.main_colour_socks) errors.push("Main socks colour is required when socks are included.");
   return errors;
+}
+
+function bundlePieceValidationErrors(piece, otherPieces = []) {
+  const errors = validateBundlePiece(piece);
+  if (bundleTypeSelect.value === "birthday_gift_pack_home_away_kids") {
+    errors.push(...validateBirthdayGiftPackPiece(piece, otherPieces));
+  }
+  return [...new Set(errors)];
 }
 
 function showBundlePieceErrors(errors) {
@@ -1434,6 +1507,8 @@ function renderBundleItemsList() {
   bundleItems.forEach((piece, index) => {
     const card = document.createElement("article");
     card.className = "bundle-piece-card";
+    const pieceErrors = bundlePieceValidationErrors(piece, bundleItems.filter((item) => item.piece_id !== piece.piece_id));
+    card.classList.toggle("invalid", pieceErrors.length > 0);
     const recipient = bundleRecipientLabelForPiece(piece);
     const socksLabel = piece.product_type === "full_kit"
       ? piece.socks_status === "included" ? "With Socks" : "No Socks"
@@ -1447,9 +1522,14 @@ function renderBundleItemsList() {
     const sizeLabel = piece.size_range_mode === "custom"
       ? `${piece.visible_size_range} (custom)`
       : piece.visible_size_range;
-    const pieceStatus = piece.size_range_mode === "custom"
+    const pieceStatus = pieceErrors.length
+      ? '<span class="badge block">Needs fix</span>'
+      : piece.size_range_mode === "custom"
       ? '<span class="badge review">Size review</span>'
       : '<span class="badge pass">Ready</span>';
+    const pieceErrorSummary = pieceErrors.length
+      ? `<div class="bundle-piece-card-errors"><strong>Fix this Piece:</strong><ul>${pieceErrors.map((error) => `<li>${esc(error)}</li>`).join("")}</ul></div>`
+      : "";
     const colours = [
       `Shirt: ${piece.main_colour_shirt}`,
       piece.main_colour_shorts ? `Shorts: ${piece.main_colour_shorts}` : "",
@@ -1461,7 +1541,8 @@ function renderBundleItemsList() {
       `<p class="bundle-piece-card-product">${esc(piece.product_name)}</p>`,
       `<p class="bundle-piece-card-meta">${esc(openingAudienceLabel(piece.audience) || piece.audience)} · ${esc(piece.product_kind)} · ${esc(titleCaseToken(piece.kit_type))} · ${esc(socksLabel)} · ${esc(printLabel)}</p>`,
       `<p class="bundle-piece-card-meta">${esc(personalisationLabel)} · Sizes: ${esc(sizeLabel)}</p>`,
-      `<p class="bundle-piece-card-colours">${esc(colours)}</p>`
+      `<p class="bundle-piece-card-colours">${esc(colours)}</p>`,
+      pieceErrorSummary
     ].join("");
 
     const actions = document.createElement("div");
@@ -1479,9 +1560,18 @@ function renderBundleItemsList() {
         showBundlePieceErrors([`A Bundle can contain up to ${maxBundlePieces} Pieces.`]);
         return;
       }
-      bundleItems.push({ ...piece, piece_id: `piece-${nextBundlePieceId++}` });
+      const duplicatePiece = { ...piece, piece_id: `piece-${nextBundlePieceId}` };
+      const duplicateErrors = bundlePieceValidationErrors(duplicatePiece, bundleItems);
+      if (duplicateErrors.length) {
+        showBundlePieceErrors(duplicateErrors);
+        bundlePieceValidation.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      bundleItems.push(duplicatePiece);
+      nextBundlePieceId += 1;
       variantOffset = 0;
       renderBundleItemsList();
+      syncBundleItemControls();
     });
     const removeButton = document.createElement("button");
     removeButton.type = "button";
@@ -1501,8 +1591,9 @@ function renderBundleItemsList() {
 
 function addSelectedBundleItem() {
   const piece = bundlePieceFactsFromEditor();
-  const errors = validateBundlePiece(piece);
   const existingIndex = bundleItems.findIndex((item) => item.piece_id === piece.piece_id);
+  const otherPieces = bundleItems.filter((item) => item.piece_id !== piece.piece_id);
+  const errors = bundlePieceValidationErrors(piece, otherPieces);
   if (existingIndex < 0 && bundleItems.length >= maxBundlePieces) {
     errors.push(`A Bundle can contain up to ${maxBundlePieces} Pieces.`);
   }
@@ -1538,7 +1629,51 @@ function syncBundleSizeControls() {
   }
 }
 
+function setBundleSelectOptions(select, allowedValues = null) {
+  [...select.options].forEach((option) => {
+    if (option.dataset.customOption === "true") return;
+    const allowed = !allowedValues || allowedValues.has(option.value);
+    option.hidden = !allowed;
+    option.disabled = !allowed;
+  });
+}
+
+function syncBirthdayGiftPackEditorConstraints() {
+  const isGiftPack = bundleTypeSelect.value === "birthday_gift_pack_home_away_kids";
+  const childRecipients = new Set(["son", "daughter", "child", "kid", "none", "other"]);
+
+  setBundleSelectOptions(bundleRecipientSelect, isGiftPack ? childRecipients : null);
+  setBundleSelectOptions(bundleAudienceSelect, isGiftPack ? new Set(["kids"]) : null);
+  setBundleSelectOptions(bundleProductSelect, isGiftPack ? new Set(["Kit"]) : null);
+
+  bundleAdvancedOptions.classList.toggle("hidden", isGiftPack);
+  bundleCustomSizeRangeToggle.disabled = isGiftPack;
+  if (isGiftPack) {
+    if (!childRecipients.has(bundleRecipientSelect.value)) setEnhancedSelectValue(bundleRecipientSelect, "none");
+    setEnhancedSelectValue(bundleAudienceSelect, "kids");
+    setEnhancedSelectValue(bundleProductSelect, "Kit");
+    bundleCustomSizeRangeToggle.checked = false;
+    bundleAdvancedOptions.removeAttribute("open");
+  }
+
+  const usedKitTypes = new Set(bundleItems
+    .filter((item) => item.piece_id !== editingBundlePieceId)
+    .map((item) => item.kit_type));
+  [...bundleKitTypeSelect.options].forEach((option) => {
+    if (option.dataset.customOption === "true") return;
+    const unavailable = isGiftPack && usedKitTypes.has(option.value);
+    option.hidden = unavailable;
+    option.disabled = unavailable;
+  });
+  const selectedKitType = bundleKitTypeSelect.selectedOptions[0];
+  if (selectedKitType?.disabled) {
+    const firstAvailable = [...bundleKitTypeSelect.options].find((option) => !option.disabled && option.dataset.customOption !== "true");
+    if (firstAvailable) setEnhancedSelectValue(bundleKitTypeSelect, firstAvailable.value);
+  }
+}
+
 function syncBundleItemControls() {
+  syncBirthdayGiftPackEditorConstraints();
   let isKit = isBundlePieceKit();
   let isSuit = bundleProductSelect.value === "Suit";
   if (bundleAudienceSelect.value === "baby" && !isSuit) {
@@ -1554,7 +1689,7 @@ function syncBundleItemControls() {
     setEnhancedSelectValue(bundleAudienceSelect, "baby");
   }
   const bundleAdultOption = bundleAudienceSelect.querySelector('option[value="adult"]');
-  bundleAdultOption.disabled = !isKit;
+  if (!bundleAdultOption.hidden) bundleAdultOption.disabled = !isKit;
   bundleAdultOption.textContent = isKit ? "Adult" : "Adult (kits only)";
   bundleSocksSelect.classList.toggle("hidden", !usesSocks);
   bundlePrintFields.classList.toggle("visible", usesPrint);
@@ -3695,6 +3830,7 @@ bundleTypeChoices.querySelectorAll("[data-bundle-type]").forEach((button) => {
 bundleTypeSelect.addEventListener("change", () => {
   variantOffset = 0;
   syncBundleTypeControls();
+  renderBundleItemsList();
 });
 bundleProductName.addEventListener("input", inferBundlePieceFromName);
 [bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect]

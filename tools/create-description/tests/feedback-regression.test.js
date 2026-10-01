@@ -41,6 +41,8 @@ vm.runInContext(sourceBetween("function hasStandaloneKeyword", "function selectP
 vm.runInContext(sourceBetween("function findFootballTeam", "function inferProductSelectionFromName"), context);
 vm.runInContext(sourceBetween("function bundleRecipientLabelForPiece", "function isBundlePieceKit"), context);
 vm.runInContext(sourceBetween("function productTitleFromImageName", "function useImageTitle"), context);
+vm.runInContext(sourceBetween("function inferBundleAudienceFromName", "function inferBundlePieceFromName"), context);
+vm.runInContext(sourceBetween("function expectedAudienceForRecipient", "function showBundlePieceErrors"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
 vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthdayGiftPack"), context);
 vm.runInContext(sourceBetween("function isBirthdayGiftPack", "function auditPieceBasedBundleDescription"), context);
@@ -78,6 +80,29 @@ const references = context.assignBundlePieceReferences([
 ]);
 assert.deepEqual(Array.from(references, (piece) => piece.reference), ["Men's Home shirt", "Men's Away shirt"]);
 assert.ok(references.every((piece) => !piece.reference.includes("Unassigned")));
+
+const invalidDadKidsPiece = {
+  piece_id: "piece-invalid", recipient_role: "dad", recipient_label: "", audience: "men",
+  product_name: "Nottingham Forest Home Kids Football Kit 2026/27", team: "Nottingham Forest", season: "2026/27",
+  product_kind: "Kit", product_type: "full_kit", kit_type: "home", sleeve_length: "short_sleeve",
+  socks_status: "unavailable", included_items: "shirt_and_shorts", listing_configuration: "plain_customisable",
+  personalisation_status: "available", pre_applied_name: "", pre_applied_number: "", size_range_mode: "standard",
+  visible_size_range: "Men sizes S-XXL", size_profile: "adult_s_2xl", main_colour_shirt: "Red",
+  main_colour_shorts: "White", main_colour_socks: "", badge_status: "unavailable"
+};
+assert.match(Array.from(context.validateBundlePiece(invalidDadKidsPiece)).join(" "), /Product name indicates Kids/);
+assert.match(Array.from(context.validateBirthdayGiftPackPiece(invalidDadKidsPiece)).join(" "), /Kids audience/);
+assert.match(Array.from(context.validateBirthdayGiftPackPiece(invalidDadKidsPiece)).join(" "), /Kids 16–28 size range/);
+
+const validGiftPackPiece = {
+  ...invalidDadKidsPiece,
+  recipient_role: "kid",
+  audience: "kids",
+  visible_size_range: "Kids sizes 16-28, suggested ages 3-13",
+  size_profile: "kids_16_28"
+};
+assert.deepEqual(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece)), []);
+assert.match(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece, [{ ...validGiftPackPiece, piece_id: "piece-other" }])).join(" "), /different kit type/);
 
 const standardPieces = [
   {
@@ -126,10 +151,12 @@ assert.doesNotMatch(htmlSource, /Birthday Gift Pack policy confirmations/);
 assert.doesNotMatch(htmlSource, /giftPackPolicyConfirmation/);
 assert.match(htmlSource, /id="bundleCustomSizeRangeToggle"/);
 assert.match(htmlSource, /id="bundleStandardSizeSummary"/);
+assert.match(htmlSource, /id="bundleAdvancedOptions"/);
 assert.match(htmlSource, /id="bundleRecipientLabelField" class="hidden"/);
 assert.doesNotMatch(htmlSource, />\s*Bundle label\s*</);
 assert.match(appSource, /bundle_label: isGiftPack \? "KFK Birthday Gift Pack" : "Standard Bundle"/);
 assert.match(appSource, /gift_pack_returns_policy: isGiftPack \? "approved" : ""/);
+assert.match(appSource, /syncBirthdayGiftPackEditorConstraints/);
 assert.match(htmlSource, />Standard Bundle<\/button>/);
 assert.match(htmlSource, />KFK Birthday Gift Pack<\/button>/);
 assert.doesNotMatch(htmlSource, />Standard Bundle: 2–4 Pieces<\/option>/);

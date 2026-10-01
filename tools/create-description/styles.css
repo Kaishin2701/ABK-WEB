@@ -812,6 +812,24 @@ input:disabled {
   padding: 12px;
 }
 
+.bundle-piece-card.invalid {
+  border-color: rgba(255, 85, 85, 0.55);
+}
+
+.bundle-piece-card-errors {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 85, 85, 0.45);
+  border-radius: 7px;
+  background: rgba(255, 85, 85, 0.08);
+  color: #ff8585;
+  font-size: 13px;
+}
+
+.bundle-piece-card-errors ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
 .bundle-piece-card-title {
   margin: 0;
   font-size: 14px;
