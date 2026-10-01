@@ -111,7 +111,7 @@ const validGiftPackPiece = {
   size_profile: "kids_16_28"
 };
 assert.deepEqual(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece)), []);
-assert.match(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece, [{ ...validGiftPackPiece, piece_id: "piece-other" }])).join(" "), /different kit type/);
+assert.deepEqual(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece, [{ ...validGiftPackPiece, piece_id: "piece-other" }])), []);
 assert.deepEqual(Array.from(context.validateBundlePiece(validGiftPackPiece)), []);
 
 function validationErrors(mutation) {
@@ -221,8 +221,18 @@ assert.equal(context.isBirthdayGiftPack(giftPackFacts), true);
 assert.deepEqual(Array.from(context.validateBirthdayGiftPackFacts(giftPackFacts)), []);
 assert.match(Array.from(context.validateBirthdayGiftPackFacts({ ...giftPackFacts, gift_pack_packaging_policy: "" }))[0], /all Birthday Gift Pack policies/i);
 
+const independentGiftPackPieces = [
+  giftPackPieces[0],
+  { ...giftPackPieces[1], team: "Arsenal", season: "2025/26", kit_type: "home" }
+];
+assert.deepEqual(Array.from(context.validateBirthdayGiftPackFacts({
+  ...giftPackFacts,
+  bundle_items_list: independentGiftPackPieces
+})), []);
+
 const giftPackSummary = {
   pieces: giftPackPieces,
+  sharedTeam: "Nottingham Forest",
   sharedSeason: "2026/27",
   personalisable: giftPackPieces,
   fixedPrint: [],
@@ -238,6 +248,23 @@ assert.match(giftPackHtml, /kids sizes 16&ndash;28 \(ages 3&ndash;13\)/);
 assert.match(giftPackHtml, /EPL badges:<\/strong> Premier League sleeve badges added to both shirts\./);
 assert.match(giftPackHtml, /promo codes can&rsquo;t be applied/);
 assert.match(giftPackHtml, /standard packaging, not gift-wrapped/);
+
+const independentGiftPackHtml = context.renderBirthdayGiftPackDescription({
+  ...giftPackSummary,
+  pieces: [
+    { ...independentGiftPackPieces[0], reference: "Home kit" },
+    { ...independentGiftPackPieces[1], reference: "Home kit 2" }
+  ],
+  sharedTeam: "",
+  sharedSeason: "",
+  personalisable: independentGiftPackPieces,
+  fixedPrint: [],
+  badgeEligible: independentGiftPackPieces
+});
+assert.match(independentGiftPackHtml, /Teams:<\/strong> Home kit — Nottingham Forest; Home kit 2 — Arsenal\./);
+assert.match(independentGiftPackHtml, /Home kit season:<\/strong> 2026\/27\./);
+assert.match(independentGiftPackHtml, /Home kit 2 season:<\/strong> 2025\/26\./);
+assert.doesNotMatch(independentGiftPackHtml, /<strong>Season:<\/strong> \./);
 
 const printedAway = {
   ...giftPackPieces[1],

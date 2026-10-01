@@ -1435,22 +1435,13 @@ function expectedAudienceForRecipient(recipientRole) {
   }[recipientRole] || "";
 }
 
-function validateBirthdayGiftPackPiece(piece, otherPieces = []) {
+function validateBirthdayGiftPackPiece(piece) {
   const errors = [];
   if (piece.audience !== "kids") errors.push("KFK Birthday Gift Pack Pieces must use the Kids audience.");
   if (piece.product_type !== "full_kit") errors.push("KFK Birthday Gift Pack Pieces must be short-sleeve Kits.");
   if (piece.sleeve_length !== "short_sleeve") errors.push("KFK Birthday Gift Pack Pieces cannot use long sleeves or baby suits.");
   if (piece.size_profile !== "kids_16_28" || piece.size_range_mode !== "standard") {
     errors.push("KFK Birthday Gift Pack Pieces must use the standard Kids 16–28 size range.");
-  }
-  if (otherPieces.some((item) => item.kit_type === piece.kit_type)) {
-    errors.push("Choose a different kit type for each Birthday Gift Pack Piece.");
-  }
-  if (otherPieces.some((item) => item.team.trim().toLowerCase() !== piece.team.trim().toLowerCase())) {
-    errors.push("All Birthday Gift Pack Pieces must use the same team.");
-  }
-  if (otherPieces.some((item) => item.season.trim().toLowerCase() !== piece.season.trim().toLowerCase())) {
-    errors.push("All Birthday Gift Pack Pieces must use the same season.");
   }
   return errors;
 }
@@ -1533,10 +1524,10 @@ function validateBundlePiece(piece) {
   return errors;
 }
 
-function bundlePieceValidationErrors(piece, otherPieces = []) {
+function bundlePieceValidationErrors(piece) {
   const errors = validateBundlePiece(piece);
   if (bundleTypeSelect.value === "birthday_gift_pack_home_away_kids") {
-    errors.push(...validateBirthdayGiftPackPiece(piece, otherPieces));
+    errors.push(...validateBirthdayGiftPackPiece(piece));
   }
   return [...new Set(errors)];
 }
@@ -1564,7 +1555,7 @@ function renderBundleItemsList() {
   bundleItems.forEach((piece, index) => {
     const card = document.createElement("article");
     card.className = "bundle-piece-card";
-    const pieceErrors = bundlePieceValidationErrors(piece, bundleItems.filter((item) => item.piece_id !== piece.piece_id));
+    const pieceErrors = bundlePieceValidationErrors(piece);
     card.classList.toggle("invalid", pieceErrors.length > 0);
     const recipient = bundleRecipientLabelForPiece(piece);
     const socksLabel = piece.product_type === "full_kit"
@@ -1618,7 +1609,7 @@ function renderBundleItemsList() {
         return;
       }
       const duplicatePiece = { ...piece, piece_id: `piece-${nextBundlePieceId}` };
-      const duplicateErrors = bundlePieceValidationErrors(duplicatePiece, bundleItems);
+      const duplicateErrors = bundlePieceValidationErrors(duplicatePiece);
       if (duplicateErrors.length) {
         showBundlePieceErrors(duplicateErrors);
         bundlePieceValidation.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1649,8 +1640,7 @@ function renderBundleItemsList() {
 function addSelectedBundleItem() {
   const piece = bundlePieceFactsFromEditor();
   const existingIndex = bundleItems.findIndex((item) => item.piece_id === piece.piece_id);
-  const otherPieces = bundleItems.filter((item) => item.piece_id !== piece.piece_id);
-  const errors = bundlePieceValidationErrors(piece, otherPieces);
+  const errors = bundlePieceValidationErrors(piece);
   if (existingIndex < 0 && bundleItems.length >= maxBundlePieces) {
     errors.push(`A Bundle can contain up to ${maxBundlePieces} Pieces.`);
   }
@@ -3206,8 +3196,6 @@ function validateBirthdayGiftPackFacts(facts) {
   const pieces = facts.bundle_items_list;
   if (facts.site !== "KFK") blockers.push("Birthday Gift Pack branch is approved only for KFK.");
   if (pieces.length < 2 || pieces.length > maxBundlePieces) blockers.push(`Birthday Gift Pack requires between 2 and ${maxBundlePieces} Pieces.`);
-  const kitTypes = pieces.map((piece) => piece.kit_type);
-  if (uniqueTextValues(kitTypes).length !== kitTypes.length) blockers.push("Birthday Gift Pack Pieces must use different kit types so each kit remains identifiable.");
   if (pieces.some((piece) => piece.audience !== "kids")) blockers.push("Birthday Gift Pack Pieces must use the Kids audience.");
   if (pieces.some((piece) => piece.product_type !== "full_kit")) {
     blockers.push("Each Birthday Gift Pack Piece must be a full kids kit.");
@@ -3224,8 +3212,6 @@ function validateBirthdayGiftPackFacts(facts) {
   }
   if (pieces.some((piece) => piece.sleeve_length !== "short_sleeve")) blockers.push("Birthday Gift Pack Pieces must be short sleeve.");
   if (pieces.some((piece) => piece.size_profile !== "kids_16_28")) blockers.push("Birthday Gift Pack Pieces must use the kids 16 to 28 size profile.");
-  if (uniqueTextValues(pieces.map((piece) => piece.team)).length !== 1) blockers.push("Birthday Gift Pack Pieces must use the same team.");
-  if (uniqueTextValues(pieces.map((piece) => piece.season)).length !== 1) blockers.push("Birthday Gift Pack Pieces must use the same season.");
   const policiesApproved = [
     facts.gift_pack_returns_policy,
     facts.gift_pack_promotion_policy,
@@ -3310,6 +3296,12 @@ function renderBirthdayGiftPackDescription(summary) {
   beforeOrder.push("<li>Gift packs are already discounted, so promo codes can&rsquo;t be applied.</li>");
   beforeOrder.push("<li><strong>Packaging:</strong> sent in standard packaging, not gift-wrapped.</li>");
   const kitTypes = pieces.map((piece) => titleCaseToken(piece.kit_type));
+  const teamDetails = summary.sharedTeam
+    ? []
+    : [`<li><strong>Teams:</strong> ${esc(pieces.map((piece) => `${piece.reference} — ${piece.team}`).join("; "))}.</li>`];
+  const seasonDetails = summary.sharedSeason
+    ? [`<li><strong>Season:</strong> ${esc(summary.sharedSeason)}.</li>`]
+    : pieces.map((piece) => `<li><strong>${esc(piece.reference)} season:</strong> ${esc(piece.season)}.</li>`);
   const sizeSelection = pieces.length === 2 && pieces[0].kit_type === "home" && pieces[1].kit_type === "away"
     ? "Choose the Home and Away sizes separately."
     : "Choose each kit size separately.";
@@ -3322,7 +3314,8 @@ function renderBirthdayGiftPackDescription(summary) {
     "",
     "<h3>Product Details</h3>",
     "<ul>",
-    `<li><strong>Season:</strong> ${esc(summary.sharedSeason)}.</li>`,
+    ...teamDetails,
+    ...seasonDetails,
     `<li><strong>Kit types:</strong> ${esc(humanList(kitTypes))}.</li>`,
     "<li><strong>Version:</strong> Fan version.</li>",
     "<li><strong>Sleeve length:</strong> Short sleeve.</li>",

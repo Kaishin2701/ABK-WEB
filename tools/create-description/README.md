@@ -35,12 +35,12 @@ Men and Women can be selected directly as Piece recipients for couple bundles
 or bundles containing multiple adult shirts.
 
 Use the explicit **KFK Birthday Gift Pack: 2–4 Kids Kits** Bundle type only for
-the Boss-approved gift-pack configuration. It requires two to four Kids kits
-with distinct kit types for the same team and season. Each Piece may be With
-Socks or No Socks; its generated contents, colours and order warning follow the
-saved selection. The branch also requires confirmation
-of the controlled personalised-returns, promotion and packaging statements;
-these policies are never inherited by a Standard Piece Bundle.
+the Boss-approved gift-pack configuration. It requires two to four Kids kits,
+but each Piece remains an independent product and may use its own team, season
+and kit type. Each Piece may be With Socks or No Socks; its generated contents,
+colours and order warning follow the saved selection. The branch also requires
+confirmation of the controlled personalised-returns, promotion and packaging
+statements; these policies are never inherited by a Standard Piece Bundle.
 
 Product and Bundle badge selectors share one maintained league list. This list
 includes FIFA World Cup, FIFA Club World Cup, Saudi Pro League and MLS alongside
