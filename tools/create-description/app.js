@@ -1435,17 +1435,6 @@ function expectedAudienceForRecipient(recipientRole) {
   }[recipientRole] || "";
 }
 
-function validateBirthdayGiftPackPiece(piece) {
-  const errors = [];
-  if (piece.audience !== "kids") errors.push("KFK Birthday Gift Pack Pieces must use the Kids audience.");
-  if (piece.product_type !== "full_kit") errors.push("KFK Birthday Gift Pack Pieces must be short-sleeve Kits.");
-  if (piece.sleeve_length !== "short_sleeve") errors.push("KFK Birthday Gift Pack Pieces cannot use long sleeves or baby suits.");
-  if (piece.size_profile !== "kids_16_28" || piece.size_range_mode !== "standard") {
-    errors.push("KFK Birthday Gift Pack Pieces must use the standard Kids 16–28 size range.");
-  }
-  return errors;
-}
-
 function validateBundlePiece(piece) {
   const errors = [];
   if (!piece.recipient_role) errors.push("Choose who this Piece is for. Use None when no recipient applies.");
@@ -1525,11 +1514,7 @@ function validateBundlePiece(piece) {
 }
 
 function bundlePieceValidationErrors(piece) {
-  const errors = validateBundlePiece(piece);
-  if (bundleTypeSelect.value === "birthday_gift_pack_home_away_kids") {
-    errors.push(...validateBirthdayGiftPackPiece(piece));
-  }
-  return [...new Set(errors)];
+  return [...new Set(validateBundlePiece(piece))];
 }
 
 function showBundlePieceErrors(errors) {
@@ -1686,37 +1671,12 @@ function setBundleSelectOptions(select, allowedValues = null) {
 }
 
 function syncBirthdayGiftPackEditorConstraints() {
-  const isGiftPack = bundleTypeSelect.value === "birthday_gift_pack_home_away_kids";
-  const childRecipients = new Set(["son", "daughter", "child", "kid", "none", "other"]);
-
-  setBundleSelectOptions(bundleRecipientSelect, isGiftPack ? childRecipients : null);
-  setBundleSelectOptions(bundleAudienceSelect, isGiftPack ? new Set(["kids"]) : null);
-  setBundleSelectOptions(bundleProductSelect, isGiftPack ? new Set(["Kit"]) : null);
-
-  bundleAdvancedOptions.classList.toggle("hidden", isGiftPack);
-  bundleCustomSizeRangeToggle.disabled = isGiftPack;
-  if (isGiftPack) {
-    if (!childRecipients.has(bundleRecipientSelect.value)) setEnhancedSelectValue(bundleRecipientSelect, "none");
-    setEnhancedSelectValue(bundleAudienceSelect, "kids");
-    setEnhancedSelectValue(bundleProductSelect, "Kit");
-    bundleCustomSizeRangeToggle.checked = false;
-    bundleAdvancedOptions.removeAttribute("open");
-  }
-
-  const usedKitTypes = new Set(bundleItems
-    .filter((item) => item.piece_id !== editingBundlePieceId)
-    .map((item) => item.kit_type));
-  [...bundleKitTypeSelect.options].forEach((option) => {
-    if (option.dataset.customOption === "true") return;
-    const unavailable = isGiftPack && usedKitTypes.has(option.value);
-    option.hidden = unavailable;
-    option.disabled = unavailable;
-  });
-  const selectedKitType = bundleKitTypeSelect.selectedOptions[0];
-  if (selectedKitType?.disabled) {
-    const firstAvailable = [...bundleKitTypeSelect.options].find((option) => !option.disabled && option.dataset.customOption !== "true");
-    if (firstAvailable) setEnhancedSelectValue(bundleKitTypeSelect, firstAvailable.value);
-  }
+  setBundleSelectOptions(bundleRecipientSelect);
+  setBundleSelectOptions(bundleAudienceSelect);
+  setBundleSelectOptions(bundleProductSelect);
+  setBundleSelectOptions(bundleKitTypeSelect);
+  bundleAdvancedOptions.classList.remove("hidden");
+  bundleCustomSizeRangeToggle.disabled = false;
 }
 
 function syncBundleItemControls() {
@@ -3152,6 +3112,13 @@ function renderBundleBeforeOrder(summary) {
   summary.pieces.filter((piece) => piece.product_type === "full_kit" && piece.socks_status === "unavailable").forEach((piece) => {
     lines.push(`<li>${esc(piece.reference)} includes the shirt and matching shorts. Socks are not included.</li>`);
   });
+  if (isBirthdayGiftPack(summary.facts)) {
+    if (summary.personalisable.length) {
+      lines.push("<li>Personalised shirts can&rsquo;t be returned for a change of mind or wrong size, unless we made an error.</li>");
+    }
+    lines.push("<li>Gift packs are already discounted, so promo codes can&rsquo;t be applied.</li>");
+    lines.push("<li><strong>Packaging:</strong> sent in standard packaging, not gift-wrapped.</li>");
+  }
   return lines;
 }
 
@@ -3188,7 +3155,16 @@ function renderPieceBasedBundleDescription(summary) {
 }
 
 function isBirthdayGiftPack(facts) {
-  return facts.bundle_type === "birthday_gift_pack_home_away_kids";
+  return facts?.bundle_type === "birthday_gift_pack_home_away_kids";
+}
+
+function usesLegacyKidsGiftPackTemplate(summary) {
+  return summary.pieces.every((piece) => (
+    piece.audience === "kids"
+    && piece.product_type === "full_kit"
+    && piece.sleeve_length === "short_sleeve"
+    && piece.size_profile === "kids_16_28"
+  ));
 }
 
 function validateBirthdayGiftPackFacts(facts) {
@@ -3196,22 +3172,6 @@ function validateBirthdayGiftPackFacts(facts) {
   const pieces = facts.bundle_items_list;
   if (facts.site !== "KFK") blockers.push("Birthday Gift Pack branch is approved only for KFK.");
   if (pieces.length < 2 || pieces.length > maxBundlePieces) blockers.push(`Birthday Gift Pack requires between 2 and ${maxBundlePieces} Pieces.`);
-  if (pieces.some((piece) => piece.audience !== "kids")) blockers.push("Birthday Gift Pack Pieces must use the Kids audience.");
-  if (pieces.some((piece) => piece.product_type !== "full_kit")) {
-    blockers.push("Each Birthday Gift Pack Piece must be a full kids kit.");
-  }
-  if (pieces.some((piece) => !["included", "unavailable"].includes(piece.socks_status))) {
-    blockers.push("Choose With Socks or No Socks for every Birthday Gift Pack Piece.");
-  }
-  if (pieces.some((piece) => (
-    piece.socks_status === "included"
-      ? piece.included_items !== "shirt_shorts_and_socks"
-      : piece.included_items !== "shirt_and_shorts"
-  ))) {
-    blockers.push("Each Birthday Gift Pack Piece must keep its contents consistent with the selected socks option.");
-  }
-  if (pieces.some((piece) => piece.sleeve_length !== "short_sleeve")) blockers.push("Birthday Gift Pack Pieces must be short sleeve.");
-  if (pieces.some((piece) => piece.size_profile !== "kids_16_28")) blockers.push("Birthday Gift Pack Pieces must use the kids 16 to 28 size profile.");
   const policiesApproved = [
     facts.gift_pack_returns_policy,
     facts.gift_pack_promotion_policy,
@@ -3277,6 +3237,12 @@ function renderBirthdayGiftPackOptions(summary) {
 }
 
 function renderBirthdayGiftPackDescription(summary) {
+  return usesLegacyKidsGiftPackTemplate(summary)
+    ? renderLegacyBirthdayGiftPackDescription(summary)
+    : renderPieceBasedBundleDescription(summary);
+}
+
+function renderLegacyBirthdayGiftPackDescription(summary) {
   const pieces = birthdayGiftPackPieces(summary);
   const options = renderBirthdayGiftPackOptions(summary);
   const printDetails = (summary.fixedPrint || []).map((piece) => (
@@ -3339,6 +3305,30 @@ function renderBirthdayGiftPackDescription(summary) {
 }
 
 function auditBirthdayGiftPackDescription(html, summary, fingerprint) {
+  if (usesLegacyKidsGiftPackTemplate(summary)) {
+    return auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint);
+  }
+  const audit = auditPieceBasedBundleDescription(html, summary, fingerprint, 0);
+  const textValue = html.toLowerCase();
+  const blockers = [...audit.blockers];
+  if (summary.personalisable.length && !textValue.includes("personalised shirts can&rsquo;t be returned")) {
+    blockers.push("Birthday Gift Pack personalised-returns wording is missing.");
+  }
+  if (!textValue.includes("promo codes can&rsquo;t be applied")) blockers.push("Birthday Gift Pack promotion policy is missing.");
+  if (!textValue.includes("standard packaging, not gift-wrapped")) blockers.push("Birthday Gift Pack packaging policy is missing.");
+  const qaStatus = blockers.length ? "block" : audit.review_flags.length ? "review" : "pass";
+  return {
+    ...audit,
+    qa_status: qaStatus,
+    branch_profile: "kfk_birthday_gift_pack_piece_based",
+    checks_run: [...new Set([...audit.checks_run, "gift_pack_policy"])],
+    blockers,
+    recommended_actions: recommendedActions(qaStatus, blockers, audit.review_flags),
+    generator_version: "kfk_birthday_gift_pack_0.2.0"
+  };
+}
+
+function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   const blockers = [];
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div id="gift-pack-audit-root">${html}</div>`, "text/html");

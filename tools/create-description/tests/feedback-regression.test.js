@@ -100,8 +100,6 @@ const invalidDadKidsPiece = {
   main_colour_shorts: "White", main_colour_socks: "", badge_status: "unavailable"
 };
 assert.match(Array.from(context.validateBundlePiece(invalidDadKidsPiece)).join(" "), /Product name indicates Kids/);
-assert.match(Array.from(context.validateBirthdayGiftPackPiece(invalidDadKidsPiece)).join(" "), /Kids audience/);
-assert.match(Array.from(context.validateBirthdayGiftPackPiece(invalidDadKidsPiece)).join(" "), /Kids 16–28 size range/);
 
 const validGiftPackPiece = {
   ...invalidDadKidsPiece,
@@ -110,8 +108,6 @@ const validGiftPackPiece = {
   visible_size_range: "Kids sizes 16-28, suggested ages 3-13",
   size_profile: "kids_16_28"
 };
-assert.deepEqual(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece)), []);
-assert.deepEqual(Array.from(context.validateBirthdayGiftPackPiece(validGiftPackPiece, [{ ...validGiftPackPiece, piece_id: "piece-other" }])), []);
 assert.deepEqual(Array.from(context.validateBundlePiece(validGiftPackPiece)), []);
 
 function validationErrors(mutation) {
@@ -188,6 +184,10 @@ assert.doesNotMatch(htmlSource, />\s*Bundle label\s*</);
 assert.match(appSource, /bundle_label: isGiftPack \? "KFK Birthday Gift Pack" : "Standard Bundle"/);
 assert.match(appSource, /gift_pack_returns_policy: isGiftPack \? "approved" : ""/);
 assert.match(appSource, /syncBirthdayGiftPackEditorConstraints/);
+assert.doesNotMatch(appSource, /isGiftPack \? new Set\(\["kids"\]\)/);
+assert.doesNotMatch(appSource, /isGiftPack \? new Set\(\["Kit"\]\)/);
+assert.match(appSource, /bundleAdvancedOptions\.classList\.remove\("hidden"\)/);
+assert.match(appSource, /bundleCustomSizeRangeToggle\.disabled = false/);
 assert.match(htmlSource, />Standard Bundle<\/button>/);
 assert.match(htmlSource, />KFK Birthday Gift Pack<\/button>/);
 assert.doesNotMatch(htmlSource, />Standard Bundle: 2–4 Pieces<\/option>/);
@@ -229,6 +229,20 @@ assert.deepEqual(Array.from(context.validateBirthdayGiftPackFacts({
   ...giftPackFacts,
   bundle_items_list: independentGiftPackPieces
 })), []);
+
+const mixedBirthdayFacts = {
+  ...giftPackFacts,
+  bundle_items_list: standardPieces
+};
+assert.deepEqual(Array.from(context.validateBirthdayGiftPackFacts(mixedBirthdayFacts)), []);
+const mixedBirthdayHtml = context.renderBirthdayGiftPackDescription({
+  ...standardSummary,
+  facts: mixedBirthdayFacts
+});
+assert.match(mixedBirthdayHtml, /Inter Miami Home men's shirt/);
+assert.match(mixedBirthdayHtml, /Inter Miami Away kids kit/);
+assert.match(mixedBirthdayHtml, /promo codes can&rsquo;t be applied/);
+assert.match(mixedBirthdayHtml, /standard packaging, not gift-wrapped/);
 
 const giftPackSummary = {
   pieces: giftPackPieces,
@@ -321,10 +335,15 @@ const noSocksHome = {
 };
 const mixedSocksPieces = [noSocksHome, giftPackPieces[1]];
 assert.deepEqual(Array.from(context.validateBirthdayGiftPackFacts({ ...giftPackFacts, bundle_items_list: mixedSocksPieces })), []);
-assert.match(Array.from(context.validateBirthdayGiftPackFacts({
+assert.deepEqual(Array.from(context.validateBirthdayGiftPackFacts({
   ...giftPackFacts,
   bundle_items_list: [{ ...noSocksHome, included_items: "shirt_shorts_and_socks" }, giftPackPieces[1]]
-}))[0], /contents consistent with the selected socks option/i);
+})), []);
+assert.match(Array.from(context.validateBundlePiece({
+  ...validGiftPackPiece,
+  included_items: "shirt_shorts_and_socks",
+  socks_status: "unavailable"
+})).join(" "), /contents do not match the selected product and socks options/i);
 const mixedSocksHtml = context.renderBirthdayGiftPackDescription({
   ...giftPackSummary,
   pieces: mixedSocksPieces,
