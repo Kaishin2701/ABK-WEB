@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.2.0',
+        version: '6.2.1',
         label: 'Current release',
+        title: 'Piece-by-piece colour details',
+        description: 'Bundle Product Details now list colours on a separate, clearly labelled line for every shirt and kit, making each Piece easier to check before ordering.'
+    },
+    {
+        version: '6.2.0',
+        label: 'Previous release',
         title: 'Universal Bundle Builder',
         description: 'Standard Bundles and KFK Birthday Gift Packs now accept the same flexible mix of Men, Women, Kids and Baby shirts, kits and suits. Shirt inclusions are cleaner, while duplicate kit types receive numbered labels for unambiguous options and product details.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Dedicated Tool Library',
         description: 'Tools now live on a dedicated visual library page. Opening a tool smoothly transforms the navigation pill into a Back button for a focused workspace.'
-    },
-    {
-        version: '6.0.4',
-        label: 'Previous release',
-        title: 'Circular update carousel',
-        description: 'The five most recent updates now rotate through an infinite vertical carousel using scroll, swipe or keyboard controls, with a reduced-motion fallback.'
     },
 ];
 

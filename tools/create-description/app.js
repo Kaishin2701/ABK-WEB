@@ -3006,13 +3006,15 @@ function renderBundlePieceIncluded(piece) {
 }
 
 function renderBundleColours(summary) {
-  const entries = summary.pieces.map((piece) => {
+  return summary.pieces.map((piece) => {
+    const kind = bundlePieceKindLabel(piece);
+    const reference = String(piece.reference || `${titleCaseToken(piece.kit_type)} ${kind}`).trim();
+    const label = reference.toLowerCase().includes(kind) ? reference : `${reference} ${kind}`;
     const colours = [`${String(piece.main_colour_shirt).toLowerCase()} shirt`];
-    if (piece.main_colour_shorts) colours.push(`${String(piece.main_colour_shorts).toLowerCase()} shorts`);
-    if (piece.main_colour_socks) colours.push(`${String(piece.main_colour_socks).toLowerCase()} socks`);
-    return `${piece.reference}: ${colours.join(", ")}`;
+    if (piece.product_type === "full_kit" && piece.main_colour_shorts) colours.push(`${String(piece.main_colour_shorts).toLowerCase()} shorts`);
+    if (piece.product_type === "full_kit" && piece.main_colour_socks) colours.push(`${String(piece.main_colour_socks).toLowerCase()} socks`);
+    return `<li><strong>${esc(label)} colours:</strong> ${esc(colours.join(", "))}.</li>`;
   });
-  return `<li><strong>Main colours:</strong> ${esc(entries.join("; "))}.</li>`;
 }
 
 function bundleRangeHtml(value) {
@@ -3047,7 +3049,7 @@ function renderBundleProductDetails(summary) {
   summary.fixedPrint.forEach((piece) => {
     lines.push(`<li><strong>${esc(piece.reference)} player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`);
   });
-  lines.push(renderBundleColours(summary));
+  lines.push(...renderBundleColours(summary));
   lines.push(renderBundleSizes(summary));
   lines.push("<li><strong>Material:</strong> Made from lightweight polyester fabric</li>");
   lines.push("<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>");
@@ -3459,6 +3461,12 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
     [piece.main_colour_shirt, piece.main_colour_shorts, piece.main_colour_socks].filter(Boolean).forEach((colour) => {
       if (!textValue.includes(removeDashesFromText(colour).toLowerCase())) blockers.push(`${prefix}: colour ${colour} is missing.`);
     });
+    const kind = bundlePieceKindLabel(piece);
+    const reference = String(piece.reference || `${titleCaseToken(piece.kit_type)} ${kind}`).trim();
+    const colourLabel = (reference.toLowerCase().includes(kind) ? reference : `${reference} ${kind}`).toLowerCase();
+    if (!productDetailsText.includes(`${colourLabel} colours:`)) {
+      blockers.push(`${prefix}: individual colour line is missing from Product Details.`);
+    }
     if (piece.socks_status === "unavailable" && !textValue.includes(`${comparableReference} includes the shirt and matching shorts. socks are not included`)) {
       blockers.push(`${prefix}: no-socks warning is missing from Before You Order.`);
     }

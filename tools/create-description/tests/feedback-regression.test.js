@@ -174,6 +174,9 @@ assert.match(standardHtml, /<strong>Son:<\/strong> 1 &times; Inter Miami Away ki
 assert.match(standardHtml, /<strong>Material:<\/strong> Made from lightweight polyester fabric/);
 assert.match(standardHtml, /Dad: Men sizes S&ndash;XXL; Son: Kids sizes 16&ndash;28, suggested ages 3&ndash;13/);
 assert.match(standardHtml, /<strong>Son player print:<\/strong> Messi name and number 10 are already applied and included\./);
+assert.match(standardHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
+assert.match(standardHtml, /<strong>Son kit colours:<\/strong> black shirt, black shorts, pink socks\./);
+assert.doesNotMatch(standardHtml, /<strong>Main colours:<\/strong>/);
 const standardProductDetails = standardHtml.slice(standardHtml.indexOf("<h3>Product Details</h3>"), standardHtml.indexOf("<h3>Options You Can Add</h3>"));
 const standardOptions = standardHtml.slice(standardHtml.indexOf("<h3>Options You Can Add</h3>"), standardHtml.indexOf("<h3>Before You Order</h3>"));
 assert.match(standardProductDetails, /Son player print/);
@@ -249,6 +252,9 @@ const mixedBirthdayHtml = context.renderBirthdayGiftPackDescription({
 });
 assert.match(mixedBirthdayHtml, /Inter Miami Home men's shirt/);
 assert.match(mixedBirthdayHtml, /Inter Miami Away kids kit/);
+assert.match(mixedBirthdayHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
+assert.match(mixedBirthdayHtml, /<strong>Son kit colours:<\/strong> black shirt, black shorts, pink socks\./);
+assert.doesNotMatch(mixedBirthdayHtml, /<strong>Main colours:<\/strong>/);
 assert.match(mixedBirthdayHtml, /promo codes can&rsquo;t be applied/);
 assert.match(mixedBirthdayHtml, /standard packaging, not gift-wrapped/);
 
