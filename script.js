@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.1.1',
+        version: '6.2.0',
         label: 'Current release',
+        title: 'Universal Bundle Builder',
+        description: 'Standard Bundles and KFK Birthday Gift Packs now accept the same flexible mix of Men, Women, Kids and Baby shirts, kits and suits. Shirt inclusions are cleaner, while duplicate kit types receive numbered labels for unambiguous options and product details.'
+    },
+    {
+        version: '6.1.1',
+        label: 'Previous release',
         title: 'Independent Bundle Pieces',
         description: 'Bundle Pieces can now use different teams, seasons and kit types. Each Piece is validated independently, while its product, audience, size, socks, personalisation and player-print facts must remain internally consistent.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Circular update carousel',
         description: 'The five most recent updates now rotate through an infinite vertical carousel using scroll, swipe or keyboard controls, with a reduced-motion fallback.'
-    },
-    {
-        version: '6.0.3',
-        label: 'Previous release',
-        title: 'Navigation refresh',
-        description: 'The ABK header now uses a centred glass-style navigation pill, a responsive two-column Tools menu and clearer active-tool states. Information now keeps the five most recent updates.'
     },
 ];
 
