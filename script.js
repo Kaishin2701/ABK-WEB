@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.2.1',
+        version: '6.2.2',
         label: 'Current release',
+        title: 'Combined Piece details',
+        description: 'Printed Bundle Pieces now show their fixed player print and colours together in one Product Details line, avoiding repeated labels for duplicate kits.'
+    },
+    {
+        version: '6.2.1',
+        label: 'Previous release',
         title: 'Piece-by-piece colour details',
         description: 'Bundle Product Details now list colours on a separate, clearly labelled line for every shirt and kit, making each Piece easier to check before ordering.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Validated Bundle Description workflow',
         description: 'Bundle Description now supports 2–4 Piece Standard Bundles and KFK Birthday Gift Packs. Approved Gift Pack policies are applied automatically, while incompatible audience, size, product, socks, print, team, season, kit type and sleeve combinations are hidden or blocked before Add or Save.'
-    },
-    {
-        version: '6.0.5',
-        label: 'Previous release',
-        title: 'Dedicated Tool Library',
-        description: 'Tools now live on a dedicated visual library page. Opening a tool smoothly transforms the navigation pill into a Back button for a focused workspace.'
     },
 ];
 

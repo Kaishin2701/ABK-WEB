@@ -3005,15 +3005,27 @@ function renderBundlePieceIncluded(piece) {
   return `<li>${recipient}1 &times; ${esc(identity)}: ${esc(contents)}.${esc(playerPrint)}</li>`;
 }
 
-function renderBundleColours(summary) {
+function bundlePieceColourLabel(piece) {
+  const kind = bundlePieceKindLabel(piece);
+  const reference = String(piece.reference || `${titleCaseToken(piece.kit_type)} ${kind}`).trim();
+  return reference.toLowerCase().includes(kind) ? reference : `${reference} ${kind}`;
+}
+
+function bundlePieceColoursText(piece) {
+  const colours = [`${String(piece.main_colour_shirt).toLowerCase()} shirt`];
+  if (piece.product_type === "full_kit" && piece.main_colour_shorts) colours.push(`${String(piece.main_colour_shorts).toLowerCase()} shorts`);
+  if (piece.product_type === "full_kit" && piece.main_colour_socks) colours.push(`${String(piece.main_colour_socks).toLowerCase()} socks`);
+  return colours.join(", ");
+}
+
+function renderBundlePieceDetails(summary) {
   return summary.pieces.map((piece) => {
-    const kind = bundlePieceKindLabel(piece);
-    const reference = String(piece.reference || `${titleCaseToken(piece.kit_type)} ${kind}`).trim();
-    const label = reference.toLowerCase().includes(kind) ? reference : `${reference} ${kind}`;
-    const colours = [`${String(piece.main_colour_shirt).toLowerCase()} shirt`];
-    if (piece.product_type === "full_kit" && piece.main_colour_shorts) colours.push(`${String(piece.main_colour_shorts).toLowerCase()} shorts`);
-    if (piece.product_type === "full_kit" && piece.main_colour_socks) colours.push(`${String(piece.main_colour_socks).toLowerCase()} socks`);
-    return `<li><strong>${esc(label)} colours:</strong> ${esc(colours.join(", "))}.</li>`;
+    const label = bundlePieceColourLabel(piece);
+    const colours = bundlePieceColoursText(piece);
+    if (piece.listing_configuration === "pre_applied_player") {
+      return `<li><strong>${esc(label)}:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included; ${esc(colours)}.</li>`;
+    }
+    return `<li><strong>${esc(label)} colours:</strong> ${esc(colours)}.</li>`;
   });
 }
 
@@ -3046,10 +3058,7 @@ function renderBundleProductDetails(summary) {
   if (summary.sharedSleeve) lines.push(`<li><strong>Sleeve length:</strong> ${esc(sleeveLengthLabel({ sleeve_length: summary.sharedSleeve }) || titleCaseToken(summary.sharedSleeve))}.</li>`);
   else lines.push(`<li><strong>Sleeve lengths:</strong> ${esc(summary.pieces.map((piece) => `${piece.reference} — ${sleeveLengthLabel(piece) || titleCaseToken(piece.sleeve_length)}`).join("; "))}.</li>`);
   lines.push("<li><strong>Version:</strong> Fan version.</li>");
-  summary.fixedPrint.forEach((piece) => {
-    lines.push(`<li><strong>${esc(piece.reference)} player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`);
-  });
-  lines.push(...renderBundleColours(summary));
+  lines.push(...renderBundlePieceDetails(summary));
   lines.push(renderBundleSizes(summary));
   lines.push("<li><strong>Material:</strong> Made from lightweight polyester fabric</li>");
   lines.push("<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>");
@@ -3262,9 +3271,14 @@ function renderBirthdayGiftPackDescription(summary) {
 function renderLegacyBirthdayGiftPackDescription(summary) {
   const pieces = birthdayGiftPackPieces(summary);
   const options = renderBirthdayGiftPackOptions(summary);
-  const printDetails = (summary.fixedPrint || []).map((piece) => (
-    `<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`
-  ));
+  const pieceDetails = pieces.map((piece) => {
+    const label = birthdayGiftPackKitLabel(piece, pieces);
+    const colours = birthdayGiftPackColours(piece);
+    if (piece.listing_configuration === "pre_applied_player") {
+      return `<li><strong>${esc(label)}:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included; ${esc(colours)}.</li>`;
+    }
+    return `<li><strong>${esc(label)} colours:</strong> ${esc(colours)}.</li>`;
+  });
   const beforeOrder = [];
   if (summary.personalisable.length) {
     beforeOrder.push("<li>Double-check the spelling of each name and number in the personalisation fields.</li>");
@@ -3306,8 +3320,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     `<li><strong>Kit types:</strong> ${esc(humanList(kitTypes))}.</li>`,
     "<li><strong>Version:</strong> Fan version.</li>",
     "<li><strong>Sleeve length:</strong> Short sleeve.</li>",
-    ...printDetails,
-    ...pieces.map((piece) => `<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} colours:</strong> ${esc(birthdayGiftPackColours(piece))}.</li>`),
+    ...pieceDetails,
     `<li><strong>Sizes:</strong> kids sizes 16&ndash;28 (ages 3&ndash;13) for each kit. ${sizeSelection} See the Size Guide tab for measurements.</li>`,
     "<li><strong>Material:</strong> Made from lightweight polyester fabric.</li>",
     "<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>",
@@ -3378,7 +3391,10 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
     if (birthdayGiftPackHasDuplicateKitType(piece, pieces) && !includedText.includes(`${kitLabel}:`)) {
       blockers.push(`${birthdayGiftPackKitLabel(piece, pieces)} label is missing from What's Included.`);
     }
-    if (!productDetailsText.includes(`${kitLabel} colours:`)) blockers.push(`${titleCaseToken(piece.kit_type)} kit colours are missing from Product Details.`);
+    const expectedDetailsLabel = piece.listing_configuration === "pre_applied_player"
+      ? `${kitLabel}:`
+      : `${kitLabel} colours:`;
+    if (!productDetailsText.includes(expectedDetailsLabel)) blockers.push(`${titleCaseToken(piece.kit_type)} kit details are missing from Product Details.`);
     const expectedContents = piece.socks_status === "included"
       ? "shirt, matching shorts and socks"
       : "shirt and matching shorts; socks are not included";
@@ -3398,10 +3414,10 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
       if (!textValue.includes(`fixed ${playerName} ${playerNumber} print`) || !textValue.includes("another name or number cannot be selected")) {
         blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print warning is missing from Before You Order.`);
       }
-      if (!productDetailsText.includes(`${kitLabel} player print:`) || !productDetailsText.includes(`${playerName} name and number ${playerNumber} are already applied and included`)) {
-        blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print is missing from Product Details.`);
+      if (!productDetailsText.includes(`${kitLabel}:`) || !productDetailsText.includes(`${playerName} name and number ${playerNumber} are already applied and included`)) {
+        blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print is missing from its combined Product Details line.`);
       }
-      if (optionsText.includes(`${kitLabel} player print:`)) {
+      if (optionsText.includes(`${kitLabel}:`) && optionsText.includes(`${playerName} name and number ${playerNumber}`)) {
         blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print must not appear under Options You Can Add.`);
       }
     }
@@ -3461,11 +3477,12 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
     [piece.main_colour_shirt, piece.main_colour_shorts, piece.main_colour_socks].filter(Boolean).forEach((colour) => {
       if (!textValue.includes(removeDashesFromText(colour).toLowerCase())) blockers.push(`${prefix}: colour ${colour} is missing.`);
     });
-    const kind = bundlePieceKindLabel(piece);
-    const reference = String(piece.reference || `${titleCaseToken(piece.kit_type)} ${kind}`).trim();
-    const colourLabel = (reference.toLowerCase().includes(kind) ? reference : `${reference} ${kind}`).toLowerCase();
-    if (!productDetailsText.includes(`${colourLabel} colours:`)) {
-      blockers.push(`${prefix}: individual colour line is missing from Product Details.`);
+    const colourLabel = bundlePieceColourLabel(piece).toLowerCase();
+    const expectedDetailsLabel = piece.listing_configuration === "pre_applied_player"
+      ? `${colourLabel}:`
+      : `${colourLabel} colours:`;
+    if (!productDetailsText.includes(expectedDetailsLabel)) {
+      blockers.push(`${prefix}: combined Piece detail line is missing from Product Details.`);
     }
     if (piece.socks_status === "unavailable" && !textValue.includes(`${comparableReference} includes the shirt and matching shorts. socks are not included`)) {
       blockers.push(`${prefix}: no-socks warning is missing from Before You Order.`);
@@ -3477,10 +3494,10 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
       if (!textValue.includes(removeDashesFromText(piece.pre_applied_name).toLowerCase()) || !textValue.includes(String(piece.pre_applied_number).toLowerCase())) {
         blockers.push(`${prefix}: fixed player print is missing.`);
       }
-      if (!productDetailsText.includes(`${comparableReference} player print:`)) {
-        blockers.push(`${prefix}: fixed player print is missing from Product Details.`);
+      if (!productDetailsText.includes(`${colourLabel}:`)) {
+        blockers.push(`${prefix}: fixed player print is missing from its combined Product Details line.`);
       }
-      if (optionsText.includes(`${comparableReference} player print:`)) {
+      if (optionsText.includes(`${colourLabel}:`) && optionsText.includes(removeDashesFromText(piece.pre_applied_name).toLowerCase())) {
         blockers.push(`${prefix}: fixed player print must not appear under Options You Can Add.`);
       }
     }

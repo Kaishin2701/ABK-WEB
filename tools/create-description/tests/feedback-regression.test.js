@@ -173,14 +173,14 @@ assert.doesNotMatch(longSleeveShirtIncluded, /shorts and socks are not included/
 assert.match(standardHtml, /<strong>Son:<\/strong> 1 &times; Inter Miami Away kids kit: shirt, matching shorts and socks\. Messi name and number 10 are already applied to the back\./);
 assert.match(standardHtml, /<strong>Material:<\/strong> Made from lightweight polyester fabric/);
 assert.match(standardHtml, /Dad: Men sizes S&ndash;XXL; Son: Kids sizes 16&ndash;28, suggested ages 3&ndash;13/);
-assert.match(standardHtml, /<strong>Son player print:<\/strong> Messi name and number 10 are already applied and included\./);
+assert.match(standardHtml, /<strong>Son kit:<\/strong> Messi name and number 10 are already applied and included; black shirt, black shorts, pink socks\./);
 assert.match(standardHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
-assert.match(standardHtml, /<strong>Son kit colours:<\/strong> black shirt, black shorts, pink socks\./);
+assert.doesNotMatch(standardHtml, /Son kit colours|Son player print/);
 assert.doesNotMatch(standardHtml, /<strong>Main colours:<\/strong>/);
 const standardProductDetails = standardHtml.slice(standardHtml.indexOf("<h3>Product Details</h3>"), standardHtml.indexOf("<h3>Options You Can Add</h3>"));
 const standardOptions = standardHtml.slice(standardHtml.indexOf("<h3>Options You Can Add</h3>"), standardHtml.indexOf("<h3>Before You Order</h3>"));
-assert.match(standardProductDetails, /Son player print/);
-assert.doesNotMatch(standardOptions, /Son player print/);
+assert.match(standardProductDetails, /Son kit:<\/strong> Messi name and number 10/);
+assert.doesNotMatch(standardOptions, /Son kit:<\/strong> Messi name and number 10/);
 assert.doesNotMatch(standardHtml, /promo codes|gift-wrapped|change of mind/);
 
 assert.match(htmlSource, /id="bundleTypeSelect"/);
@@ -253,7 +253,7 @@ const mixedBirthdayHtml = context.renderBirthdayGiftPackDescription({
 assert.match(mixedBirthdayHtml, /Inter Miami Home men's shirt/);
 assert.match(mixedBirthdayHtml, /Inter Miami Away kids kit/);
 assert.match(mixedBirthdayHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
-assert.match(mixedBirthdayHtml, /<strong>Son kit colours:<\/strong> black shirt, black shorts, pink socks\./);
+assert.match(mixedBirthdayHtml, /<strong>Son kit:<\/strong> Messi name and number 10 are already applied and included; black shirt, black shorts, pink socks\./);
 assert.doesNotMatch(mixedBirthdayHtml, /<strong>Main colours:<\/strong>/);
 assert.match(mixedBirthdayHtml, /promo codes can&rsquo;t be applied/);
 assert.match(mixedBirthdayHtml, /standard packaging, not gift-wrapped/);
@@ -296,6 +296,28 @@ assert.match(duplicateHomeHtml, /Home kit 2 colours:<\/strong> blue shirt/);
 assert.match(duplicateHomeHtml, /optional on the Home kit 1, the Home kit 2 or both/);
 assert.doesNotMatch(duplicateHomeHtml, /Kit types:<\/strong> Home and Home|the Home kit, the Home kit or both/);
 
+const duplicatePrintedHomePieces = [
+  {
+    ...duplicateHomePieces[0], listing_configuration: "pre_applied_player", personalisation_status: "unavailable",
+    pre_applied_name: "BELLINGHAM", pre_applied_number: "10"
+  },
+  {
+    ...duplicateHomePieces[1], listing_configuration: "pre_applied_player", personalisation_status: "unavailable",
+    pre_applied_name: "KANE", pre_applied_number: "9"
+  }
+];
+const duplicatePrintedHomeHtml = context.renderBirthdayGiftPackDescription({
+  ...giftPackSummary,
+  pieces: duplicatePrintedHomePieces,
+  personalisable: [],
+  fixedPrint: duplicatePrintedHomePieces,
+  badgeEligible: duplicatePrintedHomePieces
+});
+const duplicatePrintedHomeDetails = duplicatePrintedHomeHtml.slice(duplicatePrintedHomeHtml.indexOf("<h3>Product Details</h3>"), duplicatePrintedHomeHtml.indexOf("<h3>Options You Can Add</h3>"));
+assert.match(duplicatePrintedHomeDetails, /<strong>Home kit 1:<\/strong> Bellingham name and number 10 are already applied and included; red shirt/);
+assert.match(duplicatePrintedHomeDetails, /<strong>Home kit 2:<\/strong> Kane name and number 9 are already applied and included; blue shirt/);
+assert.doesNotMatch(duplicatePrintedHomeDetails, /Home kit [12] colours|Home kit [12] player print/);
+
 const independentGiftPackHtml = context.renderBirthdayGiftPackDescription({
   ...giftPackSummary,
   pieces: [
@@ -328,13 +350,14 @@ const printedGiftPackHtml = context.renderBirthdayGiftPackDescription({
   badgeEligible: [giftPackPieces[0], printedAway]
 });
 assert.match(printedGiftPackHtml, /Away kids kit: shirt, matching shorts and socks\. Messi name and number 10 are already applied to the back\./);
-assert.match(printedGiftPackHtml, /<strong>Away kit player print:<\/strong> Messi name and number 10 are already applied and included\./);
+assert.match(printedGiftPackHtml, /<strong>Away kit:<\/strong> Messi name and number 10 are already applied and included; green shirt, green shorts, green socks\./);
+assert.doesNotMatch(printedGiftPackHtml, /Away kit colours|Away kit player print/);
 assert.match(printedGiftPackHtml, /The Away kit includes the fixed Messi 10 print; another name or number cannot be selected for this kit\./);
 assert.doesNotMatch(printedGiftPackHtml, /Away kit or both/);
 const printedProductDetails = printedGiftPackHtml.slice(printedGiftPackHtml.indexOf("<h3>Product Details</h3>"), printedGiftPackHtml.indexOf("<h3>Options You Can Add</h3>"));
 const printedOptions = printedGiftPackHtml.slice(printedGiftPackHtml.indexOf("<h3>Options You Can Add</h3>"), printedGiftPackHtml.indexOf("<h3>Before You Order</h3>"));
-assert.match(printedProductDetails, /Away kit player print/);
-assert.doesNotMatch(printedOptions, /Away kit player print/);
+assert.match(printedProductDetails, /Away kit:<\/strong> Messi name and number 10/);
+assert.doesNotMatch(printedOptions, /Away kit:<\/strong> Messi name and number 10/);
 
 const fourPieceGiftPack = [
   giftPackPieces[0],
