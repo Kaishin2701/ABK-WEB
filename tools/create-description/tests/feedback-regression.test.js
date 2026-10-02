@@ -271,6 +271,25 @@ assert.match(giftPackHtml, /EPL badges:<\/strong> Premier League sleeve badges a
 assert.match(giftPackHtml, /promo codes can&rsquo;t be applied/);
 assert.match(giftPackHtml, /standard packaging, not gift-wrapped/);
 
+const duplicateHomePieces = [
+  { ...giftPackPieces[0], piece_id: "duplicate-home-1", recipient_role: "kid" },
+  { ...giftPackPieces[0], piece_id: "duplicate-home-2", recipient_role: "kid", main_colour_shirt: "Blue" }
+];
+const duplicateHomeHtml = context.renderBirthdayGiftPackDescription({
+  ...giftPackSummary,
+  pieces: duplicateHomePieces,
+  personalisable: duplicateHomePieces,
+  fixedPrint: [],
+  badgeEligible: duplicateHomePieces
+});
+assert.match(duplicateHomeHtml, /<strong>Home kit 1:<\/strong> 1 &times; Nottingham Forest Home kids kit/);
+assert.match(duplicateHomeHtml, /<strong>Home kit 2:<\/strong> 1 &times; Nottingham Forest Home kids kit/);
+assert.match(duplicateHomeHtml, /Kit types:<\/strong> Home kit 1 and Home kit 2\./);
+assert.match(duplicateHomeHtml, /Home kit 1 colours:<\/strong> red shirt/);
+assert.match(duplicateHomeHtml, /Home kit 2 colours:<\/strong> blue shirt/);
+assert.match(duplicateHomeHtml, /optional on the Home kit 1, the Home kit 2 or both/);
+assert.doesNotMatch(duplicateHomeHtml, /Kit types:<\/strong> Home and Home|the Home kit, the Home kit or both/);
+
 const independentGiftPackHtml = context.renderBirthdayGiftPackDescription({
   ...giftPackSummary,
   pieces: [
@@ -283,8 +302,8 @@ const independentGiftPackHtml = context.renderBirthdayGiftPackDescription({
   fixedPrint: [],
   badgeEligible: independentGiftPackPieces
 });
-assert.match(independentGiftPackHtml, /Teams:<\/strong> Home kit — Nottingham Forest; Home kit 2 — Arsenal\./);
-assert.match(independentGiftPackHtml, /Home kit season:<\/strong> 2026\/27\./);
+assert.match(independentGiftPackHtml, /Teams:<\/strong> Home kit 1 — Nottingham Forest; Home kit 2 — Arsenal\./);
+assert.match(independentGiftPackHtml, /Home kit 1 season:<\/strong> 2026\/27\./);
 assert.match(independentGiftPackHtml, /Home kit 2 season:<\/strong> 2025\/26\./);
 assert.doesNotMatch(independentGiftPackHtml, /<strong>Season:<\/strong> \./);
 

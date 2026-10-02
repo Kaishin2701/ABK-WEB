@@ -3201,23 +3201,38 @@ function birthdayGiftPackColours(piece) {
   return colours.join(", ");
 }
 
-function birthdayGiftPackIncludedLine(piece) {
+function birthdayGiftPackKitLabel(piece, pieces) {
+  const matchingPieces = pieces.filter((item) => item.kit_type === piece.kit_type);
+  const baseLabel = `${titleCaseToken(piece.kit_type)} kit`;
+  if (matchingPieces.length < 2) return baseLabel;
+  return `${baseLabel} ${matchingPieces.indexOf(piece) + 1}`;
+}
+
+function birthdayGiftPackHasDuplicateKitType(piece, pieces) {
+  return pieces.filter((item) => item.kit_type === piece.kit_type).length > 1;
+}
+
+function birthdayGiftPackIncludedLine(piece, pieces) {
   const fixedPrint = bundleFixedPrintSentence(piece);
   const contents = piece.socks_status === "included"
     ? "shirt, matching shorts and socks"
     : "shirt and matching shorts; socks are not included";
-  return `<li>1 &times; ${esc(piece.team)} ${esc(titleCaseToken(piece.kit_type))} kids kit: ${contents}.${fixedPrint ? ` ${esc(fixedPrint)}` : ""}</li>`;
+  const pieceLabel = birthdayGiftPackHasDuplicateKitType(piece, pieces)
+    ? `<strong>${esc(birthdayGiftPackKitLabel(piece, pieces))}:</strong> `
+    : "";
+  return `<li>${pieceLabel}1 &times; ${esc(piece.team)} ${esc(titleCaseToken(piece.kit_type))} kids kit: ${contents}.${fixedPrint ? ` ${esc(fixedPrint)}` : ""}</li>`;
 }
 
 function renderBirthdayGiftPackOptions(summary) {
   const lines = [];
   const available = summary.personalisable;
+  const pieces = birthdayGiftPackPieces(summary);
   if (available.length === summary.pieces.length) {
-    const kitNames = birthdayGiftPackPieces(summary).map((piece) => `${titleCaseToken(piece.kit_type)} kit`);
+    const kitNames = pieces.map((piece) => birthdayGiftPackKitLabel(piece, pieces));
     const availability = kitNames.length === 2 ? `the ${kitNames[0]}, the ${kitNames[1]} or both` : "any eligible kit";
     lines.push(`<li><strong>Name and number:</strong> optional on ${esc(availability)}. Select it separately for each kit and enter the details in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>`);
   } else if (available.length) {
-    const kitNames = available.map((piece) => `${titleCaseToken(piece.kit_type)} kit`);
+    const kitNames = available.map((piece) => birthdayGiftPackKitLabel(piece, pieces));
     lines.push(`<li><strong>Name and number:</strong> optional on the ${esc(humanList(kitNames))}. Select it in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>`);
   }
 
@@ -3230,7 +3245,7 @@ function renderBirthdayGiftPackOptions(summary) {
     lines.push(`<li><strong>Sleeve badges:</strong> ${esc(bundleBadgeDisplay(badges[0]))} sleeve badges added to ${shirtCount}.</li>`);
   } else {
     badges.forEach((piece) => {
-      lines.push(`<li><strong>${esc(titleCaseToken(piece.kit_type))} kit sleeve badge:</strong> ${esc(bundleBadgeDisplay(piece))} sleeve badge available for this shirt.</li>`);
+      lines.push(`<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} sleeve badge:</strong> ${esc(bundleBadgeDisplay(piece))} sleeve badge available for this shirt.</li>`);
     });
   }
   return lines;
@@ -3246,7 +3261,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
   const pieces = birthdayGiftPackPieces(summary);
   const options = renderBirthdayGiftPackOptions(summary);
   const printDetails = (summary.fixedPrint || []).map((piece) => (
-    `<li><strong>${esc(titleCaseToken(piece.kit_type))} kit player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`
+    `<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} player print:</strong> ${esc(displayName(piece.pre_applied_name))} name and number ${esc(piece.pre_applied_number)} are already applied and included.</li>`
   ));
   const beforeOrder = [];
   if (summary.personalisable.length) {
@@ -3254,20 +3269,24 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     beforeOrder.push("<li>Personalised shirts can&rsquo;t be returned for a change of mind or wrong size, unless we made an error.</li>");
   }
   (summary.fixedPrint || []).forEach((piece) => {
-    beforeOrder.push(`<li>The ${esc(titleCaseToken(piece.kit_type))} kit includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this kit.</li>`);
+    beforeOrder.push(`<li>The ${esc(birthdayGiftPackKitLabel(piece, pieces))} includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this kit.</li>`);
   });
   pieces.filter((piece) => piece.socks_status === "unavailable").forEach((piece) => {
-    beforeOrder.push(`<li>The ${esc(titleCaseToken(piece.kit_type))} kit includes the shirt and matching shorts. Socks are not included.</li>`);
+    beforeOrder.push(`<li>The ${esc(birthdayGiftPackKitLabel(piece, pieces))} includes the shirt and matching shorts. Socks are not included.</li>`);
   });
   beforeOrder.push("<li>Gift packs are already discounted, so promo codes can&rsquo;t be applied.</li>");
   beforeOrder.push("<li><strong>Packaging:</strong> sent in standard packaging, not gift-wrapped.</li>");
-  const kitTypes = pieces.map((piece) => titleCaseToken(piece.kit_type));
+  const kitTypes = pieces.map((piece) => (
+    birthdayGiftPackHasDuplicateKitType(piece, pieces)
+      ? birthdayGiftPackKitLabel(piece, pieces)
+      : titleCaseToken(piece.kit_type)
+  ));
   const teamDetails = summary.sharedTeam
     ? []
-    : [`<li><strong>Teams:</strong> ${esc(pieces.map((piece) => `${piece.reference} — ${piece.team}`).join("; "))}.</li>`];
+    : [`<li><strong>Teams:</strong> ${esc(pieces.map((piece) => `${birthdayGiftPackKitLabel(piece, pieces)} — ${piece.team}`).join("; "))}.</li>`];
   const seasonDetails = summary.sharedSeason
     ? [`<li><strong>Season:</strong> ${esc(summary.sharedSeason)}.</li>`]
-    : pieces.map((piece) => `<li><strong>${esc(piece.reference)} season:</strong> ${esc(piece.season)}.</li>`);
+    : pieces.map((piece) => `<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} season:</strong> ${esc(piece.season)}.</li>`);
   const sizeSelection = pieces.length === 2 && pieces[0].kit_type === "home" && pieces[1].kit_type === "away"
     ? "Choose the Home and Away sizes separately."
     : "Choose each kit size separately.";
@@ -3275,7 +3294,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
   return [
     "<h3>What's Included</h3>",
     "<ul>",
-    ...pieces.map(birthdayGiftPackIncludedLine),
+    ...pieces.map((piece) => birthdayGiftPackIncludedLine(piece, pieces)),
     "</ul>",
     "",
     "<h3>Product Details</h3>",
@@ -3286,7 +3305,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     "<li><strong>Version:</strong> Fan version.</li>",
     "<li><strong>Sleeve length:</strong> Short sleeve.</li>",
     ...printDetails,
-    ...pieces.map((piece) => `<li><strong>${esc(titleCaseToken(piece.kit_type))} kit colours:</strong> ${esc(birthdayGiftPackColours(piece))}.</li>`),
+    ...pieces.map((piece) => `<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} colours:</strong> ${esc(birthdayGiftPackColours(piece))}.</li>`),
     `<li><strong>Sizes:</strong> kids sizes 16&ndash;28 (ages 3&ndash;13) for each kit. ${sizeSelection} See the Size Guide tab for measurements.</li>`,
     "<li><strong>Material:</strong> Made from lightweight polyester fabric.</li>",
     "<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>",
@@ -3342,6 +3361,7 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   const productDetailsText = sectionText("Product Details");
   const optionsText = sectionText("Options You Can Add");
   const beforeOrderText = sectionText("Before You Order");
+  const pieces = birthdayGiftPackPieces(summary);
   const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
   if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
   if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Birthday Gift Pack must use the four approved sections in order.");
@@ -3350,9 +3370,12 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   ["lightweight polyester fabric", "standard packaging, not gift-wrapped"].forEach((phrase) => {
     if (!textValue.includes(phrase)) blockers.push(`Birthday Gift Pack is missing required copy: ${phrase}.`);
   });
-  summary.pieces.forEach((piece) => {
-    const kitLabel = `${piece.kit_type} kit`;
+  pieces.forEach((piece) => {
+    const kitLabel = birthdayGiftPackKitLabel(piece, pieces).toLowerCase();
     if (!includedText.includes(`${piece.kit_type} kids kit`)) blockers.push(`${titleCaseToken(piece.kit_type)} kit is missing from What's Included.`);
+    if (birthdayGiftPackHasDuplicateKitType(piece, pieces) && !includedText.includes(`${kitLabel}:`)) {
+      blockers.push(`${birthdayGiftPackKitLabel(piece, pieces)} label is missing from What's Included.`);
+    }
     if (!productDetailsText.includes(`${kitLabel} colours:`)) blockers.push(`${titleCaseToken(piece.kit_type)} kit colours are missing from Product Details.`);
     const expectedContents = piece.socks_status === "included"
       ? "shirt, matching shorts and socks"
@@ -3361,7 +3384,7 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
     [piece.main_colour_shirt, piece.main_colour_shorts, piece.socks_status === "included" ? piece.main_colour_socks : ""].filter(Boolean).forEach((colour) => {
       if (!textValue.includes(String(colour).toLowerCase())) blockers.push(`${titleCaseToken(piece.kit_type)} kit colour ${colour} is missing.`);
     });
-    if (piece.socks_status === "unavailable" && !beforeOrderText.includes(`the ${piece.kit_type} kit includes the shirt and matching shorts. socks are not included`)) {
+    if (piece.socks_status === "unavailable" && !beforeOrderText.includes(`the ${kitLabel} includes the shirt and matching shorts. socks are not included`)) {
       blockers.push(`${titleCaseToken(piece.kit_type)} kit no-socks warning is missing from Before You Order.`);
     }
     if (piece.listing_configuration === "pre_applied_player") {
@@ -3373,10 +3396,10 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
       if (!textValue.includes(`fixed ${playerName} ${playerNumber} print`) || !textValue.includes("another name or number cannot be selected")) {
         blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print warning is missing from Before You Order.`);
       }
-      if (!productDetailsText.includes(`${piece.kit_type} kit player print:`) || !productDetailsText.includes(`${playerName} name and number ${playerNumber} are already applied and included`)) {
+      if (!productDetailsText.includes(`${kitLabel} player print:`) || !productDetailsText.includes(`${playerName} name and number ${playerNumber} are already applied and included`)) {
         blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print is missing from Product Details.`);
       }
-      if (optionsText.includes(`${piece.kit_type} kit player print:`)) {
+      if (optionsText.includes(`${kitLabel} player print:`)) {
         blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print must not appear under Options You Can Add.`);
       }
     }
