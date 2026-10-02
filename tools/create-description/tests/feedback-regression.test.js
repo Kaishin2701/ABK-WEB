@@ -161,7 +161,15 @@ const standardSummary = {
 const standardHtml = context.renderPieceBasedBundleDescription(standardSummary);
 assert.ok(standardHtml.startsWith("<h3>What's Included</h3>"));
 assert.doesNotMatch(standardHtml, /<p>|Inter Miami Dad & Son Bundle 2026\/27 brings together/);
-assert.match(standardHtml, /<strong>Dad:<\/strong> 1 &times; Inter Miami Home men's shirt: one short-sleeve football shirt; shorts and socks are not included\./);
+assert.match(standardHtml, /<strong>Dad:<\/strong> 1 &times; Inter Miami Home men's shirt: one short-sleeve football shirt\./);
+assert.doesNotMatch(standardHtml, /Home men's shirt: one short-sleeve football shirt; shorts and socks are not included/);
+assert.match(standardHtml, /Dad is a shirt-only product\. Shorts and socks are not included\./);
+const longSleeveShirtIncluded = context.renderBundlePieceIncluded({
+  ...standardPieces[0],
+  sleeve_length: "long_sleeve"
+});
+assert.match(longSleeveShirtIncluded, /one long-sleeve football shirt\.<\/li>/);
+assert.doesNotMatch(longSleeveShirtIncluded, /shorts and socks are not included/);
 assert.match(standardHtml, /<strong>Son:<\/strong> 1 &times; Inter Miami Away kids kit: shirt, matching shorts and socks\. Messi name and number 10 are already applied to the back\./);
 assert.match(standardHtml, /<strong>Material:<\/strong> Made from lightweight polyester fabric/);
 assert.match(standardHtml, /Dad: Men sizes S&ndash;XXL; Son: Kids sizes 16&ndash;28, suggested ages 3&ndash;13/);

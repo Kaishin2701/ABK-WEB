@@ -2994,7 +2994,7 @@ function renderBundlePieceIncluded(piece) {
   } else if (piece.sleeve_length === "baby_suit") {
     contents = "one baby suit";
   } else {
-    contents = `${piece.sleeve_length === "long_sleeve" ? "one long-sleeve" : "one short-sleeve"} football shirt; shorts and socks are not included`;
+    contents = `${piece.sleeve_length === "long_sleeve" ? "one long-sleeve" : "one short-sleeve"} football shirt`;
   }
   const fixedPrint = bundleFixedPrintSentence(piece);
   const playerPrint = fixedPrint ? ` ${fixedPrint}` : "";
