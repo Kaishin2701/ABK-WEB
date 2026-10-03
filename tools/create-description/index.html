@@ -203,7 +203,7 @@
           <div class="span-2 bundle-piece-editor" aria-labelledby="bundle-piece-title">
             <div class="piece-editor-heading">
               <div>
-                <span id="bundle-piece-title" class="field-label">Piece editor</span>
+                <span id="bundle-piece-title" class="field-label">Item editor</span>
                 <p class="assistant-copy">Configure one complete product, choose who it is for, then add it to the bundle. Repeat until the bundle contains 2–4 Pieces.</p>
               </div>
               <span id="bundlePieceEditorBadge" class="badge neutral">New piece</span>
@@ -213,7 +213,7 @@
 
             <div class="piece-identity-grid">
               <label>
-                This piece is for
+                This item is for
                 <select id="bundleRecipientSelect" aria-label="Piece recipient">
                   <option value="">Select recipient...</option>
                   <option value="dad">Dad</option>
@@ -274,6 +274,17 @@
                   <button id="bundleBadgeChampionToggle" class="badge-champion-toggle" type="button" aria-label="Champion badge: off" aria-pressed="false" title="Mark this as a champions badge">&#127942;</button>
                 </span>
                 <datalist id="bundleBadgeLeagueOptions"></datalist>
+              </label>
+              <label id="bundleBadgeApplicationField" class="hidden">
+                Badge purchase option
+                <select id="bundleBadgeApplicationSelect" aria-label="Badge purchase option">
+                  <option value="per_item">Separate option for each item</option>
+                  <option value="bundle_combo">One option for the whole bundle</option>
+                </select>
+              </label>
+              <label id="bundleBadgeChampionVerificationField" class="hidden confirmation-control">
+                <input id="bundleBadgeChampionVerification" type="checkbox">
+                <span>Champion wording matches the selected badge image</span>
               </label>
             </div>
 
@@ -389,18 +400,18 @@
             <div id="bundlePieceValidation" class="piece-validation hidden" role="alert"></div>
             <div class="piece-editor-actions">
               <button id="cancelBundlePieceEditBtn" class="hidden" type="button">Cancel edit</button>
-              <button id="addBundleItemBtn" class="primary" type="button">Add Piece</button>
+              <button id="addBundleItemBtn" class="primary" type="button">Add item</button>
             </div>
             <div class="fixed-facts-panel" aria-label="Fixed KFK facts for every bundle piece">
-              <span class="field-label">Fixed KFK facts for every Piece</span>
+              <span class="field-label">Fixed KFK facts for every item</span>
               <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester &middot; League-specific sleeve badge add-on: &pound;3.99 when available</div>
             </div>
           </div>
 
           <div class="span-2 bundle-items-field">
             <div class="piece-list-heading">
-              <span class="field-label">Bundle Pieces</span>
-              <span id="bundleItemsSummary" class="bundle-items-summary">Pieces added: 0 / 4</span>
+              <span class="field-label">Bundle items</span>
+              <span id="bundleItemsSummary" class="bundle-items-summary">Items added: 0 / 4</span>
             </div>
             <div id="bundleItemsList" class="bundle-items-list bundle-piece-list" aria-live="polite"></div>
           </div>

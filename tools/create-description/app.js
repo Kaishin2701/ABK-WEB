@@ -55,6 +55,10 @@ const bundleBadgeLeagueField = document.querySelector("#bundleBadgeLeagueField")
 const bundleBadgeLeague = document.querySelector("#bundleBadgeLeague");
 const bundleBadgeLeagueOptionsList = document.querySelector("#bundleBadgeLeagueOptions");
 const bundleBadgeChampionToggle = document.querySelector("#bundleBadgeChampionToggle");
+const bundleBadgeApplicationField = document.querySelector("#bundleBadgeApplicationField");
+const bundleBadgeApplicationSelect = document.querySelector("#bundleBadgeApplicationSelect");
+const bundleBadgeChampionVerificationField = document.querySelector("#bundleBadgeChampionVerificationField");
+const bundleBadgeChampionVerification = document.querySelector("#bundleBadgeChampionVerification");
 const bundleProductSelect = document.querySelector("#bundleProductSelect");
 const bundleKitTypeSelect = document.querySelector("#bundleKitTypeSelect");
 const bundleSocksSelect = document.querySelector("#bundleSocksSelect");
@@ -1303,7 +1307,7 @@ function syncBundleTypeControls() {
 
 function applyDerivedSizeFacts(facts) {
   if (facts.audience === "women") {
-    facts.visible_size_range = "Women sizes S–2XL";
+    facts.visible_size_range = "Women sizes S–XXL";
     facts.size_profile = "women_s_2xl";
     return;
   }
@@ -1396,6 +1400,8 @@ function bundlePieceFactsFromEditor() {
     badge_status: bundleBadgeStatusSelect.value,
     badge_league: bundleBadgeStatusSelect.value === "available" ? bundleBadgeLeague.value.trim() : "",
     badge_champion_status: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionToggle.classList.contains("active") ? "champion" : "not_champion",
+    badge_application: bundleBadgeStatusSelect.value === "available" ? bundleBadgeApplicationSelect.value : "not_applicable",
+    badge_image_verified: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionVerification.checked ? "yes" : "no",
     product_kind: bundleProductSelect.value,
     product_type: isKit ? "full_kit" : "shirt_only",
     kit_type: kitType,
@@ -1475,6 +1481,8 @@ function validateBundlePiece(piece) {
     errors.push(`Product name indicates ${titleCaseToken(titleKitType)} kit type, but the Piece uses ${titleCaseToken(piece.kit_type)}.`);
   }
   if (piece.badge_status === "available" && !piece.badge_league) errors.push("Badge league is required when the badge is available.");
+  if (piece.badge_status === "available" && !["per_item", "bundle_combo"].includes(piece.badge_application || "per_item")) errors.push("Choose how the badge is added to the bundle.");
+  if (piece.badge_champion_status === "champion" && piece.badge_image_verified !== "yes") errors.push("Confirm that Champion wording matches the selected badge image.");
   const titlePlayerPrint = inferBundlePlayerPrintFromName(piece.product_name);
   if (titlePlayerPrint && piece.listing_configuration !== "pre_applied_player") {
     errors.push(`Product name includes ${titlePlayerPrint.name} ${titlePlayerPrint.number}, but the Piece is configured as No Printed.`);
@@ -1526,13 +1534,13 @@ function showBundlePieceErrors(errors) {
 
 function renderBundleItemsList() {
   syncBundleItemsInput();
-  bundleItemsSummaryEl.textContent = `Pieces added: ${bundleItems.length} / ${maxBundlePieces}`;
+  bundleItemsSummaryEl.textContent = `Items added: ${bundleItems.length} / ${maxBundlePieces}`;
   bundleItemsList.innerHTML = "";
 
   if (!bundleItems.length) {
     const emptyState = document.createElement("span");
     emptyState.className = "bundle-items-empty";
-    emptyState.textContent = "No Pieces added yet. Complete the Piece editor above and select Add Piece.";
+    emptyState.textContent = "No items added yet. Complete the item editor above and select Add item.";
     bundleItemsList.append(emptyState);
     return;
   }
@@ -1561,7 +1569,7 @@ function renderBundleItemsList() {
       ? '<span class="badge review">Size review</span>'
       : '<span class="badge pass">Ready</span>';
     const pieceErrorSummary = pieceErrors.length
-      ? `<div class="bundle-piece-card-errors"><strong>Fix this Piece:</strong><ul>${pieceErrors.map((error) => `<li>${esc(error)}</li>`).join("")}</ul></div>`
+      ? `<div class="bundle-piece-card-errors"><strong>Fix this item:</strong><ul>${pieceErrors.map((error) => `<li>${esc(error)}</li>`).join("")}</ul></div>`
       : "";
     const colours = [
       `Shirt: ${piece.main_colour_shirt}`,
@@ -1590,7 +1598,7 @@ function renderBundleItemsList() {
     duplicateButton.disabled = bundleItems.length >= maxBundlePieces;
     duplicateButton.addEventListener("click", () => {
       if (bundleItems.length >= maxBundlePieces) {
-        showBundlePieceErrors([`A Bundle can contain up to ${maxBundlePieces} Pieces.`]);
+        showBundlePieceErrors([`A Bundle can contain up to ${maxBundlePieces} items.`]);
         return;
       }
       const duplicatePiece = { ...piece, piece_id: `piece-${nextBundlePieceId}` };
@@ -1627,7 +1635,7 @@ function addSelectedBundleItem() {
   const existingIndex = bundleItems.findIndex((item) => item.piece_id === piece.piece_id);
   const errors = bundlePieceValidationErrors(piece);
   if (existingIndex < 0 && bundleItems.length >= maxBundlePieces) {
-    errors.push(`A Bundle can contain up to ${maxBundlePieces} Pieces.`);
+    errors.push(`A Bundle can contain up to ${maxBundlePieces} items.`);
   }
   showBundlePieceErrors(errors);
   if (errors.length) return;
@@ -1722,8 +1730,13 @@ function syncBundleItemControls() {
 
   const badgeAvailable = bundleBadgeStatusSelect.value === "available";
   bundleBadgeLeagueField.classList.toggle("hidden", !badgeAvailable);
+  bundleBadgeApplicationField.classList.toggle("hidden", !badgeAvailable);
+  const championVerificationRequired = badgeAvailable && bundleBadgeChampionToggle.classList.contains("active");
+  bundleBadgeChampionVerificationField.classList.toggle("hidden", !championVerificationRequired);
   if (!badgeAvailable) {
     bundleBadgeLeague.value = "";
+    setEnhancedSelectValue(bundleBadgeApplicationSelect, "per_item");
+    bundleBadgeChampionVerification.checked = false;
     setBundleBadgeChampionStatus(false);
   }
 
@@ -1745,6 +1758,8 @@ function resetBundlePieceEditor() {
   setEnhancedSelectValue(bundleRecipientSelect, "");
   setEnhancedSelectValue(bundleAudienceSelect, "");
   setEnhancedSelectValue(bundleBadgeStatusSelect, "unavailable");
+  setEnhancedSelectValue(bundleBadgeApplicationSelect, "per_item");
+  bundleBadgeChampionVerification.checked = false;
   setEnhancedSelectValue(bundleProductSelect, "Kit");
   setEnhancedSelectValue(bundleKitTypeSelect, "home");
   setEnhancedSelectValue(bundleSocksSelect, "unavailable");
@@ -1756,7 +1771,7 @@ function resetBundlePieceEditor() {
   resetBundleImageColourAssistant({ clearFile: true });
   showBundlePieceErrors([]);
   setBadge(bundlePieceEditorBadge, "New piece", "neutral");
-  addBundleItemBtn.textContent = "Add Piece";
+  addBundleItemBtn.textContent = "Add item";
   cancelBundlePieceEditBtn.classList.add("hidden");
   syncBundleItemControls();
 }
@@ -1773,6 +1788,8 @@ function loadBundlePieceIntoEditor(pieceId) {
   bundleItemSeason.value = piece.season;
   setEnhancedSelectValue(bundleBadgeStatusSelect, piece.badge_status);
   bundleBadgeLeague.value = piece.badge_league || "";
+  setEnhancedSelectValue(bundleBadgeApplicationSelect, piece.badge_application || "per_item");
+  bundleBadgeChampionVerification.checked = piece.badge_image_verified === "yes";
   setBundleBadgeChampionStatus(piece.badge_champion_status === "champion");
   setEnhancedSelectValue(bundleProductSelect, piece.product_kind);
   const knownKitType = [...bundleKitTypeSelect.options].some((option) => option.value === piece.kit_type);
@@ -1792,7 +1809,7 @@ function loadBundlePieceIntoEditor(pieceId) {
   resetBundleImageColourAssistant({ clearFile: true });
   showBundlePieceErrors([]);
   setBadge(bundlePieceEditorBadge, `Editing ${bundleRecipientLabelForPiece(piece)}`, "review");
-  addBundleItemBtn.textContent = "Save Piece";
+  addBundleItemBtn.textContent = "Save item";
   cancelBundlePieceEditBtn.classList.remove("hidden");
   syncBundleItemControls();
   bundlePieceEditorBadge.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2317,8 +2334,8 @@ function validateFacts(facts, branch) {
     blockers.push("visible_size_range must match Adult sizes S-XXL or Men sizes S-XXL for size_profile adult_s_2xl.");
   }
 
-  if (facts.size_profile === "women_s_2xl" && !facts.visible_size_range.toLowerCase().includes("women sizes s–2xl")) {
-    blockers.push("visible_size_range must match Women sizes S–2XL for size_profile women_s_2xl.");
+  if (facts.size_profile === "women_s_2xl" && !facts.visible_size_range.toLowerCase().includes("women sizes s–xxl")) {
+    blockers.push("visible_size_range must match Women sizes S–XXL for size_profile women_s_2xl.");
   }
 
   if (facts.size_profile === "baby_9_12" && !facts.visible_size_range.toLowerCase().includes("baby sizes 9 and 12 (3–24 months)")) {
@@ -2882,9 +2899,10 @@ function assignBundlePieceReferences(pieces) {
     const owner = bundleRecipientLabelForPiece(piece);
     const kind = bundlePieceKindLabel(piece);
     const genericOwner = piece.recipient_role === "none";
+    const usesProductReference = ["men", "women"].includes(piece.recipient_role);
     const base = genericOwner
       ? `${titleCaseToken(piece.kit_type)} ${kind}`
-      : owner;
+      : usesProductReference ? `${owner}'s ${kind}` : owner;
     return { ...piece, reference: base, reference_owner: owner };
   });
 
@@ -3037,10 +3055,10 @@ function bundleRangeHtml(value) {
 
 function renderBundleSizes(summary) {
   const rangeText = summary.sharedSizeRange
-    ? `${bundleRangeHtml(summary.sharedSizeRange)} for each Piece.`
+    ? `${bundleRangeHtml(summary.sharedSizeRange)} for each item.`
     : summary.pieces.map((piece) => `${esc(piece.reference)}: ${bundleRangeHtml(piece.visible_size_range)}`).join("; ") + ".";
   const sizeGuideDirection = summary.customSizes.length ? "" : " Check the Size Guide tab for measurements.";
-  return `<li><strong>Sizes:</strong> ${rangeText} Choose a size separately for every Piece.${sizeGuideDirection}</li>`;
+  return `<li><strong>Sizes:</strong> ${rangeText} Choose a size separately for every item.${sizeGuideDirection}</li>`;
 }
 
 function renderBundleProductDetails(summary) {
@@ -3052,7 +3070,9 @@ function renderBundleProductDetails(summary) {
   if (summary.pieces.every((piece) => piece.product_type === "full_kit")) {
     lines.push(`<li><strong>Kit types:</strong> ${esc(humanList(summary.kitTypes))}.</li>`);
   } else {
-    const products = summary.pieces.map((piece) => `${titleCaseToken(piece.kit_type)} ${bundlePieceKindLabel(piece)}`);
+    const products = uniqueTextValues(summary.pieces.map((piece) => (
+      `${titleCaseToken(piece.kit_type)} ${bundlePieceAudienceLabel(piece.audience)} ${bundlePieceKindLabel(piece)}`
+    )));
     lines.push(`<li><strong>Products:</strong> ${esc(humanList(products))}.</li>`);
   }
   if (summary.sharedSleeve) lines.push(`<li><strong>Sleeve length:</strong> ${esc(sleeveLengthLabel({ sleeve_length: summary.sharedSleeve }) || titleCaseToken(summary.sharedSleeve))}.</li>`);
@@ -3073,7 +3093,7 @@ function renderBundlePersonalisationOptions(summary) {
   const lines = [];
   const available = summary.personalisable;
   if (available.length === summary.pieces.length) {
-    lines.push("<li><strong>Name and number:</strong> optional on any eligible Piece. Select it separately for each Piece and enter the details in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>");
+    lines.push("<li><strong>Name and number:</strong> optional on any eligible item. Select it separately for each item and enter the details in the matching fields. Names up to 13 letters, numbers up to 2 digits.</li>");
   } else if (available.length) {
     lines.push(`<li><strong>Name and number:</strong> optional on ${esc(refsForPieces(available))}. Select it separately using the matching product options. Names up to 13 letters, numbers up to 2 digits.</li>`);
   }
@@ -3102,32 +3122,48 @@ function renderBundleBadgeOptions(summary) {
   });
   if (groups.size === 1 && summary.badgeEligible.length === summary.pieces.length) {
     const [label] = groups.keys();
-    return [`<li><strong>Sleeve badges:</strong> optional ${esc(label)} sleeve badges can be added separately to every Piece using the matching product options.</li>`];
+    const allBundleCombo = summary.badgeEligible.every((piece) => piece.badge_application === "bundle_combo");
+    const countLabel = summary.pieces.length === 2 ? "both items" : `all ${summary.pieces.length} items`;
+    const wording = allBundleCombo
+      ? `${esc(label)} sleeve badges can be added to ${countLabel} using one bundle option.`
+      : `optional ${esc(label)} sleeve badges can be added separately to every item using the matching product options.`;
+    return [`<li><strong>Sleeve badges:</strong> ${wording}</li>`];
   }
   return [...groups.entries()].map(([label, pieces]) => (
-    `<li><strong>${esc(label)} sleeve badge:</strong> Available for ${esc(refsForPieces(pieces))} using the matching product option.</li>`
+    pieces.every((piece) => piece.badge_application === "bundle_combo")
+      ? `<li><strong>${esc(label)} sleeve badge:</strong> ${esc(label)} sleeve badge can be added to ${esc(refsForPieces(pieces))} using one bundle option.</li>`
+      : `<li><strong>${esc(label)} sleeve badge:</strong> ${esc(label)} sleeve badge can be added separately to ${esc(refsForPieces(pieces))} using the matching product options.</li>`
   ));
 }
 
+function shirtOnlyWarning(piece) {
+  const reference = String(piece.reference || "").trim();
+  const subject = /\bshirt$/i.test(reference) ? reference : `${reference}'s shirt`;
+  return `${subject} is shirt-only. Shorts and socks are not included.`;
+}
+
 function renderBundleBeforeOrder(summary) {
-  const lines = ["<li>Check that a size has been selected separately for each Piece before ordering.</li>"];
+  const lines = ["<li>Check that a size has been selected separately for each item before ordering.</li>"];
   if (summary.personalisable.length) {
     lines.push("<li>Double-check the spelling of each name and number in the personalisation fields.</li>");
   }
   summary.fixedPrint.forEach((piece) => {
-    lines.push(`<li>${esc(piece.reference)} includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this Piece.</li>`);
+    lines.push(`<li>${esc(piece.reference)} includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this item.</li>`);
   });
   summary.pieces.filter((piece) => piece.product_type === "shirt_only" && piece.sleeve_length !== "baby_suit").forEach((piece) => {
-    lines.push(`<li>${esc(piece.reference)} is a shirt-only product. Shorts and socks are not included.</li>`);
+    lines.push(`<li>${esc(shirtOnlyWarning(piece))}</li>`);
   });
-  summary.pieces.filter((piece) => piece.product_type === "full_kit" && piece.socks_status === "unavailable").forEach((piece) => {
-    lines.push(`<li>${esc(piece.reference)} includes the shirt and matching shorts. Socks are not included.</li>`);
-  });
+  const noSocks = summary.pieces.filter((piece) => piece.product_type === "full_kit" && piece.socks_status === "unavailable");
+  if (noSocks.length === 1) {
+    lines.push(`<li>${esc(noSocks[0].reference)} includes the shirt and matching shorts. Socks are not included.</li>`);
+  } else if (noSocks.length > 1) {
+    lines.push(`<li>The ${esc(refsForPieces(noSocks))} include shirts and matching shorts. Socks are not included.</li>`);
+  }
   if (isBirthdayGiftPack(summary.facts)) {
     if (summary.personalisable.length) {
       lines.push("<li>Personalised shirts can&rsquo;t be returned for a change of mind or wrong size, unless we made an error.</li>");
     }
-    lines.push("<li>Gift packs are already discounted, so promo codes can&rsquo;t be applied.</li>");
+    lines.push("<li>Promo codes can&rsquo;t be applied to this gift pack.</li>");
     lines.push("<li><strong>Packaging:</strong> sent in standard packaging, not gift-wrapped.</li>");
   }
   return lines;
@@ -3138,7 +3174,7 @@ function renderPieceBasedBundleDescription(summary) {
     ...renderBundlePersonalisationOptions(summary),
     ...renderBundleBadgeOptions(summary)
   ];
-  if (!options.length) options.push("<li>No additional name-and-number personalisation or sleeve-badge option is available for the listed Pieces.</li>");
+  if (!options.length) options.push("<li>No additional name-and-number personalisation or sleeve-badge option is available for the listed items.</li>");
 
   const html = [
     "<h3>What's Included</h3>",
@@ -3223,6 +3259,14 @@ function birthdayGiftPackHasDuplicateKitType(piece, pieces) {
   return pieces.filter((item) => item.kit_type === piece.kit_type).length > 1;
 }
 
+function birthdayGiftPackKitTypesSummary(pieces) {
+  return humanList(uniqueTextValues(pieces.map((piece) => {
+    const count = pieces.filter((item) => item.kit_type === piece.kit_type).length;
+    const label = titleCaseToken(piece.kit_type);
+    return count > 1 ? `${label} (×${count})` : label;
+  })));
+}
+
 function birthdayGiftPackIncludedLine(piece, pieces) {
   const fixedPrint = bundleFixedPrintSentence(piece);
   const contents = piece.socks_status === "included"
@@ -3248,15 +3292,18 @@ function renderBirthdayGiftPackOptions(summary) {
   }
 
   const badges = summary.badgeEligible;
+  const allBundleCombo = badges.length && badges.every((piece) => piece.badge_application === "bundle_combo");
+  const comboSuffix = allBundleCombo ? " using one bundle option" : "";
   if (badges.length === summary.pieces.length && badges.every((piece) => piece.badge_league === "Premier League")) {
     const shirtCount = badges.length === 2 ? "both shirts" : `all ${badges.length} shirts`;
-    lines.push(`<li><strong>EPL badges:</strong> Premier League sleeve badges added to ${shirtCount}.</li>`);
+    lines.push(`<li><strong>EPL badges:</strong> Premier League sleeve badges can be added to ${shirtCount}${comboSuffix}.</li>`);
   } else if (badges.length === summary.pieces.length && uniqueTextValues(badges.map(bundleBadgeDisplay)).length === 1) {
     const shirtCount = badges.length === 2 ? "both shirts" : `all ${badges.length} shirts`;
-    lines.push(`<li><strong>Sleeve badges:</strong> ${esc(bundleBadgeDisplay(badges[0]))} sleeve badges added to ${shirtCount}.</li>`);
+    lines.push(`<li><strong>Sleeve badges:</strong> ${esc(bundleBadgeDisplay(badges[0]))} sleeve badges can be added to ${shirtCount}${comboSuffix}.</li>`);
   } else {
     badges.forEach((piece) => {
-      lines.push(`<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} sleeve badge:</strong> ${esc(bundleBadgeDisplay(piece))} sleeve badge available for this shirt.</li>`);
+      const suffix = piece.badge_application === "bundle_combo" ? " using one bundle option" : "";
+      lines.push(`<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} sleeve badge:</strong> ${esc(bundleBadgeDisplay(piece))} sleeve badge can be added to this shirt${suffix}.</li>`);
     });
   }
   return lines;
@@ -3287,16 +3334,14 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
   (summary.fixedPrint || []).forEach((piece) => {
     beforeOrder.push(`<li>The ${esc(birthdayGiftPackKitLabel(piece, pieces))} includes the fixed ${esc(displayName(piece.pre_applied_name))} ${esc(piece.pre_applied_number)} print; another name or number cannot be selected for this kit.</li>`);
   });
-  pieces.filter((piece) => piece.socks_status === "unavailable").forEach((piece) => {
-    beforeOrder.push(`<li>The ${esc(birthdayGiftPackKitLabel(piece, pieces))} includes the shirt and matching shorts. Socks are not included.</li>`);
-  });
-  beforeOrder.push("<li>Gift packs are already discounted, so promo codes can&rsquo;t be applied.</li>");
+  const noSocksPieces = pieces.filter((piece) => piece.socks_status === "unavailable");
+  if (noSocksPieces.length === 1) {
+    beforeOrder.push(`<li>The ${esc(birthdayGiftPackKitLabel(noSocksPieces[0], pieces))} includes the shirt and matching shorts. Socks are not included.</li>`);
+  } else if (noSocksPieces.length > 1) {
+    beforeOrder.push(`<li>The ${esc(humanList(noSocksPieces.map((piece) => birthdayGiftPackKitLabel(piece, pieces))))} include shirts and matching shorts. Socks are not included.</li>`);
+  }
+  beforeOrder.push("<li>Promo codes can&rsquo;t be applied to this gift pack.</li>");
   beforeOrder.push("<li><strong>Packaging:</strong> sent in standard packaging, not gift-wrapped.</li>");
-  const kitTypes = pieces.map((piece) => (
-    birthdayGiftPackHasDuplicateKitType(piece, pieces)
-      ? birthdayGiftPackKitLabel(piece, pieces)
-      : titleCaseToken(piece.kit_type)
-  ));
   const teamDetails = summary.sharedTeam
     ? []
     : [`<li><strong>Teams:</strong> ${esc(pieces.map((piece) => `${birthdayGiftPackKitLabel(piece, pieces)} — ${piece.team}`).join("; "))}.</li>`];
@@ -3317,7 +3362,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     "<ul>",
     ...teamDetails,
     ...seasonDetails,
-    `<li><strong>Kit types:</strong> ${esc(humanList(kitTypes))}.</li>`,
+    `<li><strong>Kit types:</strong> ${esc(birthdayGiftPackKitTypesSummary(pieces))}.</li>`,
     "<li><strong>Version:</strong> Fan version.</li>",
     "<li><strong>Sleeve length:</strong> Short sleeve.</li>",
     ...pieceDetails,
@@ -3377,6 +3422,10 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   const optionsText = sectionText("Options You Can Add");
   const beforeOrderText = sectionText("Before You Order");
   const pieces = birthdayGiftPackPieces(summary);
+  const noSocksPieces = pieces.filter((piece) => piece.socks_status === "unavailable");
+  const combinedNoSocksWarning = noSocksPieces.length > 1
+    ? `the ${humanList(noSocksPieces.map((piece) => birthdayGiftPackKitLabel(piece, pieces)))} include shirts and matching shorts. socks are not included`
+    : "";
   const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
   if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
   if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Birthday Gift Pack must use the four approved sections in order.");
@@ -3402,7 +3451,9 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
     [piece.main_colour_shirt, piece.main_colour_shorts, piece.socks_status === "included" ? piece.main_colour_socks : ""].filter(Boolean).forEach((colour) => {
       if (!textValue.includes(String(colour).toLowerCase())) blockers.push(`${titleCaseToken(piece.kit_type)} kit colour ${colour} is missing.`);
     });
-    if (piece.socks_status === "unavailable" && !beforeOrderText.includes(`the ${kitLabel} includes the shirt and matching shorts. socks are not included`)) {
+    if (piece.socks_status === "unavailable"
+      && !beforeOrderText.includes(`the ${kitLabel} includes the shirt and matching shorts. socks are not included`)
+      && !beforeOrderText.includes(combinedNoSocksWarning)) {
       blockers.push(`${titleCaseToken(piece.kit_type)} kit no-socks warning is missing from Before You Order.`);
     }
     if (piece.listing_configuration === "pre_applied_player") {
@@ -3468,6 +3519,11 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
   if (!textValue.includes("material: made from lightweight polyester fabric")) blockers.push("Bundle Product Details must include the approved polyester material wording.");
   if (!textValue.includes("exact shades may vary slightly between screens and production batches")) blockers.push("Bundle Product Details must include the approved shade note.");
 
+  const noSocksPieces = summary.pieces.filter((piece) => piece.product_type === "full_kit" && piece.socks_status === "unavailable");
+  const combinedNoSocksWarning = noSocksPieces.length > 1
+    ? `the ${refsForPieces(noSocksPieces)} include shirts and matching shorts. socks are not included`
+    : "";
+
   summary.pieces.forEach((piece, index) => {
     const prefix = `Piece ${index + 1} — ${piece.reference}`;
     const comparableReference = removeDashesFromText(piece.reference).toLowerCase();
@@ -3484,10 +3540,12 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
     if (!productDetailsText.includes(expectedDetailsLabel)) {
       blockers.push(`${prefix}: combined Piece detail line is missing from Product Details.`);
     }
-    if (piece.socks_status === "unavailable" && !textValue.includes(`${comparableReference} includes the shirt and matching shorts. socks are not included`)) {
+    if (piece.socks_status === "unavailable"
+      && !textValue.includes(`${comparableReference} includes the shirt and matching shorts. socks are not included`)
+      && !textValue.includes(combinedNoSocksWarning)) {
       blockers.push(`${prefix}: no-socks warning is missing from Before You Order.`);
     }
-    if (piece.product_type === "shirt_only" && !textValue.includes(`${comparableReference} is a shirt-only product. shorts and socks are not included`)) {
+    if (piece.product_type === "shirt_only" && !textValue.includes(shirtOnlyWarning(piece).toLowerCase())) {
       blockers.push(`${prefix}: shirt-only warning is missing from Before You Order.`);
     }
     if (piece.listing_configuration === "pre_applied_player") {
@@ -3919,12 +3977,13 @@ bundleTypeSelect.addEventListener("change", () => {
   renderBundleItemsList();
 });
 bundleProductName.addEventListener("input", inferBundlePieceFromName);
-[bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect]
+[bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect, bundleBadgeApplicationSelect]
   .forEach((field) => field.addEventListener("change", syncBundleItemControls));
 bundleCustomSizeRangeToggle.addEventListener("change", syncBundleItemControls);
 bundleBadgeChampionToggle.addEventListener("click", () => {
   if (bundleBadgeStatusSelect.value !== "available") return;
   setBundleBadgeChampionStatus(!bundleBadgeChampionToggle.classList.contains("active"));
+  syncBundleItemControls();
 });
 addBundleItemBtn.addEventListener("click", addSelectedBundleItem);
 cancelBundlePieceEditBtn.addEventListener("click", resetBundlePieceEditor);

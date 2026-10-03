@@ -39,7 +39,7 @@ const context = vm.createContext({
   standardBundleSizeFacts: (audience) => ({
     kids: { visible_size_range: "Kids sizes 16-28, suggested ages 3-13", size_profile: "kids_16_28" },
     men: { visible_size_range: "Men sizes S-XXL", size_profile: "adult_s_2xl" },
-    women: { visible_size_range: "Women sizes Sâ€“2XL", size_profile: "women_s_2xl" },
+    women: { visible_size_range: "Women sizes Sâ€“XXL", size_profile: "women_s_2xl" },
     adult: { visible_size_range: "Adult sizes S-XXL", size_profile: "adult_s_2xl" },
     baby: { visible_size_range: "Baby sizes 9 and 12 (3â€“24 months)", size_profile: "baby_9_12" }
   }[audience] || { visible_size_range: "", size_profile: "unknown" }),
@@ -68,6 +68,7 @@ assert.match(htmlSource, /<option value="men">Men<\/option>/);
 assert.match(htmlSource, /<option value="women">Women<\/option>/);
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "men", recipient_label: "", audience: "men" }), "Men");
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "women", recipient_label: "", audience: "women" }), "Women");
+assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "mum", recipient_label: "", audience: "women" }), "Mum");
 
 const nationalTeam = context.findFootballTeam("Spain World Cup Champions 2026");
 assert.equal(nationalTeam.name, "Spain");
@@ -163,7 +164,7 @@ assert.ok(standardHtml.startsWith("<h3>What's Included</h3>"));
 assert.doesNotMatch(standardHtml, /<p>|Inter Miami Dad & Son Bundle 2026\/27 brings together/);
 assert.match(standardHtml, /<strong>Dad:<\/strong> 1 &times; Inter Miami Home men's shirt: one short-sleeve football shirt\./);
 assert.doesNotMatch(standardHtml, /Home men's shirt: one short-sleeve football shirt; shorts and socks are not included/);
-assert.match(standardHtml, /Dad is a shirt-only product\. Shorts and socks are not included\./);
+assert.match(standardHtml, /Dad's shirt is shirt-only\. Shorts and socks are not included\./);
 const longSleeveShirtIncluded = context.renderBundlePieceIncluded({
   ...standardPieces[0],
   sleeve_length: "long_sleeve"
@@ -173,6 +174,7 @@ assert.doesNotMatch(longSleeveShirtIncluded, /shorts and socks are not included/
 assert.match(standardHtml, /<strong>Son:<\/strong> 1 &times; Inter Miami Away kids kit: shirt, matching shorts and socks\. Messi name and number 10 are already applied to the back\./);
 assert.match(standardHtml, /<strong>Material:<\/strong> Made from lightweight polyester fabric/);
 assert.match(standardHtml, /Dad: Men sizes S&ndash;XXL; Son: Kids sizes 16&ndash;28, suggested ages 3&ndash;13/);
+assert.doesNotMatch(standardHtml, /\bPiece\b/);
 assert.match(standardHtml, /<strong>Son kit:<\/strong> Messi name and number 10 are already applied and included; black shirt, black shorts, pink socks\./);
 assert.match(standardHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
 assert.doesNotMatch(standardHtml, /Son kit colours|Son player print/);
@@ -182,6 +184,29 @@ const standardOptions = standardHtml.slice(standardHtml.indexOf("<h3>Options You
 assert.match(standardProductDetails, /Son kit:<\/strong> Messi name and number 10/);
 assert.doesNotMatch(standardOptions, /Son kit:<\/strong> Messi name and number 10/);
 assert.doesNotMatch(standardHtml, /promo codes|gift-wrapped|change of mind/);
+
+const comboBadgeHtml = context.renderPieceBasedBundleDescription({
+  ...standardSummary,
+  badgeEligible: standardPieces.map((piece) => ({
+    ...piece,
+    badge_league: "Premier League",
+    badge_application: "bundle_combo"
+  }))
+});
+assert.match(comboBadgeHtml, /Premier League sleeve badges can be added to both items using one bundle option/);
+
+const coupleHtml = context.renderPieceBasedBundleDescription({
+  ...standardSummary,
+  pieces: [
+    { ...standardPieces[0], reference: "Men's shirt", recipient_role: "men", team: "Spain", kit_type: "away" },
+    { ...standardPieces[0], reference: "Women's shirt", recipient_role: "women", audience: "women", team: "Spain", kit_type: "away" }
+  ],
+  sharedTeam: "Spain",
+  personalisable: [],
+  fixedPrint: [],
+  badgeEligible: []
+});
+assert.match(coupleHtml, /Products:<\/strong> Away men's shirt and Away women's shirt\./);
 
 assert.match(htmlSource, /id="bundleTypeSelect"/);
 assert.match(htmlSource, /value="birthday_gift_pack_home_away_kids"/);
@@ -203,7 +228,7 @@ assert.match(htmlSource, />Standard Bundle<\/button>/);
 assert.match(htmlSource, />KFK Birthday Gift Pack<\/button>/);
 assert.doesNotMatch(htmlSource, />Standard Bundle: 2–4 Pieces<\/option>/);
 assert.doesNotMatch(htmlSource, />KFK Birthday Gift Pack: 2–4 Kids Kits<\/option>/);
-assert.match(htmlSource, /Pieces added: 0 \/ 4/);
+assert.match(htmlSource, /Items added: 0 \/ 4/);
 assert.match(appSource, /const maxBundlePieces = 4;/);
 
 const giftPackPieces = [
@@ -255,7 +280,7 @@ assert.match(mixedBirthdayHtml, /Inter Miami Away kids kit/);
 assert.match(mixedBirthdayHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
 assert.match(mixedBirthdayHtml, /<strong>Son kit:<\/strong> Messi name and number 10 are already applied and included; black shirt, black shorts, pink socks\./);
 assert.doesNotMatch(mixedBirthdayHtml, /<strong>Main colours:<\/strong>/);
-assert.match(mixedBirthdayHtml, /promo codes can&rsquo;t be applied/);
+assert.match(mixedBirthdayHtml, /Promo codes can&rsquo;t be applied to this gift pack/);
 assert.match(mixedBirthdayHtml, /standard packaging, not gift-wrapped/);
 
 const giftPackSummary = {
@@ -273,8 +298,8 @@ assert.match(giftPackHtml, /1 &times; Nottingham Forest Home kids kit: shirt, ma
 assert.match(giftPackHtml, /Home kit colours:<\/strong> red shirt, white shorts, red socks\./);
 assert.match(giftPackHtml, /Away kit colours:<\/strong> green shirt, green shorts, green socks\./);
 assert.match(giftPackHtml, /kids sizes 16&ndash;28 \(ages 3&ndash;13\)/);
-assert.match(giftPackHtml, /EPL badges:<\/strong> Premier League sleeve badges added to both shirts\./);
-assert.match(giftPackHtml, /promo codes can&rsquo;t be applied/);
+assert.match(giftPackHtml, /EPL badges:<\/strong> Premier League sleeve badges can be added to both shirts\./);
+assert.match(giftPackHtml, /Promo codes can&rsquo;t be applied to this gift pack/);
 assert.match(giftPackHtml, /standard packaging, not gift-wrapped/);
 
 const duplicateHomePieces = [
@@ -290,7 +315,7 @@ const duplicateHomeHtml = context.renderBirthdayGiftPackDescription({
 });
 assert.match(duplicateHomeHtml, /<strong>Home kit 1:<\/strong> 1 &times; Nottingham Forest Home kids kit/);
 assert.match(duplicateHomeHtml, /<strong>Home kit 2:<\/strong> 1 &times; Nottingham Forest Home kids kit/);
-assert.match(duplicateHomeHtml, /Kit types:<\/strong> Home kit 1 and Home kit 2\./);
+assert.match(duplicateHomeHtml, /Kit types:<\/strong> Home \(×2\)\./);
 assert.match(duplicateHomeHtml, /Home kit 1 colours:<\/strong> red shirt/);
 assert.match(duplicateHomeHtml, /Home kit 2 colours:<\/strong> blue shirt/);
 assert.match(duplicateHomeHtml, /optional on the Home kit 1, the Home kit 2 or both/);
@@ -381,7 +406,7 @@ assert.match(fourPieceHtml, /Kit types:<\/strong> Home, Away, Third and Fourth\.
 assert.match(fourPieceHtml, /Third kit colours:<\/strong> white shirt, black shorts, white socks\./);
 assert.match(fourPieceHtml, /Choose each kit size separately\./);
 assert.match(fourPieceHtml, /Name and number:<\/strong> optional on any eligible kit\./);
-assert.match(fourPieceHtml, /Premier League sleeve badges added to all 4 shirts\./);
+assert.match(fourPieceHtml, /Premier League sleeve badges can be added to all 4 shirts\./);
 
 const noSocksHome = {
   ...giftPackPieces[0],
@@ -411,5 +436,15 @@ assert.match(mixedSocksHtml, /Home kids kit: shirt and matching shorts; socks ar
 assert.match(mixedSocksHtml, /Home kit colours:<\/strong> red shirt, white shorts\./);
 assert.doesNotMatch(mixedSocksHtml, /Home kit colours:<\/strong>[^<]*socks/);
 assert.match(mixedSocksHtml, /The Home kit includes the shirt and matching shorts\. Socks are not included\./);
+
+const allNoSocksHtml = context.renderBirthdayGiftPackDescription({
+  ...giftPackSummary,
+  pieces: [noSocksHome, { ...giftPackPieces[1], socks_status: "unavailable", included_items: "shirt_and_shorts", main_colour_socks: "" }],
+  personalisable: giftPackPieces,
+  fixedPrint: [],
+  badgeEligible: giftPackPieces
+});
+assert.match(allNoSocksHtml, /The Home kit and Away kit include shirts and matching shorts\. Socks are not included\./);
+assert.equal((allNoSocksHtml.match(/socks are not included/gi) || []).length, 3);
 
 console.log("Create Description feedback regression tests passed.");
