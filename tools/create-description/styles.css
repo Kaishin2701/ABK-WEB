@@ -620,6 +620,16 @@ input:disabled {
   text-align: right;
 }
 
+.piece-size-range-choice {
+  display: grid;
+  gap: 5px;
+  min-width: min(100%, 330px);
+}
+
+.piece-size-range-choice select {
+  min-width: 280px;
+}
+
 .piece-advanced-options {
   border: 1px solid var(--border);
   border-radius: 7px;

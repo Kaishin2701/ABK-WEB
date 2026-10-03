@@ -67,12 +67,8 @@ const bundlePersonalisationSelect = document.querySelector("#bundlePersonalisati
 const bundlePrintFields = document.querySelector("#bundlePrintFields");
 const bundlePrintName = document.querySelector("#bundlePrintName");
 const bundlePrintNumber = document.querySelector("#bundlePrintNumber");
-const bundleSizeRangeModeSelect = document.querySelector("#bundleSizeRangeModeSelect");
-const bundleCustomSizeRangeToggle = document.querySelector("#bundleCustomSizeRangeToggle");
-const bundleCustomSizeRangeField = document.querySelector("#bundleCustomSizeRangeField");
-const bundleVisibleSizeRange = document.querySelector("#bundleVisibleSizeRange");
+const bundleSizeRangeSelect = document.querySelector("#bundleSizeRangeSelect");
 const bundleStandardSizeSummary = document.querySelector("#bundleStandardSizeSummary");
-const bundleAdvancedOptions = document.querySelector("#bundleAdvancedOptions");
 const bundleItemAnother = document.querySelector("#bundleItemAnother");
 const addBundleItemBtn = document.querySelector("#addBundleItemBtn");
 const cancelBundlePieceEditBtn = document.querySelector("#cancelBundlePieceEditBtn");
@@ -1413,17 +1409,18 @@ function bundlePieceFactsFromEditor() {
     print_price_included: bundlePrintSelect.value === "pre_applied_player" ? "yes" : "not_applicable",
     pre_applied_name: bundlePrintSelect.value === "pre_applied_player" ? bundlePrintName.value.trim() : "",
     pre_applied_number: bundlePrintSelect.value === "pre_applied_player" ? bundlePrintNumber.value.trim() : "",
-    size_range_mode: bundleSizeRangeModeSelect.value,
+    size_range_mode: "standard",
+    size_range_selection: bundleSizeRangeSelect.value || "standard",
     main_colour_shirt: bundleMainColourShirtInput.value.trim(),
     main_colour_shorts: isKit ? bundleMainColourShortsInput.value.trim() : "",
     main_colour_socks: withSocks ? bundleMainColourSocksInput.value.trim() : "",
     ...fixedKfkFacts
   };
   applyDerivedSizeFacts(facts);
-  if (facts.size_range_mode === "custom") {
-    facts.visible_size_range = bundleVisibleSizeRange.value.trim();
-    facts.size_profile = "custom_pending_review";
-  }
+  const sizeRangeFacts = selectedBundleSizeRangeFacts(facts.audience, facts.size_range_selection);
+  facts.size_range_mode = sizeRangeFacts.mode;
+  facts.visible_size_range = sizeRangeFacts.visible_size_range;
+  facts.size_profile = sizeRangeFacts.size_profile;
   return facts;
 }
 
@@ -1656,17 +1653,69 @@ function standardBundleSizeFacts(audience) {
   return facts;
 }
 
-function syncBundleSizeControls() {
-  const usesCustomRange = bundleCustomSizeRangeToggle.checked;
-  bundleSizeRangeModeSelect.value = usesCustomRange ? "custom" : "standard";
-  bundleCustomSizeRangeField.classList.toggle("hidden", !usesCustomRange);
-  const standardRange = standardBundleSizeFacts(bundleAudienceSelect.value).visible_size_range || "";
-  bundleStandardSizeSummary.textContent = usesCustomRange
-    ? "Custom size range enabled"
-    : standardRange ? `Auto size: ${standardRange}` : "Choose an audience to derive the standard range.";
-  if (!usesCustomRange) {
-    bundleVisibleSizeRange.value = standardRange;
+function bundleSizeRangeOptions(audience) {
+  const suggested = standardBundleSizeFacts(audience);
+  if (!suggested.visible_size_range) return [];
+  const options = [{
+    value: "standard",
+    label: `${suggested.visible_size_range} (Suggested)`,
+    ...suggested,
+    mode: "standard"
+  }];
+  if (["men", "women", "adult"].includes(audience)) {
+    const audienceLabel = audience === "men" ? "Men" : audience === "women" ? "Women" : "Adult";
+    options.push(
+      {
+        value: "extended_3xl",
+        label: `${audienceLabel} sizes S–3XL (Optional)`,
+        visible_size_range: `${audienceLabel} sizes S–3XL`,
+        size_profile: "custom_pending_review",
+        mode: "custom"
+      },
+      {
+        value: "extended_4xl",
+        label: `${audienceLabel} sizes S–4XL (Optional)`,
+        visible_size_range: `${audienceLabel} sizes S–4XL`,
+        size_profile: "custom_pending_review",
+        mode: "custom"
+      }
+    );
   }
+  return options;
+}
+
+function selectedBundleSizeRangeFacts(audience, selection) {
+  const options = bundleSizeRangeOptions(audience);
+  return options.find((option) => option.value === selection) || options[0] || {
+    visible_size_range: "",
+    size_profile: "unknown",
+    mode: "custom"
+  };
+}
+
+function bundleSizeRangeSelectionForPiece(piece) {
+  const options = bundleSizeRangeOptions(piece.audience);
+  const normalizedRange = normalizedSizeRange(piece.visible_size_range);
+  return options.find((option) => normalizedSizeRange(option.visible_size_range) === normalizedRange)?.value
+    || "standard";
+}
+
+function syncBundleSizeControls() {
+  const options = bundleSizeRangeOptions(bundleAudienceSelect.value);
+  const requestedValue = bundleSizeRangeSelect.value || "standard";
+  bundleSizeRangeSelect.replaceChildren(...options.map((option) => {
+    const node = document.createElement("option");
+    node.value = option.value;
+    node.textContent = option.label;
+    return node;
+  }));
+  bundleSizeRangeSelect.value = options.some((option) => option.value === requestedValue) ? requestedValue : "standard";
+  const sizeRangeFacts = selectedBundleSizeRangeFacts(bundleAudienceSelect.value, bundleSizeRangeSelect.value);
+  bundleStandardSizeSummary.textContent = !options.length
+    ? "Choose an audience to derive the suggested range."
+    : sizeRangeFacts.mode === "custom"
+      ? "Optional extended range selected — review before publishing."
+      : "Suggested range selected.";
 }
 
 function setBundleSelectOptions(select, allowedValues = null) {
@@ -1683,8 +1732,6 @@ function syncBirthdayGiftPackEditorConstraints() {
   setBundleSelectOptions(bundleAudienceSelect);
   setBundleSelectOptions(bundleProductSelect);
   setBundleSelectOptions(bundleKitTypeSelect);
-  bundleAdvancedOptions.classList.remove("hidden");
-  bundleCustomSizeRangeToggle.disabled = false;
 }
 
 function syncBundleItemControls() {
@@ -1753,7 +1800,7 @@ function syncBundleItemControls() {
 
 function resetBundlePieceEditor() {
   editingBundlePieceId = null;
-  [bundleRecipientLabel, bundleProductName, bundleItemTheme, bundleItemSeason, bundleBadgeLeague, bundleItemAnother, bundlePrintName, bundlePrintNumber, bundleVisibleSizeRange, bundleMainColourShirtInput, bundleMainColourShortsInput, bundleMainColourSocksInput]
+  [bundleRecipientLabel, bundleProductName, bundleItemTheme, bundleItemSeason, bundleBadgeLeague, bundleItemAnother, bundlePrintName, bundlePrintNumber, bundleMainColourShirtInput, bundleMainColourShortsInput, bundleMainColourSocksInput]
     .forEach((field) => { field.value = ""; });
   setEnhancedSelectValue(bundleRecipientSelect, "");
   setEnhancedSelectValue(bundleAudienceSelect, "");
@@ -1765,8 +1812,7 @@ function resetBundlePieceEditor() {
   setEnhancedSelectValue(bundleSocksSelect, "unavailable");
   setEnhancedSelectValue(bundlePrintSelect, "plain_customisable");
   setEnhancedSelectValue(bundlePersonalisationSelect, "available");
-  bundleCustomSizeRangeToggle.checked = false;
-  bundleSizeRangeModeSelect.value = "standard";
+  bundleSizeRangeSelect.value = "standard";
   setBundleBadgeChampionStatus(false);
   resetBundleImageColourAssistant({ clearFile: true });
   showBundlePieceErrors([]);
@@ -1800,9 +1846,8 @@ function loadBundlePieceIntoEditor(pieceId) {
   setEnhancedSelectValue(bundlePersonalisationSelect, piece.personalisation_status || (piece.listing_configuration === "pre_applied_player" ? "unavailable" : "available"));
   bundlePrintName.value = piece.pre_applied_name || "";
   bundlePrintNumber.value = piece.pre_applied_number || "";
-  bundleCustomSizeRangeToggle.checked = piece.size_range_mode === "custom";
-  bundleSizeRangeModeSelect.value = piece.size_range_mode || "standard";
-  bundleVisibleSizeRange.value = piece.visible_size_range || "";
+  syncBundleSizeControls();
+  bundleSizeRangeSelect.value = bundleSizeRangeSelectionForPiece(piece);
   bundleMainColourShirtInput.value = piece.main_colour_shirt || "";
   bundleMainColourShortsInput.value = piece.main_colour_shorts || "";
   bundleMainColourSocksInput.value = piece.main_colour_socks || "";
@@ -3979,7 +4024,7 @@ bundleTypeSelect.addEventListener("change", () => {
 bundleProductName.addEventListener("input", inferBundlePieceFromName);
 [bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect, bundleBadgeApplicationSelect]
   .forEach((field) => field.addEventListener("change", syncBundleItemControls));
-bundleCustomSizeRangeToggle.addEventListener("change", syncBundleItemControls);
+bundleSizeRangeSelect.addEventListener("change", syncBundleItemControls);
 bundleBadgeChampionToggle.addEventListener("click", () => {
   if (bundleBadgeStatusSelect.value !== "available") return;
   setBundleBadgeChampionStatus(!bundleBadgeChampionToggle.classList.contains("active"));

@@ -329,27 +329,12 @@
             </div>
 
             <div class="piece-size-summary" aria-live="polite">
-              <span class="field-label">Size range</span>
+              <label class="piece-size-range-choice">
+                <span class="field-label">Size range</span>
+                <select id="bundleSizeRangeSelect" data-enhance="false" aria-label="Bundle item size range"></select>
+              </label>
               <strong id="bundleStandardSizeSummary">Choose an audience to derive the standard range.</strong>
             </div>
-
-            <details id="bundleAdvancedOptions" class="piece-advanced-options">
-              <summary>Advanced options</summary>
-              <div class="advanced-options-content">
-                <label class="confirmation-control">
-                  <input id="bundleCustomSizeRangeToggle" type="checkbox">
-                  <span>Use a custom size range</span>
-                </label>
-                <select id="bundleSizeRangeModeSelect" class="hidden" data-enhance="false" aria-hidden="true" tabindex="-1">
-                  <option value="standard">Standard for audience</option>
-                  <option value="custom">Custom range</option>
-                </select>
-                <label id="bundleCustomSizeRangeField" class="hidden">
-                  Visible custom size range
-                  <input id="bundleVisibleSizeRange" type="text" placeholder="e.g. Kids sizes 18–28">
-                </label>
-              </div>
-            </details>
 
             <div class="image-colour-assistant bundle-colour-assistant">
               <div class="assistant-heading">
