@@ -57,8 +57,6 @@ const bundleBadgeLeagueOptionsList = document.querySelector("#bundleBadgeLeagueO
 const bundleBadgeChampionToggle = document.querySelector("#bundleBadgeChampionToggle");
 const bundleBadgeApplicationField = document.querySelector("#bundleBadgeApplicationField");
 const bundleBadgeApplicationSelect = document.querySelector("#bundleBadgeApplicationSelect");
-const bundleBadgeChampionVerificationField = document.querySelector("#bundleBadgeChampionVerificationField");
-const bundleBadgeChampionVerification = document.querySelector("#bundleBadgeChampionVerification");
 const bundleProductSelect = document.querySelector("#bundleProductSelect");
 const bundleKitTypeSelect = document.querySelector("#bundleKitTypeSelect");
 const bundleSocksSelect = document.querySelector("#bundleSocksSelect");
@@ -1397,7 +1395,7 @@ function bundlePieceFactsFromEditor() {
     badge_league: bundleBadgeStatusSelect.value === "available" ? bundleBadgeLeague.value.trim() : "",
     badge_champion_status: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionToggle.classList.contains("active") ? "champion" : "not_champion",
     badge_application: bundleBadgeStatusSelect.value === "available" ? bundleBadgeApplicationSelect.value : "not_applicable",
-    badge_image_verified: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionVerification.checked ? "yes" : "no",
+    badge_image_verified: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionToggle.classList.contains("active") ? "yes" : "no",
     product_kind: bundleProductSelect.value,
     product_type: isKit ? "full_kit" : "shirt_only",
     kit_type: kitType,
@@ -1479,7 +1477,6 @@ function validateBundlePiece(piece) {
   }
   if (piece.badge_status === "available" && !piece.badge_league) errors.push("Badge league is required when the badge is available.");
   if (piece.badge_status === "available" && !["per_item", "bundle_combo"].includes(piece.badge_application || "per_item")) errors.push("Choose how the badge is added to the bundle.");
-  if (piece.badge_champion_status === "champion" && piece.badge_image_verified !== "yes") errors.push("Confirm that Champion wording matches the selected badge image.");
   const titlePlayerPrint = inferBundlePlayerPrintFromName(piece.product_name);
   if (titlePlayerPrint && piece.listing_configuration !== "pre_applied_player") {
     errors.push(`Product name includes ${titlePlayerPrint.name} ${titlePlayerPrint.number}, but the Piece is configured as No Printed.`);
@@ -1778,12 +1775,9 @@ function syncBundleItemControls() {
   const badgeAvailable = bundleBadgeStatusSelect.value === "available";
   bundleBadgeLeagueField.classList.toggle("hidden", !badgeAvailable);
   bundleBadgeApplicationField.classList.toggle("hidden", !badgeAvailable);
-  const championVerificationRequired = badgeAvailable && bundleBadgeChampionToggle.classList.contains("active");
-  bundleBadgeChampionVerificationField.classList.toggle("hidden", !championVerificationRequired);
   if (!badgeAvailable) {
     bundleBadgeLeague.value = "";
     setEnhancedSelectValue(bundleBadgeApplicationSelect, "per_item");
-    bundleBadgeChampionVerification.checked = false;
     setBundleBadgeChampionStatus(false);
   }
 
@@ -1806,7 +1800,6 @@ function resetBundlePieceEditor() {
   setEnhancedSelectValue(bundleAudienceSelect, "");
   setEnhancedSelectValue(bundleBadgeStatusSelect, "unavailable");
   setEnhancedSelectValue(bundleBadgeApplicationSelect, "per_item");
-  bundleBadgeChampionVerification.checked = false;
   setEnhancedSelectValue(bundleProductSelect, "Kit");
   setEnhancedSelectValue(bundleKitTypeSelect, "home");
   setEnhancedSelectValue(bundleSocksSelect, "unavailable");
@@ -1835,7 +1828,6 @@ function loadBundlePieceIntoEditor(pieceId) {
   setEnhancedSelectValue(bundleBadgeStatusSelect, piece.badge_status);
   bundleBadgeLeague.value = piece.badge_league || "";
   setEnhancedSelectValue(bundleBadgeApplicationSelect, piece.badge_application || "per_item");
-  bundleBadgeChampionVerification.checked = piece.badge_image_verified === "yes";
   setBundleBadgeChampionStatus(piece.badge_champion_status === "champion");
   setEnhancedSelectValue(bundleProductSelect, piece.product_kind);
   const knownKitType = [...bundleKitTypeSelect.options].some((option) => option.value === piece.kit_type);
