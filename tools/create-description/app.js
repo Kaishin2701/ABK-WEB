@@ -3459,10 +3459,6 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   const optionsText = sectionText("Options You Can Add");
   const beforeOrderText = sectionText("Before You Order");
   const pieces = birthdayGiftPackPieces(summary);
-  const noSocksPieces = pieces.filter((piece) => piece.socks_status === "unavailable");
-  const combinedNoSocksWarning = noSocksPieces.length > 1
-    ? `the ${humanList(noSocksPieces.map((piece) => birthdayGiftPackKitLabel(piece, pieces)))} include shirts and matching shorts. socks are not included`
-    : "";
   const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
   if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
   if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Birthday Gift Pack must use the four approved sections in order.");
@@ -3489,8 +3485,7 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
       if (!textValue.includes(String(colour).toLowerCase())) blockers.push(`${titleCaseToken(piece.kit_type)} kit colour ${colour} is missing.`);
     });
     if (piece.socks_status === "unavailable"
-      && !beforeOrderText.includes(`the ${kitLabel} includes the shirt and matching shorts. socks are not included`)
-      && !beforeOrderText.includes(combinedNoSocksWarning)) {
+      && (!beforeOrderText.includes(kitLabel) || !beforeOrderText.includes("socks are not included"))) {
       blockers.push(`${titleCaseToken(piece.kit_type)} kit no-socks warning is missing from Before You Order.`);
     }
     if (piece.listing_configuration === "pre_applied_player") {
@@ -3556,11 +3551,6 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
   if (!textValue.includes("material: made from lightweight polyester fabric")) blockers.push("Bundle Product Details must include the approved polyester material wording.");
   if (!textValue.includes("exact shades may vary slightly between screens and production batches")) blockers.push("Bundle Product Details must include the approved shade note.");
 
-  const noSocksPieces = summary.pieces.filter((piece) => piece.product_type === "full_kit" && piece.socks_status === "unavailable");
-  const combinedNoSocksWarning = noSocksPieces.length > 1
-    ? `the ${refsForPieces(noSocksPieces)} include shirts and matching shorts. socks are not included`
-    : "";
-
   summary.pieces.forEach((piece, index) => {
     const prefix = `Piece ${index + 1} — ${piece.reference}`;
     const comparableReference = removeDashesFromText(piece.reference).toLowerCase();
@@ -3578,8 +3568,7 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
       blockers.push(`${prefix}: combined Piece detail line is missing from Product Details.`);
     }
     if (piece.socks_status === "unavailable"
-      && !textValue.includes(`${comparableReference} includes the shirt and matching shorts. socks are not included`)
-      && !textValue.includes(combinedNoSocksWarning)) {
+      && (!beforeOrderText.includes(comparableReference) || !beforeOrderText.includes("socks are not included"))) {
       blockers.push(`${prefix}: no-socks warning is missing from Before You Order.`);
     }
     if (piece.product_type === "shirt_only" && !textValue.includes(shirtOnlyWarning(piece).toLowerCase())) {

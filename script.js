@@ -3,7 +3,7 @@ const UPDATE_LOG_ENTRIES = [
         version: '6.2.3',
         label: 'Current release',
         title: 'Bundle option consistency',
-        description: 'Bundle descriptions now distinguish one shared badge option from per-item badge options, group duplicate kit types as Home (×2), clarify audience-specific shirt products and reduce repeated no-socks warnings. Champion wording now requires confirmation against the selected badge image.'
+        description: 'Bundle descriptions now distinguish one shared badge option from per-item badge options, group duplicate kit types as Home (×2), clarify audience-specific shirt products and reduce repeated no-socks warnings. A grouped no-socks warning now passes validation when every affected item is named, and Champion status is selected directly with the trophy icon.'
     },
     {
         version: '6.2.2',
