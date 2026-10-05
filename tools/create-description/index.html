@@ -261,27 +261,34 @@
                 <input id="bundleItemSeason" type="text" placeholder="2026/27">
               </label>
               <label>
-                Sleeve badge option
+                Sleeve / shoulder badge
                 <select id="bundleBadgeStatusSelect" aria-label="Piece sleeve badge option">
                   <option value="unavailable">Unavailable</option>
                   <option value="available">Available</option>
                 </select>
               </label>
               <label id="bundleBadgeLeagueField" class="hidden">
-                Badge league
+                Sleeve / shoulder badge name
                 <span class="badge-league-control">
                   <input id="bundleBadgeLeague" type="text" list="bundleBadgeLeagueOptions" placeholder="e.g. Premier League">
-                  <button id="bundleBadgeChampionToggle" class="badge-champion-toggle" type="button" aria-label="Champion badge: off" aria-pressed="false" title="Mark this as a champions badge">&#127942;</button>
+                  <button id="bundleBadgeChampionToggle" class="badge-champion-toggle" type="button" aria-label="Sleeve Champion badge: off" aria-pressed="false" title="Mark the sleeve badge as Champions">&#127942;</button>
                 </span>
-                <datalist id="bundleBadgeLeagueOptions"></datalist>
               </label>
-              <label id="bundleBadgeApplicationField" class="hidden">
-                Badge purchase option
-                <select id="bundleBadgeApplicationSelect" aria-label="Badge purchase option">
-                  <option value="per_item">Separate option for each item</option>
-                  <option value="bundle_combo">One option for the whole bundle</option>
+              <label>
+                Chest badge
+                <select id="bundleChestBadgeStatusSelect" aria-label="Piece chest badge option">
+                  <option value="unavailable">Unavailable</option>
+                  <option value="available">Available</option>
                 </select>
               </label>
+              <label id="bundleChestBadgeLeagueField" class="hidden">
+                Chest badge name
+                <span class="badge-league-control">
+                  <input id="bundleChestBadgeLeague" type="text" list="bundleBadgeLeagueOptions" placeholder="e.g. FIFA Club World Cup">
+                  <button id="bundleChestBadgeChampionToggle" class="badge-champion-toggle" type="button" aria-label="Chest Champion badge: off" aria-pressed="false" title="Mark the chest badge as Champions">&#127942;</button>
+                </span>
+              </label>
+              <datalist id="bundleBadgeLeagueOptions"></datalist>
             </div>
 
             <div class="piece-product-controls">

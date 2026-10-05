@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.2.3',
+        version: '6.3.0',
         label: 'Current release',
+        title: 'Position-aware badge options',
+        description: 'Each Bundle item can now define optional sleeve and chest badges independently, including Champions wording for either position. Badge copy is generated as one clear item-specific line without assuming how the buy-box options are configured.'
+    },
+    {
+        version: '6.2.3',
+        label: 'Previous release',
         title: 'Bundle option consistency',
         description: 'Bundle descriptions now distinguish one shared badge option from per-item badge options, group duplicate kit types as Home (×2), clarify audience-specific shirt products and reduce repeated no-socks warnings. A grouped no-socks warning now passes validation when every affected item is named, and Champion status is selected directly with the trophy icon.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Universal Bundle Builder',
         description: 'Standard Bundles and KFK Birthday Gift Packs now accept the same flexible mix of Men, Women, Kids and Baby shirts, kits and suits.'
-    },
-    {
-        version: '6.1.1',
-        label: 'Previous release',
-        title: 'Independent Bundle items',
-        description: 'Bundle items can use different teams, seasons and kit types. Each item is validated independently, while its product, audience, size, socks, personalisation and player-print facts must remain internally consistent.'
     },
 ];
 

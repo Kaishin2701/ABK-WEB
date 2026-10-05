@@ -55,8 +55,10 @@ const bundleBadgeLeagueField = document.querySelector("#bundleBadgeLeagueField")
 const bundleBadgeLeague = document.querySelector("#bundleBadgeLeague");
 const bundleBadgeLeagueOptionsList = document.querySelector("#bundleBadgeLeagueOptions");
 const bundleBadgeChampionToggle = document.querySelector("#bundleBadgeChampionToggle");
-const bundleBadgeApplicationField = document.querySelector("#bundleBadgeApplicationField");
-const bundleBadgeApplicationSelect = document.querySelector("#bundleBadgeApplicationSelect");
+const bundleChestBadgeStatusSelect = document.querySelector("#bundleChestBadgeStatusSelect");
+const bundleChestBadgeLeagueField = document.querySelector("#bundleChestBadgeLeagueField");
+const bundleChestBadgeLeague = document.querySelector("#bundleChestBadgeLeague");
+const bundleChestBadgeChampionToggle = document.querySelector("#bundleChestBadgeChampionToggle");
 const bundleProductSelect = document.querySelector("#bundleProductSelect");
 const bundleKitTypeSelect = document.querySelector("#bundleKitTypeSelect");
 const bundleSocksSelect = document.querySelector("#bundleSocksSelect");
@@ -1005,8 +1007,15 @@ function handleImageColourCanvasClick(event) {
 function setBundleBadgeChampionStatus(isChampion) {
   bundleBadgeChampionToggle.classList.toggle("active", isChampion);
   bundleBadgeChampionToggle.setAttribute("aria-pressed", String(isChampion));
-  bundleBadgeChampionToggle.setAttribute("aria-label", `Champion badge: ${isChampion ? "on" : "off"}`);
-  bundleBadgeChampionToggle.title = isChampion ? "Champions badge selected" : "Mark this as a champions badge";
+  bundleBadgeChampionToggle.setAttribute("aria-label", `Sleeve Champion badge: ${isChampion ? "on" : "off"}`);
+  bundleBadgeChampionToggle.title = isChampion ? "Sleeve Champions badge selected" : "Mark the sleeve badge as Champions";
+}
+
+function setBundleChestBadgeChampionStatus(isChampion) {
+  bundleChestBadgeChampionToggle.classList.toggle("active", isChampion);
+  bundleChestBadgeChampionToggle.setAttribute("aria-pressed", String(isChampion));
+  bundleChestBadgeChampionToggle.setAttribute("aria-label", `Chest Champion badge: ${isChampion ? "on" : "off"}`);
+  bundleChestBadgeChampionToggle.title = isChampion ? "Chest Champions badge selected" : "Mark the chest badge as Champions";
 }
 
 function currentBundleImageColourTargets() {
@@ -1383,6 +1392,8 @@ function bundlePieceFactsFromEditor() {
   const kitType = bundleKitTypeSelect.value === "other"
     ? bundleItemAnother.value.trim()
     : bundleKitTypeSelect.value;
+  const sleeveBadgeAvailable = bundleBadgeStatusSelect.value === "available";
+  const chestBadgeAvailable = bundleChestBadgeStatusSelect.value === "available";
   const facts = {
     piece_id: editingBundlePieceId || `piece-${nextBundlePieceId}`,
     recipient_role: bundleRecipientSelect.value,
@@ -1392,10 +1403,12 @@ function bundlePieceFactsFromEditor() {
     team: bundleItemTheme.value.trim(),
     season: bundleItemSeason.value.trim(),
     badge_status: bundleBadgeStatusSelect.value,
-    badge_league: bundleBadgeStatusSelect.value === "available" ? bundleBadgeLeague.value.trim() : "",
-    badge_champion_status: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionToggle.classList.contains("active") ? "champion" : "not_champion",
-    badge_application: bundleBadgeStatusSelect.value === "available" ? bundleBadgeApplicationSelect.value : "not_applicable",
-    badge_image_verified: bundleBadgeStatusSelect.value === "available" && bundleBadgeChampionToggle.classList.contains("active") ? "yes" : "no",
+    badge_league: sleeveBadgeAvailable ? bundleBadgeLeague.value.trim() : "",
+    badge_champion_status: sleeveBadgeAvailable && bundleBadgeChampionToggle.classList.contains("active") ? "champion" : "not_champion",
+    chest_badge_status: bundleChestBadgeStatusSelect.value,
+    chest_badge_league: chestBadgeAvailable ? bundleChestBadgeLeague.value.trim() : "",
+    chest_badge_champion_status: chestBadgeAvailable && bundleChestBadgeChampionToggle.classList.contains("active") ? "champion" : "not_champion",
+    badge_image_verified: sleeveBadgeAvailable && bundleBadgeChampionToggle.classList.contains("active") ? "yes" : "no",
     product_kind: bundleProductSelect.value,
     product_type: isKit ? "full_kit" : "shirt_only",
     kit_type: kitType,
@@ -1475,8 +1488,10 @@ function validateBundlePiece(piece) {
   if (titleKitType && piece.kit_type && titleKitType !== piece.kit_type) {
     errors.push(`Product name indicates ${titleCaseToken(titleKitType)} kit type, but the Piece uses ${titleCaseToken(piece.kit_type)}.`);
   }
-  if (piece.badge_status === "available" && !piece.badge_league) errors.push("Badge league is required when the badge is available.");
-  if (piece.badge_status === "available" && !["per_item", "bundle_combo"].includes(piece.badge_application || "per_item")) errors.push("Choose how the badge is added to the bundle.");
+  const sleeveBadgeAvailable = piece.badge_status === "available";
+  const chestBadgeAvailable = piece.chest_badge_status === "available";
+  if (sleeveBadgeAvailable && !piece.badge_league) errors.push("Enter the sleeve / shoulder badge name.");
+  if (chestBadgeAvailable && !piece.chest_badge_league) errors.push("Enter the chest badge name.");
   const titlePlayerPrint = inferBundlePlayerPrintFromName(piece.product_name);
   if (titlePlayerPrint && piece.listing_configuration !== "pre_applied_player") {
     errors.push(`Product name includes ${titlePlayerPrint.name} ${titlePlayerPrint.number}, but the Piece is configured as No Printed.`);
@@ -1570,6 +1585,10 @@ function renderBundleItemsList() {
       piece.main_colour_shorts ? `Shorts: ${piece.main_colour_shorts}` : "",
       piece.main_colour_socks ? `Socks: ${piece.main_colour_socks}` : ""
     ].filter(Boolean).join(" · ");
+    const badgeSummary = [
+      piece.badge_status === "available" ? `Sleeve: ${bundleBadgeDisplay(piece)}` : "",
+      bundlePieceHasChestBadge(piece) ? `Chest: ${bundleChestBadgeDisplay(piece)}` : ""
+    ].filter(Boolean).join(" · ");
 
     card.innerHTML = [
       `<div class="bundle-piece-card-header"><h3 class="bundle-piece-card-title">Piece ${index + 1} — ${esc(recipient)}</h3>${pieceStatus}</div>`,
@@ -1577,6 +1596,7 @@ function renderBundleItemsList() {
       `<p class="bundle-piece-card-meta">${esc(openingAudienceLabel(piece.audience) || piece.audience)} · ${esc(piece.product_kind)} · ${esc(titleCaseToken(piece.kit_type))} · ${esc(socksLabel)} · ${esc(printLabel)}</p>`,
       `<p class="bundle-piece-card-meta">${esc(personalisationLabel)} · Sizes: ${esc(sizeLabel)}</p>`,
       `<p class="bundle-piece-card-colours">${esc(colours)}</p>`,
+      badgeSummary ? `<p class="bundle-piece-card-meta">${esc(badgeSummary)}</p>` : "",
       pieceErrorSummary
     ].join("");
 
@@ -1772,13 +1792,17 @@ function syncBundleItemControls() {
   bundleMainColourSocksField.classList.toggle("hidden", !usesSocksColour);
   if (!usesSocksColour) bundleMainColourSocksInput.value = "";
 
-  const badgeAvailable = bundleBadgeStatusSelect.value === "available";
-  bundleBadgeLeagueField.classList.toggle("hidden", !badgeAvailable);
-  bundleBadgeApplicationField.classList.toggle("hidden", !badgeAvailable);
-  if (!badgeAvailable) {
+  const sleeveBadgeAvailable = bundleBadgeStatusSelect.value === "available";
+  const chestBadgeAvailable = bundleChestBadgeStatusSelect.value === "available";
+  bundleBadgeLeagueField.classList.toggle("hidden", !sleeveBadgeAvailable);
+  bundleChestBadgeLeagueField.classList.toggle("hidden", !chestBadgeAvailable);
+  if (!sleeveBadgeAvailable) {
     bundleBadgeLeague.value = "";
-    setEnhancedSelectValue(bundleBadgeApplicationSelect, "per_item");
     setBundleBadgeChampionStatus(false);
+  }
+  if (!chestBadgeAvailable) {
+    bundleChestBadgeLeague.value = "";
+    setBundleChestBadgeChampionStatus(false);
   }
 
   const customRecipient = bundleRecipientSelect.value === "other";
@@ -1794,12 +1818,12 @@ function syncBundleItemControls() {
 
 function resetBundlePieceEditor() {
   editingBundlePieceId = null;
-  [bundleRecipientLabel, bundleProductName, bundleItemTheme, bundleItemSeason, bundleBadgeLeague, bundleItemAnother, bundlePrintName, bundlePrintNumber, bundleMainColourShirtInput, bundleMainColourShortsInput, bundleMainColourSocksInput]
+  [bundleRecipientLabel, bundleProductName, bundleItemTheme, bundleItemSeason, bundleBadgeLeague, bundleChestBadgeLeague, bundleItemAnother, bundlePrintName, bundlePrintNumber, bundleMainColourShirtInput, bundleMainColourShortsInput, bundleMainColourSocksInput]
     .forEach((field) => { field.value = ""; });
   setEnhancedSelectValue(bundleRecipientSelect, "");
   setEnhancedSelectValue(bundleAudienceSelect, "");
   setEnhancedSelectValue(bundleBadgeStatusSelect, "unavailable");
-  setEnhancedSelectValue(bundleBadgeApplicationSelect, "per_item");
+  setEnhancedSelectValue(bundleChestBadgeStatusSelect, "unavailable");
   setEnhancedSelectValue(bundleProductSelect, "Kit");
   setEnhancedSelectValue(bundleKitTypeSelect, "home");
   setEnhancedSelectValue(bundleSocksSelect, "unavailable");
@@ -1807,6 +1831,7 @@ function resetBundlePieceEditor() {
   setEnhancedSelectValue(bundlePersonalisationSelect, "available");
   bundleSizeRangeSelect.value = "standard";
   setBundleBadgeChampionStatus(false);
+  setBundleChestBadgeChampionStatus(false);
   resetBundleImageColourAssistant({ clearFile: true });
   showBundlePieceErrors([]);
   setBadge(bundlePieceEditorBadge, "New piece", "neutral");
@@ -1827,8 +1852,10 @@ function loadBundlePieceIntoEditor(pieceId) {
   bundleItemSeason.value = piece.season;
   setEnhancedSelectValue(bundleBadgeStatusSelect, piece.badge_status);
   bundleBadgeLeague.value = piece.badge_league || "";
-  setEnhancedSelectValue(bundleBadgeApplicationSelect, piece.badge_application || "per_item");
+  setEnhancedSelectValue(bundleChestBadgeStatusSelect, piece.chest_badge_status || "unavailable");
+  bundleChestBadgeLeague.value = piece.chest_badge_league || "";
   setBundleBadgeChampionStatus(piece.badge_champion_status === "champion");
+  setBundleChestBadgeChampionStatus(piece.chest_badge_champion_status === "champion");
   setEnhancedSelectValue(bundleProductSelect, piece.product_kind);
   const knownKitType = [...bundleKitTypeSelect.options].some((option) => option.value === piece.kit_type);
   setEnhancedSelectValue(bundleKitTypeSelect, knownKitType ? piece.kit_type : "other");
@@ -2857,6 +2884,9 @@ function bundleFactsSignature(facts) {
     badge_status: piece.badge_status,
     badge_league: piece.badge_league,
     badge_champion_status: piece.badge_champion_status,
+    chest_badge_status: piece.chest_badge_status,
+    chest_badge_league: piece.chest_badge_league,
+    chest_badge_champion_status: piece.chest_badge_champion_status,
     main_colour_shirt: piece.main_colour_shirt,
     main_colour_shorts: piece.main_colour_shorts,
     main_colour_socks: piece.main_colour_socks,
@@ -2996,7 +3026,7 @@ function buildBundleSummary(facts) {
     kitTypes: uniqueTextValues(pieces.map((piece) => titleCaseToken(piece.kit_type))),
     personalisable: pieces.filter((piece) => piece.personalisation_status === "available"),
     fixedPrint: pieces.filter((piece) => piece.listing_configuration === "pre_applied_player"),
-    badgeEligible: pieces.filter((piece) => piece.badge_status === "available"),
+    badgeEligible: pieces.filter((piece) => piece.badge_status === "available" || piece.chest_badge_status === "available"),
     customSizes: pieces.filter((piece) => piece.size_range_mode === "custom")
   };
 }
@@ -3148,29 +3178,35 @@ function bundleBadgeDisplay(piece) {
   return `${piece.badge_league}${piece.badge_champion_status === "champion" ? " Champions" : ""}`;
 }
 
+function bundleChestBadgeDisplay(piece) {
+  return `${piece.chest_badge_league}${piece.chest_badge_champion_status === "champion" ? " Champions" : ""}`;
+}
+
+function bundlePieceHasChestBadge(piece) {
+  return piece.chest_badge_status === "available" && Boolean(String(piece.chest_badge_league || "").trim());
+}
+
+function renderPositionedBadgeOption(piece, reference) {
+  const sleeveAvailable = piece.badge_status === "available" && Boolean(String(piece.badge_league || "").trim());
+  const chestAvailable = bundlePieceHasChestBadge(piece);
+  if (!sleeveAvailable && !chestAvailable) return "";
+
+  let wording;
+  if (sleeveAvailable && chestAvailable) {
+    const sleeve = `${bundleBadgeDisplay(piece)} sleeve badge`;
+    const chest = `${bundleChestBadgeDisplay(piece)} chest badge`;
+    wording = `${sleeve} and ${chest} can be added.`;
+  } else if (sleeveAvailable) {
+    wording = `${bundleBadgeDisplay(piece)} sleeve badge can be added.`;
+  } else {
+    wording = `${bundleChestBadgeDisplay(piece)} chest badge can be added.`;
+  }
+  return `<li><strong>${esc(reference)} badge options:</strong> ${esc(wording)}</li>`;
+}
+
 function renderBundleBadgeOptions(summary) {
   if (!summary.badgeEligible.length) return [];
-  const groups = new Map();
-  summary.badgeEligible.forEach((piece) => {
-    const label = bundleBadgeDisplay(piece);
-    const group = groups.get(label) || [];
-    group.push(piece);
-    groups.set(label, group);
-  });
-  if (groups.size === 1 && summary.badgeEligible.length === summary.pieces.length) {
-    const [label] = groups.keys();
-    const allBundleCombo = summary.badgeEligible.every((piece) => piece.badge_application === "bundle_combo");
-    const countLabel = summary.pieces.length === 2 ? "both items" : `all ${summary.pieces.length} items`;
-    const wording = allBundleCombo
-      ? `${esc(label)} sleeve badges can be added to ${countLabel} using one bundle option.`
-      : `optional ${esc(label)} sleeve badges can be added separately to every item using the matching product options.`;
-    return [`<li><strong>Sleeve badges:</strong> ${wording}</li>`];
-  }
-  return [...groups.entries()].map(([label, pieces]) => (
-    pieces.every((piece) => piece.badge_application === "bundle_combo")
-      ? `<li><strong>${esc(label)} sleeve badge:</strong> ${esc(label)} sleeve badge can be added to ${esc(refsForPieces(pieces))} using one bundle option.</li>`
-      : `<li><strong>${esc(label)} sleeve badge:</strong> ${esc(label)} sleeve badge can be added separately to ${esc(refsForPieces(pieces))} using the matching product options.</li>`
-  ));
+  return summary.badgeEligible.map((piece) => renderPositionedBadgeOption(piece, piece.reference)).filter(Boolean);
 }
 
 function shirtOnlyWarning(piece) {
@@ -3329,20 +3365,10 @@ function renderBirthdayGiftPackOptions(summary) {
   }
 
   const badges = summary.badgeEligible;
-  const allBundleCombo = badges.length && badges.every((piece) => piece.badge_application === "bundle_combo");
-  const comboSuffix = allBundleCombo ? " using one bundle option" : "";
-  if (badges.length === summary.pieces.length && badges.every((piece) => piece.badge_league === "Premier League")) {
-    const shirtCount = badges.length === 2 ? "both shirts" : `all ${badges.length} shirts`;
-    lines.push(`<li><strong>EPL badges:</strong> Premier League sleeve badges can be added to ${shirtCount}${comboSuffix}.</li>`);
-  } else if (badges.length === summary.pieces.length && uniqueTextValues(badges.map(bundleBadgeDisplay)).length === 1) {
-    const shirtCount = badges.length === 2 ? "both shirts" : `all ${badges.length} shirts`;
-    lines.push(`<li><strong>Sleeve badges:</strong> ${esc(bundleBadgeDisplay(badges[0]))} sleeve badges can be added to ${shirtCount}${comboSuffix}.</li>`);
-  } else {
-    badges.forEach((piece) => {
-      const suffix = piece.badge_application === "bundle_combo" ? " using one bundle option" : "";
-      lines.push(`<li><strong>${esc(birthdayGiftPackKitLabel(piece, pieces))} sleeve badge:</strong> ${esc(bundleBadgeDisplay(piece))} sleeve badge can be added to this shirt${suffix}.</li>`);
-    });
-  }
+  badges.forEach((piece) => {
+    const line = renderPositionedBadgeOption(piece, birthdayGiftPackKitLabel(piece, pieces));
+    if (line) lines.push(line);
+  });
   return lines;
 }
 
@@ -3504,6 +3530,18 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
         blockers.push(`${titleCaseToken(piece.kit_type)} kit fixed player print must not appear under Options You Can Add.`);
       }
     }
+    if (bundlePieceHasChestBadge(piece)) {
+      const chestBadge = removeDashesFromText(bundleChestBadgeDisplay(piece)).toLowerCase();
+      if (!optionsText.includes(kitLabel) || !optionsText.includes(chestBadge) || !optionsText.includes("chest badge")) {
+        blockers.push(`${titleCaseToken(piece.kit_type)} kit chest badge option is missing or unclear.`);
+      }
+      if (piece.badge_status === "available") {
+        const sleeveBadge = removeDashesFromText(bundleBadgeDisplay(piece)).toLowerCase();
+        if (!optionsText.includes(sleeveBadge) || !optionsText.includes("sleeve badge")) {
+          blockers.push(`${titleCaseToken(piece.kit_type)} kit sleeve badge option is missing or unclear.`);
+        }
+      }
+    }
   });
   if (summary.personalisable.length && (!textValue.includes("13 letters") || !textValue.includes("2 digits") || !textValue.includes("double-check"))) {
     blockers.push("Birthday Gift Pack personalisation limits or spelling check are missing.");
@@ -3583,6 +3621,18 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
       }
       if (optionsText.includes(`${colourLabel}:`) && optionsText.includes(removeDashesFromText(piece.pre_applied_name).toLowerCase())) {
         blockers.push(`${prefix}: fixed player print must not appear under Options You Can Add.`);
+      }
+    }
+    if (bundlePieceHasChestBadge(piece)) {
+      const chestBadge = removeDashesFromText(bundleChestBadgeDisplay(piece)).toLowerCase();
+      if (!optionsText.includes(comparableReference) || !optionsText.includes(chestBadge) || !optionsText.includes("chest badge")) {
+        blockers.push(`${prefix}: chest badge option is missing or unclear.`);
+      }
+      if (piece.badge_status === "available") {
+        const sleeveBadge = removeDashesFromText(bundleBadgeDisplay(piece)).toLowerCase();
+        if (!optionsText.includes(sleeveBadge) || !optionsText.includes("sleeve badge")) {
+          blockers.push(`${prefix}: sleeve badge option is missing or unclear.`);
+        }
       }
     }
   });
@@ -4003,12 +4053,17 @@ bundleTypeSelect.addEventListener("change", () => {
   renderBundleItemsList();
 });
 bundleProductName.addEventListener("input", inferBundlePieceFromName);
-[bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect, bundleBadgeApplicationSelect]
+[bundleAudienceSelect, bundleProductSelect, bundleKitTypeSelect, bundleSocksSelect, bundlePrintSelect, bundlePersonalisationSelect, bundleBadgeStatusSelect, bundleChestBadgeStatusSelect]
   .forEach((field) => field.addEventListener("change", syncBundleItemControls));
 bundleSizeRangeSelect.addEventListener("change", syncBundleItemControls);
 bundleBadgeChampionToggle.addEventListener("click", () => {
   if (bundleBadgeStatusSelect.value !== "available") return;
   setBundleBadgeChampionStatus(!bundleBadgeChampionToggle.classList.contains("active"));
+  syncBundleItemControls();
+});
+bundleChestBadgeChampionToggle.addEventListener("click", () => {
+  if (bundleChestBadgeStatusSelect.value !== "available") return;
+  setBundleChestBadgeChampionStatus(!bundleChestBadgeChampionToggle.classList.contains("active"));
   syncBundleItemControls();
 });
 addBundleItemBtn.addEventListener("click", addSelectedBundleItem);

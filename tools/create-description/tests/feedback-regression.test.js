@@ -189,11 +189,47 @@ const comboBadgeHtml = context.renderPieceBasedBundleDescription({
   ...standardSummary,
   badgeEligible: standardPieces.map((piece) => ({
     ...piece,
-    badge_league: "Premier League",
-    badge_application: "bundle_combo"
+    badge_status: "available",
+    badge_league: "Premier League"
   }))
 });
-assert.match(comboBadgeHtml, /Premier League sleeve badges can be added to both items using one bundle option/);
+assert.match(comboBadgeHtml, /Dad badge options:<\/strong> Premier League sleeve badge can be added\./);
+assert.match(comboBadgeHtml, /Son badge options:<\/strong> Premier League sleeve badge can be added\./);
+assert.doesNotMatch(comboBadgeHtml, /one bundle option|separate buy-box option/);
+
+const positionedBadgePiece = {
+  ...standardPieces[0],
+  reference: "Chelsea Home shirt",
+  team: "Chelsea",
+  badge_status: "available",
+  badge_league: "FIFA Club World Cup",
+  badge_champion_status: "champion",
+  chest_badge_status: "available",
+  chest_badge_league: "Premier League",
+  chest_badge_champion_status: "not_champion",
+};
+const positionedBadgeHtml = context.renderPieceBasedBundleDescription({
+  ...standardSummary,
+  pieces: [positionedBadgePiece, standardPieces[1]],
+  badgeEligible: [positionedBadgePiece]
+});
+assert.match(positionedBadgeHtml, /FIFA Club World Cup Champions sleeve badge and Premier League chest badge can be added\./);
+assert.equal((positionedBadgeHtml.match(/Chelsea Home shirt badge options:/g) || []).length, 1);
+
+const sameBadgeBothPositions = context.renderPositionedBadgeOption({
+  ...positionedBadgePiece,
+  chest_badge_league: "FIFA World Cup",
+  chest_badge_champion_status: "champion"
+}, "Argentina Home kit");
+assert.match(sameBadgeBothPositions, /FIFA Club World Cup Champions sleeve badge and FIFA World Cup Champions chest badge can be added\./);
+
+const chestOnlyBadge = context.renderPositionedBadgeOption({
+  ...positionedBadgePiece,
+  badge_status: "unavailable",
+  badge_league: "",
+  chest_badge_league: "FIFA Club World Cup"
+}, "Chelsea Home shirt");
+assert.match(chestOnlyBadge, /FIFA Club World Cup chest badge can be added\./);
 
 const coupleHtml = context.renderPieceBasedBundleDescription({
   ...standardSummary,
@@ -214,6 +250,12 @@ assert.doesNotMatch(htmlSource, /Birthday Gift Pack policy confirmations/);
 assert.doesNotMatch(htmlSource, /giftPackPolicyConfirmation/);
 assert.match(htmlSource, /id="bundleSizeRangeSelect"/);
 assert.doesNotMatch(htmlSource, /id="bundleCustomSizeRangeToggle"/);
+assert.match(htmlSource, /id="bundleChestBadgeStatusSelect"/);
+assert.match(htmlSource, /id="bundleChestBadgeLeague"/);
+assert.doesNotMatch(htmlSource, /id="bundleBadgePositionApplicationSelect"/);
+assert.doesNotMatch(htmlSource, /id="bundleBadgeApplicationSelect"/);
+assert.doesNotMatch(htmlSource, /id="bundleAddBadgeBtn"/);
+assert.doesNotMatch(htmlSource, /id="bundleBadgeList"/);
 assert.match(htmlSource, /id="bundleStandardSizeSummary"/);
 assert.doesNotMatch(htmlSource, /id="bundleAdvancedOptions"/);
 assert.doesNotMatch(htmlSource, /Custom range/);
@@ -302,7 +344,8 @@ assert.match(giftPackHtml, /1 &times; Nottingham Forest Home kids kit: shirt, ma
 assert.match(giftPackHtml, /Home kit colours:<\/strong> red shirt, white shorts, red socks\./);
 assert.match(giftPackHtml, /Away kit colours:<\/strong> green shirt, green shorts, green socks\./);
 assert.match(giftPackHtml, /kids sizes 16&ndash;28 \(ages 3&ndash;13\)/);
-assert.match(giftPackHtml, /EPL badges:<\/strong> Premier League sleeve badges can be added to both shirts\./);
+assert.match(giftPackHtml, /Home kit badge options:<\/strong> Premier League sleeve badge can be added\./);
+assert.match(giftPackHtml, /Away kit badge options:<\/strong> Premier League sleeve badge can be added\./);
 assert.match(giftPackHtml, /Promo codes can&rsquo;t be applied to this gift pack/);
 assert.match(giftPackHtml, /standard packaging, not gift-wrapped/);
 
@@ -410,7 +453,7 @@ assert.match(fourPieceHtml, /Kit types:<\/strong> Home, Away, Third and Fourth\.
 assert.match(fourPieceHtml, /Third kit colours:<\/strong> white shirt, black shorts, white socks\./);
 assert.match(fourPieceHtml, /Choose each kit size separately\./);
 assert.match(fourPieceHtml, /Name and number:<\/strong> optional on any eligible kit\./);
-assert.match(fourPieceHtml, /Premier League sleeve badges can be added to all 4 shirts\./);
+assert.equal((fourPieceHtml.match(/Premier League sleeve badge can be added\./g) || []).length, 4);
 
 const noSocksHome = {
   ...giftPackPieces[0],
