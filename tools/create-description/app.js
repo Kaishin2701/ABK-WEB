@@ -3593,6 +3593,7 @@ function auditPieceBasedBundleDescription(html, summary, fingerprint, revision) 
     .find((node) => node.textContent.trim() === heading)?.nextElementSibling?.textContent.toLowerCase() || "";
   const productDetailsText = sectionText("Product Details");
   const optionsText = sectionText("Options You Can Add");
+  const beforeOrderText = sectionText("Before You Order");
   const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
   if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
   if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Bundle descriptions must use the four approved sections in order.");

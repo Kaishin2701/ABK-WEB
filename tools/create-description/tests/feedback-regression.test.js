@@ -208,6 +208,40 @@ assert.doesNotMatch(standardHtml, /\bPiece\b/);
 assert.match(standardHtml, /<strong>Son kit:<\/strong> Messi name and number 10 are already applied and included; black shirt, black shorts, pink socks\./);
 assert.match(standardHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
 assert.doesNotMatch(standardHtml, /Son kit colours|Son player print/);
+
+const swedenDadAndSonPieces = [
+  {
+    ...standardPieces[0],
+    team: "Sweden",
+    season: "2026",
+    reference: "Dad",
+    kit_type: "home"
+  },
+  {
+    ...standardPieces[1],
+    team: "Sweden",
+    season: "2026",
+    reference: "Son",
+    kit_type: "home",
+    socks_status: "unavailable",
+    included_items: "shirt_and_shorts",
+    main_colour_socks: ""
+  }
+];
+const swedenDadAndSonHtml = context.renderPieceBasedBundleDescription({
+  ...standardSummary,
+  pieces: swedenDadAndSonPieces,
+  sharedTeam: "Sweden",
+  sharedSeason: "2026",
+  personalisable: [swedenDadAndSonPieces[0]],
+  fixedPrint: [swedenDadAndSonPieces[1]],
+  badgeEligible: []
+});
+assert.match(swedenDadAndSonHtml, /Son includes the shirt and matching shorts\. Socks are not included\./);
+const pieceAuditSource = sourceBetween("function auditPieceBasedBundleDescription", "function generateBundle");
+const beforeOrderDeclarationIndex = pieceAuditSource.indexOf('const beforeOrderText = sectionText("Before You Order");');
+const noSocksAuditIndex = pieceAuditSource.indexOf('piece.socks_status === "unavailable"');
+assert.ok(beforeOrderDeclarationIndex >= 0 && beforeOrderDeclarationIndex < noSocksAuditIndex, "Piece-based audit must define Before You Order text before checking no-socks items");
 assert.doesNotMatch(standardHtml, /<strong>Main colours:<\/strong>/);
 const standardProductDetails = standardHtml.slice(standardHtml.indexOf("<h3>Product Details</h3>"), standardHtml.indexOf("<h3>Options You Can Add</h3>"));
 const standardOptions = standardHtml.slice(standardHtml.indexOf("<h3>Options You Can Add</h3>"), standardHtml.indexOf("<h3>Before You Order</h3>"));
