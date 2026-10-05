@@ -3328,6 +3328,10 @@ function birthdayGiftPackKitLabel(piece, pieces) {
   return `${baseLabel} ${matchingPieces.indexOf(piece) + 1}`;
 }
 
+function birthdayGiftPackKitIdentity(piece) {
+  return `${titleCaseToken(piece.kit_type)} kids kit`;
+}
+
 function birthdayGiftPackHasDuplicateKitType(piece, pieces) {
   return pieces.filter((item) => item.kit_type === piece.kit_type).length > 1;
 }
@@ -3348,7 +3352,7 @@ function birthdayGiftPackIncludedLine(piece, pieces) {
   const pieceLabel = birthdayGiftPackHasDuplicateKitType(piece, pieces)
     ? `<strong>${esc(birthdayGiftPackKitLabel(piece, pieces))}:</strong> `
     : "";
-  return `<li>${pieceLabel}1 &times; ${esc(piece.team)} ${esc(titleCaseToken(piece.kit_type))} kids kit: ${contents}.${fixedPrint ? ` ${esc(fixedPrint)}` : ""}</li>`;
+  return `<li>${pieceLabel}1 &times; ${esc(piece.team)} ${esc(birthdayGiftPackKitIdentity(piece))}: ${contents}.${fixedPrint ? ` ${esc(fixedPrint)}` : ""}</li>`;
 }
 
 function renderBirthdayGiftPackOptions(summary) {
@@ -3495,7 +3499,8 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   });
   pieces.forEach((piece) => {
     const kitLabel = birthdayGiftPackKitLabel(piece, pieces).toLowerCase();
-    if (!includedText.includes(`${piece.kit_type} kids kit`)) blockers.push(`${titleCaseToken(piece.kit_type)} kit is missing from What's Included.`);
+    const kitIdentity = birthdayGiftPackKitIdentity(piece).toLowerCase();
+    if (!includedText.includes(kitIdentity)) blockers.push(`${titleCaseToken(piece.kit_type)} kit is missing from What's Included.`);
     if (birthdayGiftPackHasDuplicateKitType(piece, pieces) && !includedText.includes(`${kitLabel}:`)) {
       blockers.push(`${birthdayGiftPackKitLabel(piece, pieces)} label is missing from What's Included.`);
     }

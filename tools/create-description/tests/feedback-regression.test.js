@@ -26,7 +26,7 @@ const context = vm.createContext({
   openingAudienceLabel: (audience) => audience,
   bundlePieceKindLabel: (piece) => piece.product_type === "full_kit" ? "kit" : "shirt",
   bundlePieceAudienceLabel: (audience) => ({ kids: "kids", men: "men's", women: "women's", adult: "adult", baby: "baby" }[audience] || audience),
-  titleCaseToken: (value) => value.charAt(0).toUpperCase() + value.slice(1),
+  titleCaseToken: (value) => String(value || "").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
   uniqueTextValues: (values) => [...new Set(values)],
   humanList: (values) => values.length < 2 ? (values[0] || "") : values.length === 2 ? `${values[0]} and ${values[1]}` : `${values.slice(0, -1).join(", ")} and ${values.at(-1)}`,
   esc: (value) => String(value),
@@ -52,6 +52,7 @@ vm.runInContext(sourceBetween("function bundleRecipientLabelForPiece", "function
 vm.runInContext(sourceBetween("function productTitleFromImageName", "function useImageTitle"), context);
 vm.runInContext(sourceBetween("function inferBundleAudienceFromName", "function inferBundlePieceFromName"), context);
 vm.runInContext(sourceBetween("function expectedAudienceForRecipient", "function showBundlePieceErrors"), context);
+vm.runInContext(sourceBetween("function detectBranch", "function productNameConflict"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
 vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthdayGiftPack"), context);
 vm.runInContext(sourceBetween("function isBirthdayGiftPack", "function auditPieceBasedBundleDescription"), context);
@@ -123,6 +124,20 @@ assert.match(validationErrors({
 assert.match(validationErrors({ size_profile: "adult_s_2xl" }), /Standard size range does not match/);
 assert.match(validationErrors({ product_name: "Nottingham Forest Home Kids Long Sleeve Football Kit 2026\/27" }), /Long Sleeve Kit/);
 assert.match(validationErrors({ kit_type: "away" }), /indicates Home kit type/);
+assert.deepEqual(Array.from(context.validateBundlePiece({
+  ...validGiftPackPiece,
+  product_name: "Nottingham Forest Special Edition Kids Football Kit 2026/27",
+  kit_type: "special_edition"
+})), []);
+assert.equal(context.detectBranch({
+  site: "KFK",
+  audience: "kids",
+  product_type: "full_kit",
+  included_items: "shirt_shorts_and_socks",
+  socks_status: "included",
+  listing_configuration: "plain_customisable",
+  kit_type: "special_edition"
+}), "plain_customisable_kids_full_kit_with_socks");
 assert.match(validationErrors({ season: "2025/26" }), /indicates season 2026\/27/);
 assert.match(validationErrors({ team: "Arsenal" }), /Team field is Arsenal/);
 assert.match(validationErrors({ product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27" }), /configured as No Printed/);
@@ -454,6 +469,22 @@ assert.match(fourPieceHtml, /Third kit colours:<\/strong> white shirt, black sho
 assert.match(fourPieceHtml, /Choose each kit size separately\./);
 assert.match(fourPieceHtml, /Name and number:<\/strong> optional on any eligible kit\./);
 assert.equal((fourPieceHtml.match(/Premier League sleeve badge can be added\./g) || []).length, 4);
+
+const specialEditionPiece = {
+  ...giftPackPieces[0],
+  product_name: "Nottingham Forest Special Edition Kids Football Kit 2026/27",
+  kit_type: "special_edition"
+};
+const specialEditionGiftPackHtml = context.renderBirthdayGiftPackDescription({
+  ...giftPackSummary,
+  pieces: [specialEditionPiece, giftPackPieces[1]],
+  personalisable: [specialEditionPiece, giftPackPieces[1]],
+  fixedPrint: [],
+  badgeEligible: [specialEditionPiece, giftPackPieces[1]]
+});
+assert.match(specialEditionGiftPackHtml, /Nottingham Forest Special Edition kids kit/);
+assert.match(specialEditionGiftPackHtml, /Kit types:<\/strong> Away and Special Edition\./);
+assert.doesNotMatch(appSource, /includedText\.includes\(`\$\{piece\.kit_type\} kids kit`\)/);
 
 const noSocksHome = {
   ...giftPackPieces[0],
