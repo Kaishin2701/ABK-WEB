@@ -226,6 +226,14 @@ function hasStandaloneKeyword(value, keyword) {
   return new RegExp(`(^|[^a-z0-9])${escapedKeyword}($|[^a-z0-9])`, "i").test(value);
 }
 
+function normalizeInputText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[\u00A0\u202F]/g, " ")
+    .replace(/[‘’]/g, "'");
+}
+
 function selectProductKitType(value) {
   const hasOption = [...productKitTypeSelect.options].some((option) => option.value === value);
   if (hasOption) productKitTypeSelect.value = value;
@@ -311,7 +319,7 @@ function inferProductSelectionFromName() {
   if (hasStandaloneKeyword(productName, "with socks")) productSocksSelect.value = "included";
   if (hasStandaloneKeyword(productName, "no socks") || hasStandaloneKeyword(productName, "without socks")) productSocksSelect.value = "unavailable";
 
-  const playerPrintMatch = productName.match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
+  const playerPrintMatch = normalizeInputText(productName).match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
   if (playerPrintMatch) {
     productPrintSelect.value = "pre_applied_player";
     productPrintName.value = playerPrintMatch[1];
@@ -1224,12 +1232,12 @@ function inferBundleKitTypeFromName(name) {
 }
 
 function inferBundlePlayerPrintFromName(name) {
-  const match = name.match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
+  const match = normalizeInputText(name).match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
   return match ? { name: match[1].trim(), number: match[2] } : null;
 }
 
 function normalizedFactValue(value) {
-  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+  return normalizeInputText(value).trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function normalizedSizeRange(value) {
@@ -1498,7 +1506,7 @@ function validateBundlePiece(piece) {
   }
   if (titlePlayerPrint && piece.listing_configuration === "pre_applied_player" && (
     normalizedFactValue(titlePlayerPrint.name) !== normalizedFactValue(piece.pre_applied_name)
-    || String(titlePlayerPrint.number) !== String(piece.pre_applied_number)
+    || normalizedFactValue(titlePlayerPrint.number) !== normalizedFactValue(piece.pre_applied_number)
   )) {
     errors.push(`Product name includes ${titlePlayerPrint.name} ${titlePlayerPrint.number}, but the configured player print is ${piece.pre_applied_name || "missing"} ${piece.pre_applied_number || "missing"}.`);
   }

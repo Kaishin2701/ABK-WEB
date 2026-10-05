@@ -141,6 +141,21 @@ assert.equal(context.detectBranch({
 assert.match(validationErrors({ season: "2025/26" }), /indicates season 2026\/27/);
 assert.match(validationErrors({ team: "Arsenal" }), /Team field is Arsenal/);
 assert.match(validationErrors({ product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27" }), /configured as No Printed/);
+const mctominayTitleWithHiddenCharacter = "Scotland World Cup 2026 Home Kids Football Kit - MC\u200BTOMINAY 4 (With socks)";
+const inferredMctominayPrint = context.inferBundlePlayerPrintFromName(mctominayTitleWithHiddenCharacter);
+assert.equal(inferredMctominayPrint.name, "MCTOMINAY");
+assert.equal(inferredMctominayPrint.number, "4");
+assert.equal(context.normalizedFactValue("MC\u200BTOMINAY"), context.normalizedFactValue("MCTOMINAY"));
+assert.doesNotMatch(validationErrors({
+  product_name: mctominayTitleWithHiddenCharacter,
+  team: "Scotland",
+  season: "2026",
+  listing_configuration: "pre_applied_player",
+  personalisation_status: "unavailable",
+  print_price_included: "yes",
+  pre_applied_name: "MCTOMINAY",
+  pre_applied_number: "4"
+}), /configured player print/);
 assert.match(validationErrors({
   product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27",
   listing_configuration: "pre_applied_player", personalisation_status: "unavailable", print_price_included: "yes",
