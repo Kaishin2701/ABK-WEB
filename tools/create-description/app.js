@@ -226,6 +226,8 @@ function setChestBadgeChampionStatus(isChampion) {
   chestBadgeChampionToggle.classList.toggle("active", active);
   chestBadgeChampionToggle.disabled = !available;
   chestBadgeChampionToggle.setAttribute("aria-pressed", String(active));
+  chestBadgeChampionToggle.setAttribute("aria-label", `Chest Champion badge: ${active ? "on" : "off"}`);
+  chestBadgeChampionToggle.title = active ? "Champions chest badge selected" : "Mark the chest badge as Champions";
   chestBadgeLeagueInput.disabled = !available;
   productChestBadgeNameField.classList.toggle("hidden", !available);
   chestBadgeLeagueInput.classList.toggle("hidden", !available);

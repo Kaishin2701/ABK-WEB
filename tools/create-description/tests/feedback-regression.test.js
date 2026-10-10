@@ -103,6 +103,7 @@ assert.match(htmlSource, /id="productStandardSizeSummary"/);
 assert.match(htmlSource, /id="productBadgeGrid" class="span-2 product-badge-grid"/);
 assert.match(htmlSource, /id="productSleeveBadgeNameField"/);
 assert.match(htmlSource, /id="productChestBadgeNameField"/);
+assert.match(htmlSource, /id="chestBadgeChampionToggle" class="badge-champion-toggle"/);
 assert.match(htmlSource, /Product image &amp; colour assistant/);
 assert.match(htmlSource, /Create Description \(KFK\)/);
 assert.match(htmlSource, /id="cdfWebsiteBackBtn"/);
