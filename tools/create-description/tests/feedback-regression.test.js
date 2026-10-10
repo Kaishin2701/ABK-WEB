@@ -112,10 +112,10 @@ assert.match(htmlSource, /id="chestBadgeChampionToggle" class="badge-champion-to
 assert.match(htmlSource, /Product image &amp; colour assistant/);
 assert.match(htmlSource, /Create Description \(KFK\)/);
 assert.match(htmlSource, /id="cdfWebsiteBackBtn"/);
-assert.match(htmlSource, /id="cfsProductFacts"/);
-assert.match(htmlSource, /name="cfs_opening_visual"/);
-assert.match(htmlSource, /name="cfs_colour_details"/);
-assert.match(htmlSource, /name="cfs_back_details"/);
+assert.doesNotMatch(htmlSource, /CFS visual facts/);
+assert.doesNotMatch(htmlSource, /name="cfs_opening_visual"/);
+assert.doesNotMatch(htmlSource, /name="cfs_colour_details"/);
+assert.doesNotMatch(htmlSource, /name="cfs_back_details"/);
 assert.doesNotMatch(htmlSource, /id="cdfSiteChooser"/);
 assert.match(shellHtmlSource, /id="tab-create-description" class="tab-content cdf-site-page"/);
 assert.match(shellHtmlSource, /id="tab-create-description-kfk"/);
@@ -229,9 +229,9 @@ const cfsBaseFacts = {
   chest_badge_champion_status: "not_champion",
   pre_applied_name: "",
   pre_applied_number: "",
-  cfs_opening_visual: "Navy away shirt with an aqua camouflage-style pattern",
-  cfs_colour_details: "navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics",
-  cfs_back_details: "plain navy"
+  main_colour_shirt: "Navy",
+  main_colour_shorts: "",
+  main_colour_socks: ""
 };
 context.variantOffset = 0;
 const cfsHtml = context.renderCfsDescription(cfsBaseFacts);
@@ -241,10 +241,35 @@ assert.notEqual(cfsHtml, cfsSecondHtml, "Repeated CFS generation should rotate c
 assert.match(cfsHtml, /Olympique Marseille/);
 assert.match(cfsHtml, /2026\/27/);
 assert.match(cfsHtml, /<h3>Shirt Facts<\/h3>/);
-assert.match(cfsHtml, /<strong>Colours:<\/strong> navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics/);
+assert.match(cfsHtml, /<strong>Colours:<\/strong> navy shirt/);
+assert.doesNotMatch(cfsHtml, /<strong>Back:<\/strong>/);
 assert.match(cfsHtml, /<strong>In the parcel:<\/strong> 1 shirt\. No shorts or socks\./);
 assert.match(cfsHtml, /<strong>Sleeve badge:<\/strong> Ligue 1 can be added using the product options\./);
 assert.match(cfsHtml, /<h3>Good to Know<\/h3>/);
+
+const cfsKitColourHtml = context.renderCfsDescription({
+  ...cfsBaseFacts,
+  product_name: "Olympique Marseille Home Kids Kit 2026/27",
+  audience: "kids",
+  product_type: "full_kit",
+  included_items: "shirt_shorts_and_socks",
+  socks_status: "included",
+  kit_type: "home",
+  visible_size_range: "Kids sizes 16-28, suggested ages 3-13",
+  main_colour_shirt: "White",
+  main_colour_shorts: "Blue",
+  main_colour_socks: "White"
+});
+assert.match(cfsKitColourHtml, /<strong>Colours:<\/strong> white shirt, blue shorts, white socks/);
+
+const cfsNoColourHtml = context.renderCfsDescription({
+  ...cfsBaseFacts,
+  main_colour_shirt: "",
+  main_colour_shorts: "",
+  main_colour_socks: ""
+});
+assert.doesNotMatch(cfsNoColourHtml, /<strong>Colours:<\/strong>/);
+assert.doesNotMatch(cfsNoColourHtml, /undefined|null/i);
 
 const cfsCases = [
   {

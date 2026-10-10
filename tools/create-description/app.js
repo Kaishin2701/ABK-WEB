@@ -114,7 +114,6 @@ const activeSite = new URLSearchParams(window.location.search).get("site")?.toUp
 const cdfSiteEyebrow = document.querySelector("#cdfSiteEyebrow");
 const cdfBuilderTitle = document.querySelector("#cdfBuilderTitle");
 const bundleModeTab = document.querySelector("#bundleModeTab");
-const cfsProductFacts = document.querySelector("#cfsProductFacts");
 
 let variantOffset = 0;
 let generateTimer = null;
@@ -199,11 +198,6 @@ function configureActiveSite() {
   document.title = `Create Description (${activeSite})`;
   cdfSiteEyebrow.textContent = `${activeSite} 2026/27`;
   cdfBuilderTitle.textContent = `Create Description (${activeSite})`;
-  cfsProductFacts.classList.toggle("hidden", !isCfs);
-  cfsProductFacts.querySelectorAll("input").forEach((input) => {
-    input.required = isCfs;
-    input.disabled = !isCfs;
-  });
 
   bundleModeTab.disabled = isCfs;
   bundleModeTab.setAttribute("aria-disabled", String(isCfs));
@@ -2592,12 +2586,6 @@ function validateFacts(facts, branch) {
     blockers.push("KFK products must use the fixed polyester material value.");
   }
 
-  if (facts.site === "CFS") {
-    ["cfs_opening_visual", "cfs_colour_details", "cfs_back_details"].forEach((field) => {
-      if (!String(facts[field] || "").trim()) blockers.push(`${field} is required and cannot be unknown.`);
-    });
-  }
-
   if (facts.verification_status === "conflict" || facts.verification_status === "unverified") {
     blockers.push(`verification_status is ${facts.verification_status}.`);
   }
@@ -2854,18 +2842,35 @@ function cfsBadgeOptionLine(facts, position) {
   return `<li><strong>${isChest ? "Chest badge" : "Sleeve badge"}:</strong> ${esc(label)} can be added using the product options.</li>`;
 }
 
+function cfsColourDetails(facts) {
+  const shirtColour = String(facts.main_colour_shirt || "").trim().toLowerCase();
+  const shortsColour = String(facts.main_colour_shorts || "").trim().toLowerCase();
+  const socksColour = String(facts.main_colour_socks || "").trim().toLowerCase();
+
+  if (facts.sleeve_length === "baby_suit") {
+    return shirtColour ? `${shirtColour} baby suit` : "";
+  }
+
+  const colours = [];
+  if (shirtColour) colours.push(`${shirtColour} shirt`);
+  if (facts.product_type === "full_kit" && shortsColour) colours.push(`${shortsColour} shorts`);
+  if (facts.product_type === "full_kit" && facts.socks_status === "included" && socksColour) {
+    colours.push(`${socksColour} socks`);
+  }
+  return colours.join(", ");
+}
+
 function cfsOpening(facts) {
-  const visual = String(facts.cfs_opening_visual || "").trim().replace(/[.!?]+$/, "");
-  const visualSentence = sentenceStart(visual);
-  const visualLower = visual ? visual.charAt(0).toLowerCase() + visual.slice(1) : "";
+  const shirtColour = String(facts.main_colour_shirt || "").trim().toLowerCase();
+  const colourPrefix = shirtColour ? `${shirtColour} ` : "";
   const kind = cfsProductKindLabel(facts);
   const kitType = titleCaseToken(facts.kit_type);
   return pick([
-    `${visualSentence}, from ${cfsPossessive(facts.team)} ${facts.season} season.`,
-    `${visualSentence}. This ${kind} is from ${cfsPossessive(facts.team)} ${facts.season} season.`,
-    `For ${cfsPossessive(facts.team)} ${facts.season} season, this ${kind} features ${visualLower}.`,
-    `${cfsPossessive(facts.team)} ${facts.season} ${kitType.toLowerCase()} ${kind} features ${visualLower}.`,
-    `This ${kitType.toLowerCase()} ${kind} for ${cfsPossessive(facts.team)} ${facts.season} season features ${visualLower}.`
+    `${sentenceStart(`${colourPrefix}${kitType.toLowerCase()} ${kind}`)} from ${cfsPossessive(facts.team)} ${facts.season} season.`,
+    `${cfsPossessive(facts.team)} ${facts.season} ${kitType.toLowerCase()} ${kind}${shirtColour ? ` in ${shirtColour}` : ""}.`,
+    `This ${colourPrefix}${kitType.toLowerCase()} ${kind} is from ${cfsPossessive(facts.team)} ${facts.season} season.`,
+    `For ${cfsPossessive(facts.team)} ${facts.season} season, this ${kitType.toLowerCase()} ${kind}${shirtColour ? ` comes in ${shirtColour}` : ""}.`,
+    `${sentenceStart(facts.team)} ${facts.season} ${kitType.toLowerCase()} ${kind}${shirtColour ? ` with a ${shirtColour} main colour` : ""}.`
   ], facts, 20);
 }
 
@@ -2917,13 +2922,13 @@ function cfsBranchLabel(facts) {
 
 function renderCfsDescription(facts) {
   const factsHeading = cfsFactsHeading(facts);
+  const colourDetails = cfsColourDetails(facts);
   const factLines = [
     `<li><strong>Team:</strong> ${esc(facts.team)}</li>`,
     `<li><strong>Season:</strong> ${esc(facts.season)}</li>`,
-    `<li><strong>Kit:</strong> ${esc(titleCaseToken(facts.kit_type))}</li>`,
-    `<li><strong>Colours:</strong> ${esc(facts.cfs_colour_details)}</li>`,
-    `<li><strong>Back:</strong> ${esc(facts.cfs_back_details)}</li>`
+    `<li><strong>Kit:</strong> ${esc(titleCaseToken(facts.kit_type))}</li>`
   ];
+  if (colourDetails) factLines.push(`<li><strong>Colours:</strong> ${esc(colourDetails)}</li>`);
   if (facts.sleeve_length !== "baby_suit") {
     factLines.push(`<li><strong>Sleeves:</strong> ${facts.sleeve_length === "long_sleeve" ? "long" : "short"}</li>`);
   }
@@ -3094,12 +3099,14 @@ function auditCfsDescription(html, facts, blockers, reviewFlags, resolvedBranch 
   if (!opening.includes(String(facts.team).toLowerCase()) || !opening.includes(String(facts.season).toLowerCase())) {
     blockers.push("CFS opening must identify the confirmed team and season.");
   }
-  const requiredLabels = ["team:", "season:", "kit:", "colours:", "back:", "sizes:", "in the parcel:"];
+  const colourDetails = cfsColourDetails(facts);
+  const requiredLabels = ["team:", "season:", "kit:", "sizes:", "in the parcel:"];
+  if (colourDetails) requiredLabels.push("colours:");
   if (facts.sleeve_length !== "baby_suit") requiredLabels.push("sleeves:");
   requiredLabels.forEach((label) => {
     if (!productFacts.includes(label)) blockers.push(`CFS ${factsHeading} is missing ${label}`);
   });
-  [facts.team, facts.season, titleCaseToken(facts.kit_type), facts.cfs_colour_details, facts.cfs_back_details, cfsSizeLabel(facts)]
+  [facts.team, facts.season, titleCaseToken(facts.kit_type), colourDetails, cfsSizeLabel(facts)]
     .filter(Boolean)
     .forEach((value) => {
       if (!productFacts.includes(String(value).toLowerCase())) blockers.push(`CFS ${factsHeading} is missing the confirmed value: ${value}.`);
@@ -4321,10 +4328,7 @@ function loadSample() {
     socks_status: "not_applicable",
     listing_configuration: "plain_customisable",
     pre_applied_name: "",
-    pre_applied_number: "",
-    cfs_opening_visual: "Navy away shirt with an aqua camouflage-style pattern",
-    cfs_colour_details: "navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics",
-    cfs_back_details: "plain navy"
+    pre_applied_number: ""
   } : {
     product_name: "Inter Miami Home Kids Football Kit 2026/27",
     team: "Inter Miami",

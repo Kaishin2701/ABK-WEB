@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.4.1',
+        version: '6.4.2',
         label: 'Current release',
+        title: 'Automatic CFS visual copy',
+        description: 'CFS Product no longer requires a separate visual-facts form. Opening and colour copy is now generated automatically from the verified team, season, product type, kit type and garment colours, with controlled wording rotation for repeated generations. Unverified back-design details are omitted instead of being invented.'
+    },
+    {
+        version: '6.4.1',
+        label: 'Previous release',
         title: 'Expanded CFS Product coverage',
         description: 'CFS Product now supports the full single-product range available in KFK, including shirts, long-sleeve products, kits with or without socks, fixed player prints, Baby Suits, all audiences and independent sleeve and chest badges. Controlled wording rotation keeps repeated generations distinct while preserving every verified product fact.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Bundle option consistency',
         description: 'Bundle descriptions now distinguish one shared badge option from per-item badge options, group duplicate kit types as Home (×2), clarify audience-specific shirt products and reduce repeated no-socks warnings. A grouped no-socks warning now passes validation when every affected item is named, and Champion status is selected directly with the trophy icon.'
-    },
-    {
-        version: '6.2.2',
-        label: 'Previous release',
-        title: 'Combined item details',
-        description: 'Printed Bundle items now show their fixed player print and colours together in one Product Details line, avoiding repeated labels for duplicate kits.'
     },
 ];
 
