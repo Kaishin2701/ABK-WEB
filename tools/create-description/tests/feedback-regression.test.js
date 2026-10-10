@@ -6,6 +6,9 @@ const vm = require("node:vm");
 const toolRoot = path.resolve(__dirname, "..");
 const appSource = fs.readFileSync(path.join(toolRoot, "app.js"), "utf8");
 const htmlSource = fs.readFileSync(path.join(toolRoot, "index.html"), "utf8");
+const shellRoot = path.resolve(toolRoot, "..", "..");
+const shellHtmlSource = fs.readFileSync(path.join(shellRoot, "index.html"), "utf8");
+const shellAppSource = fs.readFileSync(path.join(shellRoot, "script.js"), "utf8");
 
 function sourceBetween(startMarker, endMarker) {
   const start = appSource.indexOf(startMarker);
@@ -56,6 +59,7 @@ vm.runInContext(sourceBetween("function inferBundleAudienceFromName", "function 
 vm.runInContext(sourceBetween("function expectedAudienceForRecipient", "function showBundlePieceErrors"), context);
 vm.runInContext(sourceBetween("function detectBranch", "function productNameConflict"), context);
 vm.runInContext(sourceBetween("function badgeLine", "function sizingWarningLine"), context);
+vm.runInContext(sourceBetween("function cfsPossessive", "function renderDescription"), context);
 vm.runInContext(sourceBetween("function removeDashesFromText", "function removeDescriptionDashes"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
 vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthdayGiftPack"), context);
@@ -100,6 +104,25 @@ assert.match(htmlSource, /id="productBadgeGrid" class="span-2 product-badge-grid
 assert.match(htmlSource, /id="productSleeveBadgeNameField"/);
 assert.match(htmlSource, /id="productChestBadgeNameField"/);
 assert.match(htmlSource, /Product image &amp; colour assistant/);
+assert.match(htmlSource, /Create Description \(KFK\)/);
+assert.match(htmlSource, /id="cdfWebsiteBackBtn"/);
+assert.match(htmlSource, /id="cfsProductFacts"/);
+assert.match(htmlSource, /name="cfs_opening_visual"/);
+assert.match(htmlSource, /name="cfs_colour_details"/);
+assert.match(htmlSource, /name="cfs_back_details"/);
+assert.doesNotMatch(htmlSource, /id="cdfSiteChooser"/);
+assert.match(shellHtmlSource, /id="tab-create-description" class="tab-content cdf-site-page"/);
+assert.match(shellHtmlSource, /id="tab-create-description-kfk"/);
+assert.match(shellHtmlSource, /id="tab-create-description-cfs"/);
+assert.match(shellHtmlSource, /openTool\('tab-create-description-kfk'\)/);
+assert.match(shellHtmlSource, /openTool\('tab-create-description-cfs'\)/);
+assert.match(shellHtmlSource, /<strong>CFS<\/strong><span>Open builder<\/span>/);
+for (const site of ["RFK", "RFS"]) {
+  assert.match(shellHtmlSource, new RegExp(`<strong>${site}<\\/strong><span>Coming soon<\\/span>`));
+}
+assert.match(shellAppSource, /cdf:return-to-site-chooser/);
+assert.match(shellAppSource, /cdf:open-kfk-builder/);
+assert.match(shellAppSource, /cdf:open-cfs-builder/);
 assert.doesNotMatch(sourceBetween("function getFacts", "function hasStandaloneKeyword"), /badge_price_gbp/);
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "men", recipient_label: "", audience: "men" }), "Men");
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "women", recipient_label: "", audience: "women" }), "Women");
@@ -172,6 +195,31 @@ assert.equal(context.detectBranch({
   listing_configuration: "plain_customisable",
   kit_type: "special_edition"
 }), "plain_customisable_kids_full_kit_with_socks");
+assert.equal(context.detectBranch({
+  site: "CFS",
+  audience: "men",
+  product_type: "shirt_only",
+  included_items: "shirt_only",
+  socks_status: "not_applicable",
+  listing_configuration: "plain_customisable"
+}), "cfs_plain_customisable_men_shirt_only");
+const cfsHtml = context.renderCfsDescription({
+  team: "Olympique Marseille",
+  season: "2026/27",
+  audience: "men",
+  kit_type: "away",
+  sleeve_length: "short_sleeve",
+  badge_status: "available",
+  cfs_opening_visual: "Navy away shirt with an aqua camouflage-style pattern",
+  cfs_colour_details: "navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics",
+  cfs_back_details: "plain navy"
+});
+assert.match(cfsHtml, /Navy away shirt with an aqua camouflage-style pattern, from Olympique Marseille’s 2026\/27 season\./);
+assert.match(cfsHtml, /<h3>Shirt Facts<\/h3>/);
+assert.match(cfsHtml, /<strong>Colours:<\/strong> navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics/);
+assert.match(cfsHtml, /<strong>In the parcel:<\/strong> 1 shirt\. No shorts or socks\./);
+assert.match(cfsHtml, /<strong>Sleeve badge:<\/strong> optional, chosen in the product options\./);
+assert.match(cfsHtml, /<h3>Good to Know<\/h3>/);
 assert.match(validationErrors({ season: "2025/26" }), /indicates season 2026\/27/);
 assert.match(validationErrors({ team: "Arsenal" }), /Team field is Arsenal/);
 assert.match(validationErrors({ product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27" }), /configured as No Printed/);

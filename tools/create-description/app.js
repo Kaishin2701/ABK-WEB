@@ -1,4 +1,5 @@
 const form = document.querySelector("#factForm");
+const cdfWebsiteBackBtn = document.querySelector("#cdfWebsiteBackBtn");
 const bundleForm = document.querySelector("#bundleForm");
 const generateBtn = document.querySelector("#generateBtn");
 const loadSampleBtn = document.querySelector("#loadSampleBtn");
@@ -109,6 +110,11 @@ const bundleViewMoreImageColoursBtn = document.querySelector("#bundleViewMoreIma
 const templateLibrary = window.DESCRIPTION_TEMPLATE_LIBRARY;
 const nationalTeams = window.NATIONAL_TEAMS || [];
 const footballClubs = window.FOOTBALL_CLUBS || [];
+const activeSite = new URLSearchParams(window.location.search).get("site")?.toUpperCase() === "CFS" ? "CFS" : "KFK";
+const cdfSiteEyebrow = document.querySelector("#cdfSiteEyebrow");
+const cdfBuilderTitle = document.querySelector("#cdfBuilderTitle");
+const bundleModeTab = document.querySelector("#bundleModeTab");
+const cfsProductFacts = document.querySelector("#cfsProductFacts");
 
 let variantOffset = 0;
 let generateTimer = null;
@@ -147,13 +153,13 @@ const fixedKfkFacts = Object.freeze({
 });
 
 const defaultFacts = {
-  site: "KFK",
-  ...fixedKfkFacts,
+  site: activeSite,
+  ...(activeSite === "KFK" ? fixedKfkFacts : {}),
   size_guide_tab_status: "confirmed_present",
   size_guide_location: "product_tab",
   verification_status: "verified",
   fact_status: "ready_for_generation",
-  source_notes: "Generated from simplified KFK description form."
+  source_notes: `Generated from simplified ${activeSite} description form.`
 };
 
 const allowedTags = new Set(["P", "H3", "UL", "LI", "STRONG", "A"]);
@@ -187,6 +193,31 @@ const badgeLeagueOptions = [
   "MLS",
   "FIFA Club World Cup"
 ];
+
+function configureActiveSite() {
+  const isCfs = activeSite === "CFS";
+  document.title = `Create Description (${activeSite})`;
+  cdfSiteEyebrow.textContent = `${activeSite} 2026/27`;
+  cdfBuilderTitle.textContent = `Create Description (${activeSite})`;
+  cfsProductFacts.classList.toggle("hidden", !isCfs);
+  cfsProductFacts.querySelectorAll("input").forEach((input) => {
+    input.required = isCfs;
+    input.disabled = !isCfs;
+  });
+
+  bundleModeTab.disabled = isCfs;
+  bundleModeTab.setAttribute("aria-disabled", String(isCfs));
+  bundleModeTab.textContent = isCfs ? "Bundle · Coming soon" : "Bundle";
+  bundleModeTab.title = isCfs ? "CFS Bundle descriptions are coming soon." : "";
+
+  [...productKindSelect.options].forEach((option) => {
+    const supported = ["Shirt", "Long Sleeve Shirt"].includes(option.value);
+    option.disabled = isCfs && !supported;
+  });
+  if (isCfs && !["Shirt", "Long Sleeve Shirt"].includes(productKindSelect.value)) {
+    productKindSelect.value = "Shirt";
+  }
+}
 
 function setChestBadgeChampionStatus(isChampion) {
   const available = chestBadgeStatusSelect.value === "available";
@@ -330,7 +361,7 @@ function getFacts() {
     facts[key] = typeof value === "string" ? value.trim() : value;
   }
 
-  Object.assign(facts, fixedKfkFacts);
+  if (activeSite === "KFK") Object.assign(facts, fixedKfkFacts);
   facts.badge_status = facts.badge_status === "available" ? "available" : "unavailable";
   facts.badge_league = facts.badge_status === "available" ? String(facts.badge_league || "").trim() : "";
   facts.badge_champion_status = facts.badge_status === "available" && facts.badge_champion_status === "champion"
@@ -555,7 +586,7 @@ function syncBadgeField() {
   const isAvailable = badgeStatusSelect.value === "available";
   badgeLeagueField.classList.add("hidden");
   productSleeveBadgeNameField.classList.toggle("hidden", !isAvailable);
-  badgeLeagueInput.required = isAvailable;
+  badgeLeagueInput.required = isAvailable && activeSite === "KFK";
   badgeChampionToggle.disabled = !isAvailable;
   if (!isAvailable) {
     badgeLeagueInput.value = "";
@@ -2444,6 +2475,17 @@ function detectBundleBranch(facts) {
 }
 
 function detectBranch(facts) {
+  if (facts.site === "CFS") {
+    const supportedAudience = ["kids", "men", "women"].includes(facts.audience);
+    const isShirt = facts.product_type === "shirt_only"
+      && facts.included_items === "shirt_only"
+      && facts.socks_status === "not_applicable";
+    if (supportedAudience && isShirt && facts.listing_configuration === "plain_customisable") {
+      return `cfs_plain_customisable_${facts.audience}_shirt_only`;
+    }
+    return null;
+  }
+
   if (facts.site !== "KFK") return null;
 
   if (facts.product_type === "shirt_only" && facts.included_items === "shirt_only" && facts.socks_status === "not_applicable") {
@@ -2522,7 +2564,7 @@ function validateFacts(facts, branch) {
     blockers.push("badge_status must be available or unavailable.");
   }
 
-  if (facts.badge_status === "available" && !facts.badge_league) {
+  if (facts.site === "KFK" && facts.badge_status === "available" && !facts.badge_league) {
     blockers.push("badge_league is required when badge_status is available.");
   }
 
@@ -2530,16 +2572,31 @@ function validateFacts(facts, branch) {
     blockers.push("chest_badge_status must be available or unavailable.");
   }
 
-  if (facts.chest_badge_status === "available" && !facts.chest_badge_league) {
+  if (facts.site === "KFK" && facts.chest_badge_status === "available" && !facts.chest_badge_league) {
     blockers.push("chest_badge_league is required when chest_badge_status is available.");
   }
 
-  if (facts.version_style !== "fan_version") {
+  if (facts.site === "KFK" && facts.version_style !== "fan_version") {
     blockers.push("KFK products must use the fixed fan version.");
   }
 
-  if (facts.material !== "polyester") {
+  if (facts.site === "KFK" && facts.material !== "polyester") {
     blockers.push("KFK products must use the fixed polyester material value.");
+  }
+
+  if (facts.site === "CFS") {
+    ["cfs_opening_visual", "cfs_colour_details", "cfs_back_details"].forEach((field) => {
+      if (!String(facts[field] || "").trim()) blockers.push(`${field} is required and cannot be unknown.`);
+    });
+    if (facts.product_type !== "shirt_only") {
+      blockers.push("CFS Product currently supports shirt-only listings.");
+    }
+    if (facts.listing_configuration !== "plain_customisable") {
+      blockers.push("CFS Product currently supports plain customisable shirts only.");
+    }
+    if (facts.chest_badge_status === "available") {
+      blockers.push("The current CFS template supports sleeve badges only.");
+    }
   }
 
   if (facts.verification_status === "conflict" || facts.verification_status === "unverified") {
@@ -2749,6 +2806,56 @@ function insertSizingWarning(lines, facts) {
   return [lines[0], sizingLine, ...lines.slice(1)];
 }
 
+function cfsPossessive(value) {
+  const label = String(value || "").trim();
+  return /s$/i.test(label) ? `${label}’` : `${label}’s`;
+}
+
+function cfsSizeLabel(facts) {
+  if (facts.audience === "kids") {
+    return "kids’ 16 to 28, suggested ages 3 to 13 (measurements in the Size Guide tab)";
+  }
+  if (facts.audience === "women") {
+    return "women’s S to XXL (measurements in the Size Guide tab)";
+  }
+  return "men’s S to XXL (measurements in the Size Guide tab)";
+}
+
+function renderCfsDescription(facts) {
+  const visual = String(facts.cfs_opening_visual || "").trim().replace(/[.!?]+$/, "");
+  const opening = `${visual}, from ${cfsPossessive(facts.team)} ${facts.season} season.`;
+  const makeItYours = [
+    "<li><strong>Name and number:</strong> optional, up to 13 letters and 2 digits.</li>"
+  ];
+  if (facts.badge_status === "available") {
+    makeItYours.push("<li><strong>Sleeve badge:</strong> optional, chosen in the product options.</li>");
+  }
+
+  return [
+    `<p>${esc(opening)}</p>`,
+    "<h3>Shirt Facts</h3>",
+    "<ul>",
+    `<li><strong>Team:</strong> ${esc(facts.team)}</li>`,
+    `<li><strong>Season:</strong> ${esc(facts.season)}</li>`,
+    `<li><strong>Kit:</strong> ${esc(titleCaseToken(facts.kit_type))}</li>`,
+    `<li><strong>Colours:</strong> ${esc(facts.cfs_colour_details)}</li>`,
+    `<li><strong>Back:</strong> ${esc(facts.cfs_back_details)}</li>`,
+    `<li><strong>Sleeves:</strong> ${facts.sleeve_length === "long_sleeve" ? "long" : "short"}</li>`,
+    `<li><strong>Sizes:</strong> ${cfsSizeLabel(facts)}</li>`,
+    "<li><strong>In the parcel:</strong> 1 shirt. No shorts or socks.</li>",
+    "</ul>",
+    "<h3>Make It Yours</h3>",
+    "<ul>",
+    ...makeItYours,
+    "</ul>",
+    "<h3>Good to Know</h3>",
+    "<ul>",
+    "<li>Personalised shirts can’t be sent back for a change of mind or wrong size, unless we made an error, so please check the spelling.</li>",
+    "<li>Colours can look slightly different on screen. The photos are the best guide.</li>",
+    "</ul>"
+  ].join("\n");
+}
+
 function renderDescription(facts, branch) {
   const template = pickBranchVariant(branch, facts);
   const opening = interpolate(template.opening, facts, { titleCaseProductLabels: true });
@@ -2858,6 +2965,73 @@ function validateBundleFacts(facts) {
   return { blockers, reviewFlags };
 }
 
+function auditCfsDescription(html, facts, blockers, reviewFlags, resolvedBranch = null) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div id="root">${html}</div>`, "text/html");
+  const root = doc.querySelector("#root");
+  const badTags = [...root.querySelectorAll("*")]
+    .map((node) => node.tagName)
+    .filter((tag) => !allowedTags.has(tag));
+  const text = root.textContent.toLowerCase();
+  const headings = [...root.querySelectorAll(":scope > h3")].map((node) => node.textContent.trim());
+  const expectedHeadings = ["Shirt Facts", "Make It Yours", "Good to Know"];
+  const sectionText = (headingText) => {
+    const heading = [...root.querySelectorAll(":scope > h3")]
+      .find((node) => node.textContent.trim() === headingText);
+    return heading?.nextElementSibling?.textContent.toLowerCase() || "";
+  };
+  const shirtFacts = sectionText("Shirt Facts");
+  const makeItYours = sectionText("Make It Yours");
+  const opening = root.querySelector(":scope > p")?.textContent.toLowerCase() || "";
+  const unsupported = forbiddenTerms.filter((term) => text.includes(term));
+
+  if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
+  if (headings.join("|") !== expectedHeadings.join("|")) {
+    blockers.push("CFS descriptions must use Shirt Facts, Make It Yours and Good to Know in that order.");
+  }
+  if (!opening.includes(String(facts.team).toLowerCase()) || !opening.includes(String(facts.season).toLowerCase())) {
+    blockers.push("CFS opening must identify the confirmed team and season.");
+  }
+  ["team:", "season:", "kit:", "colours:", "back:", "sleeves:", "sizes:", "in the parcel:"].forEach((label) => {
+    if (!shirtFacts.includes(label)) blockers.push(`CFS Shirt Facts is missing ${label}`);
+  });
+  [facts.team, facts.season, titleCaseToken(facts.kit_type), facts.cfs_colour_details, facts.cfs_back_details]
+    .filter(Boolean)
+    .forEach((value) => {
+      if (!shirtFacts.includes(String(value).toLowerCase())) blockers.push(`CFS Shirt Facts is missing the confirmed value: ${value}.`);
+    });
+  if (!shirtFacts.includes("1 shirt. no shorts or socks.")) {
+    blockers.push("CFS shirt parcel copy must state: 1 shirt. No shorts or socks.");
+  }
+  if (!makeItYours.includes("name and number:") || !makeItYours.includes("13 letters") || !makeItYours.includes("2 digits")) {
+    blockers.push("CFS Make It Yours must include the approved name-and-number limits.");
+  }
+  if (facts.badge_status === "available" && !makeItYours.includes("sleeve badge:")) {
+    blockers.push("Available CFS sleeve badges must appear in Make It Yours.");
+  }
+  if (facts.badge_status === "unavailable" && makeItYours.includes("sleeve badge:")) {
+    blockers.push("Unavailable CFS sleeve badges must not appear in Make It Yours.");
+  }
+  if (!text.includes("personalised shirts can’t be sent back") || !text.includes("photos are the best guide")) {
+    blockers.push("CFS Good to Know must include the approved returns and colour guidance.");
+  }
+  if (unsupported.length) blockers.push(`Description contains unsupported claim term(s): ${unsupported.join(", ")}.`);
+
+  const qaStatus = blockers.length ? "block" : reviewFlags.length ? "review" : "pass";
+  return {
+    qa_status: qaStatus,
+    product_ref: facts.product_name,
+    site: facts.site,
+    branch: resolvedBranch || detectBranch(facts),
+    checks_run: ["fact_consistency", "html_structure", "configuration_logic", "unsupported_claims"],
+    blockers,
+    review_flags: reviewFlags,
+    recommended_actions: recommendedActions(qaStatus, blockers, reviewFlags),
+    generated_at: new Date().toISOString(),
+    generator_version: "cfs_product_0.1.0"
+  };
+}
+
 function auditDescription(html, facts, blockers, reviewFlags, resolvedBranch = null) {
   if (!html) {
     const qaStatus = blockers.length ? "block" : reviewFlags.length ? "review" : "pass";
@@ -2876,6 +3050,10 @@ function auditDescription(html, facts, blockers, reviewFlags, resolvedBranch = n
       generated_at: new Date().toISOString(),
       generator_version: "test_project_rule_builder_0.2.0"
     };
+  }
+
+  if (facts.site === "CFS") {
+    return auditCfsDescription(html, facts, blockers, reviewFlags, resolvedBranch);
   }
 
   const parser = new DOMParser();
@@ -3065,14 +3243,17 @@ function generate() {
     preview.textContent = "BLOCK: fix the audit issues before generating customer-facing HTML.";
     htmlOutput.value = "";
   } else {
-    html = renderDescription(facts, branch);
+    html = facts.site === "CFS" ? renderCfsDescription(facts) : renderDescription(facts, branch);
     audit = auditDescription(html, facts, [...validation.blockers], [...validation.reviewFlags]);
     preview.className = "description-preview";
     preview.innerHTML = html;
     htmlOutput.value = html;
   }
 
-  setBadge(branchBadge, branch ? templateLibrary.branchLabels[branch] : "No approved branch", branch ? "pass" : "block");
+  const branchLabel = facts.site === "CFS" && branch
+    ? "CFS Plain Shirt"
+    : templateLibrary.branchLabels[branch];
+  setBadge(branchBadge, branch ? branchLabel : "No approved branch", branch ? "pass" : "block");
   setBadge(qaBadge, audit.qa_status, audit.qa_status);
   auditOutput.textContent = formatAuditOutput(audit);
 }
@@ -3991,7 +4172,30 @@ function loadSample() {
     return;
   }
 
-  const sample = {
+  const sample = activeSite === "CFS" ? {
+    product_name: "Olympique Marseille Away Men's Shirt 2026/27",
+    team: "Olympique Marseille",
+    season: "2026/27",
+    main_colour_shirt: "Navy",
+    main_colour_shorts: "",
+    main_colour_socks: "",
+    badge_status: "available",
+    badge_league: "Ligue 1",
+    chest_badge_status: "unavailable",
+    chest_badge_league: "",
+    audience: "men",
+    product_type: "shirt_only",
+    kit_type: "away",
+    sleeve_length: "short_sleeve",
+    included_items: "shirt_only",
+    socks_status: "not_applicable",
+    listing_configuration: "plain_customisable",
+    pre_applied_name: "",
+    pre_applied_number: "",
+    cfs_opening_visual: "Navy away shirt with an aqua camouflage-style pattern",
+    cfs_colour_details: "navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics",
+    cfs_back_details: "plain navy"
+  } : {
     product_name: "Inter Miami Home Kids Football Kit 2026/27",
     team: "Inter Miami",
     season: "2026/27",
@@ -4335,6 +4539,17 @@ bundleViewMoreImageColoursBtn.addEventListener("click", () => {
   renderBundleImageColourPalette();
 });
 
+cdfWebsiteBackBtn.addEventListener("click", () => {
+  window.parent.postMessage({ type: "cdf:return-to-site-chooser" }, window.location.origin);
+});
+window.addEventListener("message", (event) => {
+  if (event.origin !== window.location.origin) return;
+  if (["cdf:open-kfk-builder", "cdf:open-cfs-builder"].includes(event.data?.type)) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+});
+
+configureActiveSite();
 setupProductBadgeLayout();
 setupBoundedBadgeAutocomplete(chestBadgeLeagueInput);
 setupBoundedBadgeAutocomplete(bundleBadgeLeague);

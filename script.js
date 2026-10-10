@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.3.0',
+        version: '6.4.0',
         label: 'Current release',
+        title: 'Multi-site Description Builder',
+        description: 'Create Description now opens with a dedicated website selector. KFK keeps its existing Product and Bundle workflows, while CFS Product adds its own verified-fact inputs, Shirt Facts, Make It Yours and Good to Know template, plus site-specific validation and audit checks. CFS Bundle, RFK and RFS remain marked as coming soon.'
+    },
+    {
+        version: '6.3.0',
+        label: 'Previous release',
         title: 'Unified Product and badge editor',
         description: 'Product mode now uses the streamlined single-item editor from Bundle mode, with suggested size ranges, image-assisted colours and independent sleeve and chest badges. Product and Bundle badge fields now share the same compact autocomplete, Champions toggle and position-aware description output.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Item-by-item colour details',
         description: 'Bundle Product Details now list colours on a separate, clearly labelled line for every shirt and kit, making each item easier to check before ordering.'
-    },
-    {
-        version: '6.2.0',
-        label: 'Previous release',
-        title: 'Universal Bundle Builder',
-        description: 'Standard Bundles and KFK Birthday Gift Packs now accept the same flexible mix of Men, Women, Kids and Baby shirts, kits and suits.'
     },
 ];
 
@@ -175,11 +175,28 @@ function updateNavigationMode(showBackButton) {
 
 function openTool(tabId) {
     switchTab(tabId);
+    if (tabId === 'tab-create-description-kfk') {
+        const frame = document.getElementById('create-description-frame');
+        frame?.contentWindow?.postMessage({ type: 'cdf:open-kfk-builder' }, window.location.origin);
+    }
+    if (tabId === 'tab-create-description-cfs') {
+        const frame = document.getElementById('create-description-cfs-frame');
+        frame?.contentWindow?.postMessage({ type: 'cdf:open-cfs-builder' }, window.location.origin);
+    }
 }
 
 function returnToToolLibrary() {
     switchTab('tab-tool-library');
 }
+
+window.addEventListener('message', (event) => {
+    const frames = [
+        document.getElementById('create-description-frame'),
+        document.getElementById('create-description-cfs-frame')
+    ];
+    if (event.origin !== window.location.origin || !frames.some((frame) => event.source === frame?.contentWindow)) return;
+    if (event.data?.type === 'cdf:return-to-site-chooser') switchTab('tab-create-description');
+});
 
 // ============= SKU GENERATOR FUNCTIONS =============
 let currentSkuVariants = [];

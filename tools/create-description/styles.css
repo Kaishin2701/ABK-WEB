@@ -116,6 +116,12 @@ button:disabled {
   color: var(--accent-dark);
 }
 
+.mode-tab:disabled {
+  cursor: not-allowed;
+  border-color: transparent;
+  background: transparent;
+}
+
 .top-actions,
 .status-line {
   display: flex;
@@ -192,6 +198,24 @@ button:disabled {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   padding: 20px;
+}
+
+.cfs-product-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.cfs-product-facts.hidden {
+  display: none;
+}
+
+.cfs-product-facts-heading {
+  grid-column: 1 / -1;
 }
 
 .hidden {
@@ -1442,5 +1466,11 @@ input:disabled,
 .bounded-badge-autocomplete .badge-league-suggestion:hover,
 .bounded-badge-autocomplete .badge-league-suggestion.active {
   background: rgba(0, 255, 153, 0.13);
+  color: var(--accent);
+}
+
+#cdfWebsiteBackBtn {
+  border-color: rgba(0, 255, 136, 0.35);
+  background: #171b19;
   color: var(--accent);
 }

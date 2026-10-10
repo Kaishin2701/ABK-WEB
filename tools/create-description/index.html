@@ -3,20 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>KFK Description Builder</title>
-    <link rel="stylesheet" href="./styles.css?v=20261001e">
+    <title>Create Description KFK</title>
+    <link rel="stylesheet" href="./styles.css?v=6.4.0">
   </head>
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">KFK 2026/27</p>
-        <h1>Description Builder</h1>
+        <p id="cdfSiteEyebrow" class="eyebrow">KFK 2026/27</p>
+        <h1 id="cdfBuilderTitle">Create Description (KFK)</h1>
         <div class="mode-tabs" aria-label="Builder mode">
           <button class="mode-tab active" type="button" data-mode="product">Product</button>
-          <button class="mode-tab" type="button" data-mode="bundle">Bundle</button>
+          <button id="bundleModeTab" class="mode-tab" type="button" data-mode="bundle">Bundle</button>
         </div>
       </div>
       <div class="top-actions">
+        <button id="cdfWebsiteBackBtn" type="button">&#8592; Websites</button>
         <button id="loadSampleBtn" type="button">Load sample</button>
         <button id="clearAllBtn" type="button">Clear all</button>
         <button id="generateBtn" type="button" class="primary">Generate</button>
@@ -150,6 +151,25 @@
               <button id="chestBadgeChampionToggle" class="champion-toggle" type="button" aria-pressed="false" title="Mark chest badge as Champions">🏆</button>
               <input id="chestBadgeChampionInput" name="chest_badge_champion_status" type="hidden" value="not_champion">
             </div>
+          </div>
+
+          <div id="cfsProductFacts" class="span-2 cfs-product-facts hidden">
+            <div class="cfs-product-facts-heading">
+              <span class="field-label">CFS visual facts</span>
+              <p class="assistant-copy">Use only details confirmed by the product photos or approved product data.</p>
+            </div>
+            <label class="span-2">
+              Opening visual summary
+              <input name="cfs_opening_visual" type="text" placeholder="Navy away shirt with an aqua camouflage-style pattern">
+            </label>
+            <label class="span-2">
+              Colours and front details
+              <input name="cfs_colour_details" type="text" placeholder="navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics">
+            </label>
+            <label class="span-2">
+              Back
+              <input name="cfs_back_details" type="text" placeholder="plain navy">
+            </label>
           </div>
 
           <div class="span-2 piece-size-summary product-size-summary">
@@ -478,6 +498,6 @@
     <script src="./templates/product/product-templates.js?v=20260804h"></script>
     <script src="./templates/bundle/bundle-templates.js?v=20261001a"></script>
     <script src="./templates/template-registry.js?v=20261001a"></script>
-    <script src="./app.js?v=20261001e"></script>
+    <script src="./app.js?v=6.4.0"></script>
   </body>
 </html>
