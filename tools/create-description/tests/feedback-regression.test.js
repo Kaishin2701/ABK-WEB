@@ -33,6 +33,9 @@ const context = vm.createContext({
   uniqueTextValues: (values) => [...new Set(values)],
   humanList: (values) => values.length < 2 ? (values[0] || "") : values.length === 2 ? `${values[0]} and ${values[1]}` : `${values.slice(0, -1).join(", ")} and ${values.at(-1)}`,
   esc: (value) => String(value),
+  sentenceStart: (value) => String(value || "").replace(/^./, (letter) => letter.toUpperCase()),
+  stableHash: (text) => String(text).split("").reduce((sum, char) => sum + char.charCodeAt(0), 0),
+  variantOffset: 0,
   bundleBadgeDisplay: (piece) => piece.badge_league,
   sleeveLengthLabel: (piece) => piece.sleeve_length === "short_sleeve" ? "Short sleeve" : "Long sleeve",
   displayName: (value) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase(),
@@ -58,7 +61,9 @@ vm.runInContext(sourceBetween("function productTitleFromImageName", "function us
 vm.runInContext(sourceBetween("function inferBundleAudienceFromName", "function inferBundlePieceFromName"), context);
 vm.runInContext(sourceBetween("function expectedAudienceForRecipient", "function showBundlePieceErrors"), context);
 vm.runInContext(sourceBetween("function detectBranch", "function productNameConflict"), context);
+vm.runInContext(sourceBetween("function productNameConflict", "function sizeGuideSentence"), context);
 vm.runInContext(sourceBetween("function badgeLine", "function sizingWarningLine"), context);
+vm.runInContext(sourceBetween("function pick(", "function pickBranchVariant"), context);
 vm.runInContext(sourceBetween("function cfsPossessive", "function renderDescription"), context);
 vm.runInContext(sourceBetween("function removeDashesFromText", "function removeDescriptionDashes"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
@@ -204,23 +209,182 @@ assert.equal(context.detectBranch({
   socks_status: "not_applicable",
   listing_configuration: "plain_customisable"
 }), "cfs_plain_customisable_men_shirt_only");
-const cfsHtml = context.renderCfsDescription({
+const cfsBaseFacts = {
+  product_name: "Olympique Marseille Away Men's Shirt 2026/27",
   team: "Olympique Marseille",
   season: "2026/27",
   audience: "men",
+  product_type: "shirt_only",
+  included_items: "shirt_only",
+  socks_status: "not_applicable",
   kit_type: "away",
   sleeve_length: "short_sleeve",
+  visible_size_range: "Men sizes S-XXL",
+  listing_configuration: "plain_customisable",
   badge_status: "available",
+  badge_league: "Ligue 1",
+  badge_champion_status: "not_champion",
+  chest_badge_status: "unavailable",
+  chest_badge_league: "",
+  chest_badge_champion_status: "not_champion",
+  pre_applied_name: "",
+  pre_applied_number: "",
   cfs_opening_visual: "Navy away shirt with an aqua camouflage-style pattern",
   cfs_colour_details: "navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics",
   cfs_back_details: "plain navy"
-});
-assert.match(cfsHtml, /Navy away shirt with an aqua camouflage-style pattern, from Olympique Marseille’s 2026\/27 season\./);
+};
+context.variantOffset = 0;
+const cfsHtml = context.renderCfsDescription(cfsBaseFacts);
+context.variantOffset = 1;
+const cfsSecondHtml = context.renderCfsDescription(cfsBaseFacts);
+assert.notEqual(cfsHtml, cfsSecondHtml, "Repeated CFS generation should rotate controlled wording");
+assert.match(cfsHtml, /Olympique Marseille/);
+assert.match(cfsHtml, /2026\/27/);
 assert.match(cfsHtml, /<h3>Shirt Facts<\/h3>/);
 assert.match(cfsHtml, /<strong>Colours:<\/strong> navy with aqua pattern, aqua collar, cuffs and side panels, white front graphics/);
 assert.match(cfsHtml, /<strong>In the parcel:<\/strong> 1 shirt\. No shorts or socks\./);
-assert.match(cfsHtml, /<strong>Sleeve badge:<\/strong> optional, chosen in the product options\./);
+assert.match(cfsHtml, /<strong>Sleeve badge:<\/strong> Ligue 1 can be added using the product options\./);
 assert.match(cfsHtml, /<h3>Good to Know<\/h3>/);
+
+const cfsCases = [
+  {
+    name: "printed long-sleeve women's shirt",
+    facts: {
+      ...cfsBaseFacts,
+      product_name: "Spain Away Women's Long Sleeve Shirt 2026",
+      team: "Spain",
+      season: "2026",
+      audience: "women",
+      sleeve_length: "long_sleeve",
+      visible_size_range: "Women sizes S–XXL",
+      listing_configuration: "pre_applied_player",
+      pre_applied_name: "PUTELLAS",
+      pre_applied_number: "11",
+      badge_status: "unavailable",
+      badge_league: ""
+    },
+    branch: "cfs_pre_applied_player_women_shirt_only",
+    output: /Player print:<\/strong> Putellas name and number 11 are already applied/
+  },
+  {
+    name: "plain kids kit with socks",
+    facts: {
+      ...cfsBaseFacts,
+      product_name: "Arsenal Home Kids Football Kit 2026/27",
+      team: "Arsenal",
+      audience: "kids",
+      product_type: "full_kit",
+      included_items: "shirt_shorts_and_socks",
+      socks_status: "included",
+      kit_type: "home",
+      visible_size_range: "Kids sizes 16-28, suggested ages 3-13"
+    },
+    branch: "cfs_plain_customisable_kids_full_kit_with_socks",
+    output: /In the parcel:<\/strong> 1 shirt, matching shorts and socks\./
+  },
+  {
+    name: "printed adult long-sleeve kit without socks",
+    facts: {
+      ...cfsBaseFacts,
+      product_name: "Barcelona Special Edition Adult Long Sleeve Football Kit 2026/27 MESSI 10",
+      team: "Barcelona",
+      audience: "adult",
+      product_type: "full_kit",
+      included_items: "shirt_and_shorts",
+      socks_status: "unavailable",
+      kit_type: "special_edition",
+      sleeve_length: "long_sleeve",
+      visible_size_range: "Adult sizes S-XXL",
+      listing_configuration: "pre_applied_player",
+      pre_applied_name: "MESSI",
+      pre_applied_number: "10",
+      badge_status: "available",
+      badge_league: "UEFA Champions League",
+      badge_champion_status: "champion",
+      chest_badge_status: "available",
+      chest_badge_league: "FIFA Club World Cup",
+      chest_badge_champion_status: "champion"
+    },
+    branch: "cfs_pre_applied_player_adult_full_kit_without_socks",
+    output: /Socks are not included\./
+  },
+  {
+    name: "plain baby suit",
+    facts: {
+      ...cfsBaseFacts,
+      product_name: "Inter Miami Home Baby Suit 2026/27",
+      team: "Inter Miami",
+      audience: "baby",
+      sleeve_length: "baby_suit",
+      visible_size_range: "Baby sizes 9 and 12 (3–24 months)"
+    },
+    branch: "cfs_plain_customisable_baby_baby_suit",
+    output: /<h3>Suit Facts<\/h3>[\s\S]*In the parcel:<\/strong> 1 baby suit\./
+  }
+];
+
+for (const testCase of cfsCases) {
+  assert.equal(context.detectBranch({ site: "CFS", ...testCase.facts }), testCase.branch, testCase.name);
+  assert.match(context.renderCfsDescription(testCase.facts), testCase.output, testCase.name);
+
+  const isPrinted = testCase.facts.listing_configuration === "pre_applied_player";
+  const sizeProfiles = { kids: "kids_16_28", men: "adult_s_2xl", adult: "adult_s_2xl", women: "women_s_2xl", baby: "baby_9_12" };
+  const validatedFacts = {
+    ...testCase.facts,
+    site: "CFS",
+    badge_status: testCase.facts.badge_status || "unavailable",
+    chest_badge_status: testCase.facts.chest_badge_status || "unavailable",
+    personalisation_status: isPrinted ? "unavailable" : "available",
+    print_price_included: isPrinted ? "yes" : "not_applicable",
+    size_profile: sizeProfiles[testCase.facts.audience],
+    size_guide_tab_status: "confirmed_present",
+    size_guide_location: "product_tab",
+    verification_status: "verified",
+    fact_status: "ready_for_generation",
+    source_notes: "Regression fixture",
+    main_colour_socks: testCase.facts.socks_status === "included" ? "White" : ""
+  };
+  const validation = context.validateFacts(validatedFacts, context.detectBranch(validatedFacts));
+  assert.deepEqual(Array.from(validation.blockers), [], `${testCase.name}: ${validation.blockers.join(" | ")}`);
+}
+const cfsTwoBadgeHtml = context.renderCfsDescription(cfsCases[2].facts);
+assert.match(cfsTwoBadgeHtml, /UEFA Champions League Champions can be added using the product options/);
+assert.match(cfsTwoBadgeHtml, /FIFA Club World Cup Champions can be added using the product options/);
+
+let cfsApprovedBranchCount = 0;
+for (const audience of ["kids", "men", "women"]) {
+  for (const listing_configuration of ["plain_customisable", "pre_applied_player"]) {
+    assert.ok(context.detectBranch({
+      site: "CFS", audience, product_type: "shirt_only", included_items: "shirt_only",
+      socks_status: "not_applicable", listing_configuration, sleeve_length: "short_sleeve"
+    }));
+    cfsApprovedBranchCount += 1;
+  }
+}
+for (const audience of ["kids", "men", "adult", "women"]) {
+  for (const listing_configuration of ["plain_customisable", "pre_applied_player"]) {
+    for (const socksIncluded of [false, true]) {
+      assert.ok(context.detectBranch({
+        site: "CFS",
+        audience,
+        product_type: "full_kit",
+        included_items: socksIncluded ? "shirt_shorts_and_socks" : "shirt_and_shorts",
+        socks_status: socksIncluded ? "included" : "unavailable",
+        listing_configuration,
+        sleeve_length: "short_sleeve"
+      }));
+      cfsApprovedBranchCount += 1;
+    }
+  }
+}
+for (const listing_configuration of ["plain_customisable", "pre_applied_player"]) {
+  assert.ok(context.detectBranch({
+    site: "CFS", audience: "baby", product_type: "shirt_only", included_items: "shirt_only",
+    socks_status: "not_applicable", listing_configuration, sleeve_length: "baby_suit"
+  }));
+  cfsApprovedBranchCount += 1;
+}
+assert.equal(cfsApprovedBranchCount, 24);
 assert.match(validationErrors({ season: "2025/26" }), /indicates season 2026\/27/);
 assert.match(validationErrors({ team: "Arsenal" }), /Team field is Arsenal/);
 assert.match(validationErrors({ product_name: "Nottingham Forest MESSI 10 Home Kids Football Kit 2026\/27" }), /configured as No Printed/);

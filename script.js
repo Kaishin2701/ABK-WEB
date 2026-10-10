@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.4.0',
+        version: '6.4.1',
         label: 'Current release',
+        title: 'Expanded CFS Product coverage',
+        description: 'CFS Product now supports the full single-product range available in KFK, including shirts, long-sleeve products, kits with or without socks, fixed player prints, Baby Suits, all audiences and independent sleeve and chest badges. Controlled wording rotation keeps repeated generations distinct while preserving every verified product fact.'
+    },
+    {
+        version: '6.4.0',
+        label: 'Previous release',
         title: 'Multi-site Description Builder',
         description: 'Create Description now opens with a dedicated website selector. KFK keeps its existing Product and Bundle workflows, while CFS Product adds its own verified-fact inputs, Shirt Facts, Make It Yours and Good to Know template, plus site-specific validation and audit checks. CFS Bundle, RFK and RFS remain marked as coming soon.'
     },
@@ -22,12 +28,6 @@ const UPDATE_LOG_ENTRIES = [
         label: 'Previous release',
         title: 'Combined item details',
         description: 'Printed Bundle items now show their fixed player print and colours together in one Product Details line, avoiding repeated labels for duplicate kits.'
-    },
-    {
-        version: '6.2.1',
-        label: 'Previous release',
-        title: 'Item-by-item colour details',
-        description: 'Bundle Product Details now list colours on a separate, clearly labelled line for every shirt and kit, making each item easier to check before ordering.'
     },
 ];
 
