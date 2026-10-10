@@ -1288,3 +1288,159 @@ input:disabled,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
 }
+
+/* Single-product editor: mirrors the Bundle item editor without add/save controls. */
+#factForm.product-single-editor {
+  padding: 16px;
+  border: 1px solid rgba(0, 255, 153, 0.28);
+  border-radius: 14px;
+  background: rgba(8, 24, 18, 0.58);
+  gap: 14px;
+}
+
+#factForm.product-single-editor > label,
+#factForm.product-single-editor .product-selection-field,
+#factForm.product-single-editor .piece-size-summary,
+#factForm.product-single-editor .image-colour-assistant {
+  min-width: 0;
+}
+
+#factForm.product-single-editor .product-selection-field {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#factForm.product-single-editor .product-item-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#factForm.product-single-editor #productPersonalisationDisplay:disabled {
+  color: var(--muted);
+  opacity: 1;
+  cursor: default;
+}
+
+#factForm.product-single-editor .product-size-summary {
+  display: grid;
+  grid-template-columns: minmax(224px, 1fr) minmax(256px, 1.2fr);
+  align-items: end;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(10, 12, 11, 0.45);
+}
+
+#factForm.product-single-editor .standard-size-summary {
+  align-self: center;
+  color: var(--accent);
+  font-weight: 700;
+  text-align: right;
+}
+
+#factForm.product-single-editor .bundle-colour-assistant {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  #factForm.product-single-editor .product-item-controls,
+  #factForm.product-single-editor .product-size-summary {
+    grid-template-columns: 1fr;
+  }
+
+  #factForm.product-single-editor .standard-size-summary {
+    text-align: left;
+  }
+}
+
+#factForm.product-single-editor .product-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  align-items: end;
+}
+
+#factForm.product-single-editor .product-badge-grid > label {
+  min-width: 0;
+  margin: 0;
+}
+
+#factForm.product-single-editor .product-badge-grid select,
+#factForm.product-single-editor .product-badge-grid input,
+#factForm.product-single-editor .product-badge-grid .badge-league-control {
+  width: 100%;
+  min-width: 0;
+}
+
+#factForm.product-single-editor .product-badge-grid .badge-league-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#factForm.product-single-editor .product-badge-grid .badge-league-autocomplete {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+#factForm.product-single-editor .product-badge-grid .badge-league-suggestions {
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  width: auto;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+#factForm.product-single-editor .product-badge-grid .badge-champion-toggle {
+  width: 52px;
+}
+
+@media (max-width: 620px) {
+  #factForm.product-single-editor .product-badge-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bounded-badge-autocomplete {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.bounded-badge-autocomplete > .badge-league-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  width: auto;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.bounded-badge-autocomplete .badge-league-suggestion {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 0;
+  background: #1b1b1b;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.bounded-badge-autocomplete .badge-league-suggestion:hover,
+.bounded-badge-autocomplete .badge-league-suggestion.active {
+  background: rgba(0, 255, 153, 0.13);
+  color: var(--accent);
+}

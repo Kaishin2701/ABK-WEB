@@ -35,6 +35,8 @@ const context = vm.createContext({
   displayName: (value) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase(),
   allowedTags: new Set(["P", "H3", "UL", "LI", "STRONG", "A"]),
   forbiddenTerms: [],
+  descriptionDashPattern: /[-\u2013\u2014]/g,
+  descriptionDashCheckPattern: /[-\u2013\u2014]/g,
   recommendedActions: () => [],
   standardBundleSizeFacts: (audience) => ({
     kids: { visible_size_range: "Kids sizes 16-28, suggested ages 3-13", size_profile: "kids_16_28" },
@@ -53,6 +55,8 @@ vm.runInContext(sourceBetween("function productTitleFromImageName", "function us
 vm.runInContext(sourceBetween("function inferBundleAudienceFromName", "function inferBundlePieceFromName"), context);
 vm.runInContext(sourceBetween("function expectedAudienceForRecipient", "function showBundlePieceErrors"), context);
 vm.runInContext(sourceBetween("function detectBranch", "function productNameConflict"), context);
+vm.runInContext(sourceBetween("function badgeLine", "function sizingWarningLine"), context);
+vm.runInContext(sourceBetween("function removeDashesFromText", "function removeDescriptionDashes"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
 vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthdayGiftPack"), context);
 vm.runInContext(sourceBetween("function isBirthdayGiftPack", "function auditPieceBasedBundleDescription"), context);
@@ -65,8 +69,38 @@ for (const league of ["FIFA World Cup", "Saudi Pro League", "MLS", "FIFA Club Wo
   assert.ok(context.badgeLeagueOptions.includes(league), `${league} is missing from the shared badge list`);
 }
 
+const productSleeveAndChestBadge = context.badgeLine({
+  badge_status: "available",
+  badge_league: "Premier League",
+  badge_champion_status: "not_champion",
+  chest_badge_status: "available",
+  chest_badge_league: "FIFA Club World Cup",
+  chest_badge_champion_status: "champion"
+});
+assert.match(productSleeveAndChestBadge, /Premier League sleeve badge and FIFA Club World Cup Champions chest badge can be added\./);
+assert.doesNotMatch(productSleeveAndChestBadge, /3\.99|&pound;|£/);
+assert.match(context.badgeLine({
+  badge_status: "unavailable",
+  chest_badge_status: "available",
+  chest_badge_league: "FIFA Club World Cup",
+  chest_badge_champion_status: "not_champion"
+}), /FIFA Club World Cup chest badge can be added\./);
+assert.equal(context.badgeLine({ badge_status: "unavailable", chest_badge_status: "unavailable" }), "");
+assert.equal(context.removeDashesFromText("Men sizes S–XXL"), "Men sizes S-XXL");
+assert.equal(context.removeDashesFromText("Kids sizes 16—28, suggested ages 3–13"), "Kids sizes 16-28, suggested ages 3-13");
+assert.equal(context.containsForbiddenDescriptionDash("Men sizes S-XXL; kids sizes 16-28"), false);
+
 assert.match(htmlSource, /<option value="men">Men<\/option>/);
 assert.match(htmlSource, /<option value="women">Women<\/option>/);
+assert.match(htmlSource, /id="factForm" class="fact-grid product-single-editor"/);
+assert.match(htmlSource, /id="productPersonalisationDisplay"/);
+assert.match(htmlSource, /id="productSizeRangeSelect"/);
+assert.match(htmlSource, /id="productStandardSizeSummary"/);
+assert.match(htmlSource, /id="productBadgeGrid" class="span-2 product-badge-grid"/);
+assert.match(htmlSource, /id="productSleeveBadgeNameField"/);
+assert.match(htmlSource, /id="productChestBadgeNameField"/);
+assert.match(htmlSource, /Product image &amp; colour assistant/);
+assert.doesNotMatch(sourceBetween("function getFacts", "function hasStandaloneKeyword"), /badge_price_gbp/);
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "men", recipient_label: "", audience: "men" }), "Men");
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "women", recipient_label: "", audience: "women" }), "Women");
 assert.equal(context.bundleRecipientLabelForPiece({ recipient_role: "mum", recipient_label: "", audience: "women" }), "Mum");
@@ -203,7 +237,7 @@ assert.match(longSleeveShirtIncluded, /one long-sleeve football shirt\.<\/li>/);
 assert.doesNotMatch(longSleeveShirtIncluded, /shorts and socks are not included/);
 assert.match(standardHtml, /<strong>Son:<\/strong> 1 &times; Inter Miami Away kids kit: shirt, matching shorts and socks\. Messi name and number 10 are already applied to the back\./);
 assert.match(standardHtml, /<strong>Material:<\/strong> Made from lightweight polyester fabric/);
-assert.match(standardHtml, /Dad: Men sizes S&ndash;XXL; Son: Kids sizes 16&ndash;28, suggested ages 3&ndash;13/);
+assert.match(standardHtml, /Dad: Men sizes S-XXL; Son: Kids sizes 16-28, suggested ages 3-13/);
 assert.doesNotMatch(standardHtml, /\bPiece\b/);
 assert.match(standardHtml, /<strong>Son kit:<\/strong> Messi name and number 10 are already applied and included; black shirt, black shorts, pink socks\./);
 assert.match(standardHtml, /<strong>Dad shirt colours:<\/strong> pink shirt\./);
@@ -316,6 +350,13 @@ assert.match(htmlSource, /id="bundleSizeRangeSelect"/);
 assert.doesNotMatch(htmlSource, /id="bundleCustomSizeRangeToggle"/);
 assert.match(htmlSource, /id="bundleChestBadgeStatusSelect"/);
 assert.match(htmlSource, /id="bundleChestBadgeLeague"/);
+assert.match(htmlSource, /id="chestBadgeStatusSelect"/);
+assert.match(htmlSource, /id="chestBadgeLeagueInput"/);
+assert.match(htmlSource, /id="chestBadgeChampionToggle"/);
+assert.doesNotMatch(appSource, /badge_price_gbp|for &pound;3\.99|fixed sleeve badge price/i);
+assert.doesNotMatch(htmlSource, /£3\.99|&pound;3\.99|GBP 3\.99/i);
+assert.doesNotMatch(appSource, /S&ndash;XXL|\$1&ndash;\$2/);
+assert.doesNotMatch(appSource, /(?:sizes|ages)[^"\n]*&ndash;/i);
 assert.doesNotMatch(htmlSource, /id="bundleBadgePositionApplicationSelect"/);
 assert.doesNotMatch(htmlSource, /id="bundleBadgeApplicationSelect"/);
 assert.doesNotMatch(htmlSource, /id="bundleAddBadgeBtn"/);
@@ -407,7 +448,7 @@ assert.doesNotMatch(giftPackHtml, /<p>|Key Buying Details/);
 assert.match(giftPackHtml, /1 &times; Nottingham Forest Home kids kit: shirt, matching shorts and socks\./);
 assert.match(giftPackHtml, /Home kit colours:<\/strong> red shirt, white shorts, red socks\./);
 assert.match(giftPackHtml, /Away kit colours:<\/strong> green shirt, green shorts, green socks\./);
-assert.match(giftPackHtml, /kids sizes 16&ndash;28 \(ages 3&ndash;13\)/);
+assert.match(giftPackHtml, /kids sizes 16-28 \(ages 3-13\)/);
 assert.match(giftPackHtml, /Home kit badge options:<\/strong> Premier League sleeve badge can be added\./);
 assert.match(giftPackHtml, /Away kit badge options:<\/strong> Premier League sleeve badge can be added\./);
 assert.match(giftPackHtml, /Promo codes can&rsquo;t be applied to this gift pack/);

@@ -2,8 +2,8 @@ const UPDATE_LOG_ENTRIES = [
     {
         version: '6.3.0',
         label: 'Current release',
-        title: 'Position-aware badge options',
-        description: 'Each Bundle item can now define optional sleeve and chest badges independently, including Champions wording for either position. Badge copy is generated as one clear item-specific line without assuming how the buy-box options are configured.'
+        title: 'Unified Product and badge editor',
+        description: 'Product mode now uses the streamlined single-item editor from Bundle mode, with suggested size ranges, image-assisted colours and independent sleeve and chest badges. Product and Bundle badge fields now share the same compact autocomplete, Champions toggle and position-aware description output.'
     },
     {
         version: '6.2.3',

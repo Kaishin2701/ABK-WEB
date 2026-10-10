@@ -35,12 +35,27 @@ const productAudienceSelect = document.querySelector("#productAudienceSelect");
 const adultAudienceOption = productAudienceSelect.querySelector('option[value="adult"]');
 const productKindSelect = document.querySelector("#productKindSelect");
 const productKitTypeSelect = document.querySelector("#productKitTypeSelect");
+const chestBadgeStatusSelect = document.querySelector("#chestBadgeStatusSelect");
+const chestBadgeLeagueInput = document.querySelector("#chestBadgeLeagueInput");
+const chestBadgeChampionToggle = document.querySelector("#chestBadgeChampionToggle");
+const chestBadgeChampionInput = document.querySelector("#chestBadgeChampionInput");
+const productChestBadgeOptionsList = document.querySelector("#productChestBadgeOptions");
 const productOtherKitType = document.querySelector("#productOtherKitType");
 const productSocksSelect = document.querySelector("#productSocksSelect");
 const productPrintSelect = document.querySelector("#productPrintSelect");
 const productPrintFields = document.querySelector("#productPrintFields");
 const productPrintName = document.querySelector("#productPrintName");
 const productPrintNumber = document.querySelector("#productPrintNumber");
+const productBadgeGrid = document.querySelector("#productBadgeGrid");
+const productSleeveBadgeStatusField = document.querySelector("#productSleeveBadgeStatusField");
+const productSleeveBadgeNameField = document.querySelector("#productSleeveBadgeNameField");
+const productSleeveBadgeNameControl = document.querySelector("#productSleeveBadgeNameControl");
+const productChestBadgeStatusField = document.querySelector("#productChestBadgeStatusField");
+const productChestBadgeNameField = document.querySelector("#productChestBadgeNameField");
+const productChestBadgeNameControl = document.querySelector("#productChestBadgeNameControl");
+const productPersonalisationDisplay = document.querySelector("#productPersonalisationDisplay");
+const productSizeRangeSelect = document.querySelector("#productSizeRangeSelect");
+const productStandardSizeSummary = document.querySelector("#productStandardSizeSummary");
 const bundleTypeSelect = document.querySelector("#bundleTypeSelect");
 const bundleTypeChoices = document.querySelector("#bundleTypeChoices");
 const bundleRecipientSelect = document.querySelector("#bundleRecipientSelect");
@@ -128,8 +143,7 @@ const bundleImageColourState = {
 
 const fixedKfkFacts = Object.freeze({
   version_style: "fan_version",
-  material: "polyester",
-  badge_price_gbp: 3.99
+  material: "polyester"
 });
 
 const defaultFacts = {
@@ -174,12 +188,138 @@ const badgeLeagueOptions = [
   "FIFA Club World Cup"
 ];
 
+function setChestBadgeChampionStatus(isChampion) {
+  const available = chestBadgeStatusSelect.value === "available";
+  const active = available && Boolean(isChampion);
+  chestBadgeChampionInput.value = active ? "champion" : "not_champion";
+  chestBadgeChampionToggle.classList.toggle("active", active);
+  chestBadgeChampionToggle.disabled = !available;
+  chestBadgeChampionToggle.setAttribute("aria-pressed", String(active));
+  chestBadgeLeagueInput.disabled = !available;
+  productChestBadgeNameField.classList.toggle("hidden", !available);
+  chestBadgeLeagueInput.classList.toggle("hidden", !available);
+  chestBadgeChampionToggle.classList.toggle("hidden", !available);
+  chestBadgeLeagueInput.required = available;
+  if (!available) chestBadgeLeagueInput.value = "";
+}
+
+setChestBadgeChampionStatus(false);
+
 function renderBundleBadgeLeagueOptions() {
-  bundleBadgeLeagueOptionsList.replaceChildren(...badgeLeagueOptions.map((league) => {
+  const makeOptions = () => badgeLeagueOptions.map((league) => {
     const option = document.createElement("option");
     option.value = league;
     return option;
-  }));
+  });
+  productChestBadgeOptionsList.replaceChildren(...makeOptions());
+  bundleBadgeLeagueOptionsList.replaceChildren(...makeOptions());
+}
+
+function setupProductBadgeLayout() {
+  const directFormChild = (node) => {
+    let current = node;
+    while (current?.parentElement && current.parentElement !== form) current = current.parentElement;
+    return current?.parentElement === form ? current : null;
+  };
+  const oldRoots = new Set([
+    badgeStatusSelect,
+    badgeLeagueInput,
+    chestBadgeStatusSelect,
+    chestBadgeLeagueInput
+  ].map(directFormChild).filter(Boolean));
+
+  productSleeveBadgeStatusField.append(badgeStatusSelect);
+  productSleeveBadgeNameControl.append(badgeLeagueInput, badgeChampionToggle);
+  document.querySelector("#productSleeveBadgeAutocomplete").append(badgeLeagueSuggestions);
+  productSleeveBadgeNameField.append(badgeChampionInput);
+  productChestBadgeStatusField.append(chestBadgeStatusSelect);
+  productChestBadgeNameControl.append(chestBadgeLeagueInput, chestBadgeChampionToggle);
+  productChestBadgeNameField.append(chestBadgeChampionInput);
+  const chestOptions = document.querySelector("#productChestBadgeOptions");
+  if (chestOptions) productChestBadgeNameField.append(chestOptions);
+
+  oldRoots.forEach((root) => {
+    if (root !== productBadgeGrid) root.classList.add("hidden");
+  });
+}
+
+function setupBoundedBadgeAutocomplete(input) {
+  if (!input || input.dataset.boundedBadgeAutocomplete === "true") return;
+  input.dataset.boundedBadgeAutocomplete = "true";
+  input.removeAttribute("list");
+
+  const control = input.closest(".badge-league-control") || input.parentElement;
+  let wrapper = control.parentElement?.classList.contains("badge-league-autocomplete")
+    ? control.parentElement
+    : null;
+  if (!wrapper) {
+    wrapper = document.createElement("span");
+    wrapper.className = "badge-league-autocomplete";
+    control.parentElement.insertBefore(wrapper, control);
+    wrapper.append(control);
+  }
+  wrapper.classList.add("bounded-badge-autocomplete");
+
+  const suggestions = document.createElement("span");
+  suggestions.className = "badge-league-suggestions hidden";
+  suggestions.setAttribute("role", "listbox");
+  suggestions.setAttribute("aria-label", "Badge suggestions");
+  wrapper.append(suggestions);
+
+  let activeIndex = -1;
+  const matches = () => {
+    const query = input.value.trim().toLowerCase();
+    return badgeLeagueOptions.filter((league) => league.toLowerCase().includes(query));
+  };
+  const render = (open = true) => {
+    const values = matches();
+    suggestions.replaceChildren(...values.map((league, index) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "badge-league-suggestion";
+      option.textContent = league;
+      option.setAttribute("role", "option");
+      option.classList.toggle("active", index === activeIndex);
+      option.addEventListener("mousedown", (event) => event.preventDefault());
+      option.addEventListener("click", () => {
+        input.value = league;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        suggestions.classList.add("hidden");
+      });
+      return option;
+    }));
+    suggestions.classList.toggle("hidden", !open || !values.length);
+  };
+
+  input.addEventListener("focus", () => {
+    activeIndex = -1;
+    render(true);
+  });
+  input.addEventListener("input", () => {
+    activeIndex = -1;
+    render(true);
+  });
+  input.addEventListener("blur", () => window.setTimeout(() => suggestions.classList.add("hidden"), 120));
+  input.addEventListener("keydown", (event) => {
+    const values = matches();
+    if (["ArrowDown", "ArrowUp"].includes(event.key) && values.length) {
+      event.preventDefault();
+      activeIndex = event.key === "ArrowDown"
+        ? (activeIndex + 1) % values.length
+        : (activeIndex - 1 + values.length) % values.length;
+      render(true);
+      suggestions.querySelector(".active")?.scrollIntoView({ block: "nearest" });
+    } else if (event.key === "Enter" && activeIndex >= 0 && values[activeIndex]) {
+      event.preventDefault();
+      input.value = values[activeIndex];
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      suggestions.classList.add("hidden");
+    } else if (event.key === "Escape") {
+      suggestions.classList.add("hidden");
+    }
+  });
 }
 
 function getFacts() {
@@ -196,6 +336,11 @@ function getFacts() {
   facts.badge_champion_status = facts.badge_status === "available" && facts.badge_champion_status === "champion"
     ? "champion"
     : "not_champion";
+  facts.chest_badge_status = facts.chest_badge_status === "available" ? "available" : "unavailable";
+  facts.chest_badge_league = facts.chest_badge_status === "available" ? String(facts.chest_badge_league || "").trim() : "";
+  facts.chest_badge_champion_status = facts.chest_badge_status === "available" && facts.chest_badge_champion_status === "champion"
+    ? "champion"
+    : "not_champion";
 
   applyAnotherValue(facts, "kit_type");
   applyAnotherValue(facts, "sleeve_length");
@@ -207,6 +352,11 @@ function getFacts() {
   normaliseProductType(facts);
   applyProductTypeRules(facts);
   applyDerivedSizeFacts(facts);
+  const selectedSizeRange = selectedBundleSizeRangeFacts(facts.audience, productSizeRangeSelect.value || "standard");
+  facts.size_range_mode = selectedSizeRange.mode;
+  facts.size_range_selection = productSizeRangeSelect.value || "standard";
+  facts.visible_size_range = selectedSizeRange.visible_size_range;
+  facts.size_profile = selectedSizeRange.size_profile;
 
   if (facts.listing_configuration === "plain_customisable") {
     facts.personalisation_status = "available";
@@ -376,6 +526,7 @@ function syncProductSelectionFields() {
   productPrintFields.classList.toggle("visible", isPrinted);
   productPrintName.required = isPrinted;
   productPrintNumber.required = isPrinted;
+  productPersonalisationDisplay.value = isPrinted ? "Personalisation Unavailable" : "Personalisation Available";
 
   if (!isPrinted) {
     productPrintName.value = "";
@@ -395,13 +546,15 @@ function syncProductSelectionFields() {
   if (!usesSocksColour) mainColourSocksInput.value = "";
 
   syncBadgeField();
+  syncProductSizeControls();
   updateImageColourAssistantUi();
   refreshEnhancedSelects();
 }
 
 function syncBadgeField() {
   const isAvailable = badgeStatusSelect.value === "available";
-  badgeLeagueField.classList.toggle("hidden", !isAvailable);
+  badgeLeagueField.classList.add("hidden");
+  productSleeveBadgeNameField.classList.toggle("hidden", !isAvailable);
   badgeLeagueInput.required = isAvailable;
   badgeChampionToggle.disabled = !isAvailable;
   if (!isAvailable) {
@@ -1241,7 +1394,7 @@ function normalizedFactValue(value) {
 }
 
 function normalizedSizeRange(value) {
-  return normalizedFactValue(value).replace(/[–—]/g, "-");
+  return normalizedFactValue(value).replace(/[\u2013\u2014]/g, "-");
 }
 
 function inferBundlePieceFromName() {
@@ -1284,6 +1437,9 @@ function syncProductControlsFromFacts(facts) {
   badgeStatusSelect.value = facts.badge_status === "available" ? "available" : "unavailable";
   badgeLeagueInput.value = facts.badge_league || "";
   setBadgeChampionStatus(facts.badge_champion_status === "champion");
+  chestBadgeStatusSelect.value = facts.chest_badge_status === "available" ? "available" : "unavailable";
+  chestBadgeLeagueInput.value = facts.chest_badge_league || "";
+  setChestBadgeChampionStatus(facts.chest_badge_champion_status === "champion");
   syncProductSelectionFields();
 }
 
@@ -1725,6 +1881,24 @@ function bundleSizeRangeSelectionForPiece(piece) {
     || "standard";
 }
 
+function syncProductSizeControls() {
+  const options = bundleSizeRangeOptions(productAudienceSelect.value);
+  const requestedValue = productSizeRangeSelect.value || "standard";
+  productSizeRangeSelect.replaceChildren(...options.map((option) => {
+    const node = document.createElement("option");
+    node.value = option.value;
+    node.textContent = option.label;
+    return node;
+  }));
+  productSizeRangeSelect.value = options.some((option) => option.value === requestedValue) ? requestedValue : "standard";
+  const sizeRangeFacts = selectedBundleSizeRangeFacts(productAudienceSelect.value, productSizeRangeSelect.value);
+  productStandardSizeSummary.textContent = !options.length
+    ? "Enter an audience in the product name to derive the suggested range."
+    : sizeRangeFacts.mode === "custom"
+      ? "Optional extended range selected — review before publishing."
+      : "Suggested range selected.";
+}
+
 function syncBundleSizeControls() {
   const options = bundleSizeRangeOptions(bundleAudienceSelect.value);
   const requestedValue = bundleSizeRangeSelect.value || "standard";
@@ -1995,9 +2169,28 @@ const descriptionDashPattern = /[-‐‑‒–—―−]/g;
 const descriptionDashCheckPattern = /[-‐‑‒–—―−]/;
 
 function removeDashesFromText(value) {
-  return String(value || "")
+  const sizeRanges = [];
+  const protectedText = String(value || "").replace(
+    /\b(?:(?:XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL)\s*[\u002D\u2013\u2014]\s*(?:XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL)|\d+\s*[\u002D\u2013\u2014]\s*\d+)\b/gi,
+    (range) => {
+      const token = `ABKSIZERANGE${sizeRanges.length}TOKEN`;
+      sizeRanges.push(range.replace(/\s*[\u002D\u2013\u2014]\s*/g, "-"));
+      return token;
+    }
+  );
+  return protectedText
     .replace(descriptionDashPattern, " ")
-    .replace(/[ \t]{2,}/g, " ");
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ABKSIZERANGE(\d+)TOKEN/g, (_, index) => sizeRanges[Number(index)]);
+}
+
+function containsForbiddenDescriptionDash(value) {
+  const withoutSizeRanges = String(value || "").replace(
+    /\b(?:(?:XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL)\s*[\u002D\u2013\u2014]\s*(?:XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL)|\d+\s*[\u002D\u2013\u2014]\s*\d+)\b/gi,
+    ""
+  );
+  descriptionDashCheckPattern.lastIndex = 0;
+  return descriptionDashCheckPattern.test(withoutSizeRanges);
 }
 
 function removeDescriptionDashes(html) {
@@ -2333,16 +2526,20 @@ function validateFacts(facts, branch) {
     blockers.push("badge_league is required when badge_status is available.");
   }
 
+  if (!["available", "unavailable"].includes(facts.chest_badge_status)) {
+    blockers.push("chest_badge_status must be available or unavailable.");
+  }
+
+  if (facts.chest_badge_status === "available" && !facts.chest_badge_league) {
+    blockers.push("chest_badge_league is required when chest_badge_status is available.");
+  }
+
   if (facts.version_style !== "fan_version") {
     blockers.push("KFK products must use the fixed fan version.");
   }
 
   if (facts.material !== "polyester") {
     blockers.push("KFK products must use the fixed polyester material value.");
-  }
-
-  if (Number(facts.badge_price_gbp) !== 3.99) {
-    blockers.push("The fixed sleeve badge price must be £3.99.");
   }
 
   if (facts.verification_status === "conflict" || facts.verification_status === "unverified") {
@@ -2522,11 +2719,20 @@ function materialLine(facts) {
 }
 
 function badgeLine(facts) {
-  if (facts.badge_status !== "available") return "";
+  const sleeveAvailable = facts.badge_status === "available";
+  const chestAvailable = facts.chest_badge_status === "available";
+  if (!sleeveAvailable && !chestAvailable) return "";
 
-  const price = Number(facts.badge_price_gbp || fixedKfkFacts.badge_price_gbp).toFixed(2);
-  const badgeLabel = `${facts.badge_league}${facts.badge_champion_status === "champion" ? " Champions" : ""}`;
-  return `<li><strong>Sleeve badge:</strong> An optional ${esc(badgeLabel)} sleeve badge can be added for &pound;${price}. Select it in the product options if required. It is not included in the base kit.</li>`;
+  const options = [];
+  if (sleeveAvailable) {
+    const sleeveLabel = `${facts.badge_league}${facts.badge_champion_status === "champion" ? " Champions" : ""}`;
+    options.push(`${sleeveLabel} sleeve badge`);
+  }
+  if (chestAvailable) {
+    const chestLabel = `${facts.chest_badge_league}${facts.chest_badge_champion_status === "champion" ? " Champions" : ""}`;
+    options.push(`${chestLabel} chest badge`);
+  }
+  return `<li><strong>Badge options:</strong> ${esc(humanList(options))} can be added.</li>`;
 }
 
 function sizingWarningLine(facts) {
@@ -2692,7 +2898,7 @@ function auditDescription(html, facts, blockers, reviewFlags, resolvedBranch = n
     blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
   }
 
-  if (descriptionDashCheckPattern.test(rootText)) {
+  if (containsForbiddenDescriptionDash(rootText)) {
     blockers.push("Description text must not contain dash characters.");
   }
 
@@ -2707,14 +2913,23 @@ function auditDescription(html, facts, blockers, reviewFlags, resolvedBranch = n
     if (!text.includes("material: polyester")) {
       blockers.push("Product descriptions must identify the fixed polyester material.");
     }
-    if (facts.badge_status === "available" && (!facts.badge_league || !text.includes(removeDashesFromText(facts.badge_league).toLowerCase()) || !text.includes("sleeve badge") || !text.includes("3.99"))) {
-      blockers.push("Available badge products must show the entered league badge option and £3.99 price.");
+    if (facts.badge_status === "available" && (!facts.badge_league || !text.includes(removeDashesFromText(facts.badge_league).toLowerCase()) || !text.includes("sleeve badge"))) {
+      blockers.push("Available sleeve badge products must show the entered badge option and sleeve position.");
     }
     if (facts.badge_champion_status === "champion" && !text.includes("champions sleeve badge")) {
       blockers.push("Champion badge products must identify the Champions sleeve badge option.");
     }
-    if (facts.badge_status === "unavailable" && text.includes("sleeve badge")) {
+    if (facts.chest_badge_status === "available" && (!facts.chest_badge_league || !text.includes(removeDashesFromText(facts.chest_badge_league).toLowerCase()) || !text.includes("chest badge"))) {
+      blockers.push("Available chest badge products must show the entered badge option and chest position.");
+    }
+    if (facts.chest_badge_champion_status === "champion" && !text.includes("champions chest badge")) {
+      blockers.push("Champion chest badge products must identify the Champions chest badge option.");
+    }
+    if (facts.badge_status === "unavailable" && facts.chest_badge_status !== "available" && text.includes("sleeve badge")) {
       blockers.push("Unavailable badge products must not show the badge option.");
+    }
+    if (text.includes("£3.99")) {
+      blockers.push("Product badge copy must not include a fixed badge price.");
     }
     if (facts.product_type === "shirt_only" && sectionText("product details").includes("shorts")) {
       blockers.push("Shirt-only products must not show a shorts colour in Product Details.");
@@ -3124,8 +3339,8 @@ function renderBundlePieceDetails(summary) {
 
 function bundleRangeHtml(value) {
   return esc(value)
-    .replace(/(\d)\s*-\s*(\d)/g, "$1&ndash;$2")
-    .replace(/\bS\s*-\s*XXL\b/gi, "S&ndash;XXL");
+    .replace(/(\d)\s*[\u002D\u2013\u2014]\s*(\d)/g, "$1-$2")
+    .replace(/\bS\s*[\u002D\u2013\u2014]\s*XXL\b/gi, "S-XXL");
 }
 
 function renderBundleSizes(summary) {
@@ -3441,7 +3656,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     "<li><strong>Version:</strong> Fan version.</li>",
     "<li><strong>Sleeve length:</strong> Short sleeve.</li>",
     ...pieceDetails,
-    `<li><strong>Sizes:</strong> kids sizes 16&ndash;28 (ages 3&ndash;13) for each kit. ${sizeSelection} See the Size Guide tab for measurements.</li>`,
+    `<li><strong>Sizes:</strong> kids sizes 16-28 (ages 3-13) for each kit. ${sizeSelection} See the Size Guide tab for measurements.</li>`,
     "<li><strong>Material:</strong> Made from lightweight polyester fabric.</li>",
     "<li>Exact shades may vary slightly between screens and production batches. Please use the product photos as your guide.</li>",
     "</ul>",
@@ -3939,6 +4154,10 @@ document.querySelectorAll(".mode-tab").forEach((button) => {
   button.addEventListener("click", () => setMode(button.dataset.mode));
 });
 
+form.addEventListener("reset", () => {
+  window.setTimeout(() => setChestBadgeChampionStatus(false), 0);
+});
+
 generateBtn.addEventListener("click", () => scheduleGenerate({ advanceVariant: true }));
 loadSampleBtn.addEventListener("click", loadSample);
 clearAllBtn.addEventListener("click", clearAll);
@@ -3960,7 +4179,7 @@ productNameInput.addEventListener("input", () => {
   variantOffset = 0;
   scheduleGenerate();
 });
-[mainColourShirtInput, mainColourShortsInput, mainColourSocksInput, badgeLeagueInput].forEach((field) => {
+[mainColourShirtInput, mainColourShortsInput, mainColourSocksInput, badgeLeagueInput, chestBadgeLeagueInput].forEach((field) => {
   field.addEventListener("input", () => {
     if (field === badgeLeagueInput) {
       if (tabSuggestionContext?.type !== "badge") delete badgeLeagueInput.dataset.tabSuggestionQuery;
@@ -4009,7 +4228,8 @@ productOtherKitType.addEventListener("input", () => {
   productKitTypeSelect,
   productSocksSelect,
   productPrintSelect,
-  badgeStatusSelect
+  badgeStatusSelect,
+  chestBadgeStatusSelect
 ].forEach((field) => {
   field.addEventListener("change", () => {
     if (field === productPrintSelect) isPrintInferredFromProductName = false;
@@ -4022,6 +4242,20 @@ productOtherKitType.addEventListener("input", () => {
 badgeChampionToggle.addEventListener("click", () => {
   if (badgeChampionToggle.disabled) return;
   setBadgeChampionStatus(badgeChampionInput.value !== "champion");
+  variantOffset = 0;
+  scheduleGenerate();
+});
+chestBadgeStatusSelect.addEventListener("change", () => {
+  setChestBadgeChampionStatus(chestBadgeChampionInput.value === "champion");
+});
+chestBadgeChampionToggle.addEventListener("click", () => {
+  if (chestBadgeChampionToggle.disabled) return;
+  setChestBadgeChampionStatus(chestBadgeChampionInput.value !== "champion");
+  variantOffset = 0;
+  scheduleGenerate();
+});
+productSizeRangeSelect.addEventListener("change", () => {
+  syncProductSizeControls();
   variantOffset = 0;
   scheduleGenerate();
 });
@@ -4101,6 +4335,10 @@ bundleViewMoreImageColoursBtn.addEventListener("click", () => {
   renderBundleImageColourPalette();
 });
 
+setupProductBadgeLayout();
+setupBoundedBadgeAutocomplete(chestBadgeLeagueInput);
+setupBoundedBadgeAutocomplete(bundleBadgeLeague);
+setupBoundedBadgeAutocomplete(bundleChestBadgeLeague);
 renderBundleBadgeLeagueOptions();
 enhanceSelects();
 loadSample();

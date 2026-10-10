@@ -30,7 +30,7 @@
           <span id="branchBadge" class="badge neutral">No branch yet</span>
         </div>
 
-        <form id="factForm" class="fact-grid">
+        <form id="factForm" class="fact-grid product-single-editor">
           <label class="span-2">
             Product name
             <input name="product_name" type="text" placeholder="Inter Miami Home Kids Football Kit 2026/27" required>
@@ -46,16 +46,35 @@
             <input name="season" type="text" placeholder="2026/27" required>
           </label>
 
+          <div id="productBadgeGrid" class="span-2 product-badge-grid" aria-label="Product badge options">
+            <label id="productSleeveBadgeStatusField">
+              Sleeve / shoulder badge
+            </label>
+            <label id="productSleeveBadgeNameField" class="hidden">
+              Sleeve / shoulder badge name
+              <span id="productSleeveBadgeAutocomplete" class="badge-league-autocomplete">
+                <span id="productSleeveBadgeNameControl" class="badge-league-control"></span>
+              </span>
+            </label>
+            <label id="productChestBadgeStatusField">
+              Chest badge
+            </label>
+            <label id="productChestBadgeNameField" class="hidden">
+              Chest badge name
+              <span id="productChestBadgeNameControl" class="badge-league-control"></span>
+            </label>
+          </div>
+
           <label>
-            Sleeve badge option
-            <select name="badge_status" aria-label="Sleeve badge option">
+            Sleeve / shoulder badge
+            <select name="badge_status" aria-label="Sleeve or shoulder badge option">
               <option value="unavailable">Unavailable</option>
               <option value="available">Available</option>
             </select>
           </label>
 
           <label id="badgeLeagueField" class="hidden">
-            Badge league (when available)
+            Sleeve / shoulder badge name
             <span class="badge-league-autocomplete">
               <span class="badge-league-control">
                 <input name="badge_league" type="text" autocomplete="off" placeholder="Search a league, e.g. LaLiga" aria-autocomplete="list" aria-controls="badgeLeagueSuggestions" aria-expanded="false">
@@ -67,7 +86,6 @@
           </label>
 
           <div class="span-2 product-selection-field">
-            <span class="field-label">Product selection</span>
             <input name="audience" type="hidden">
             <input name="product_type" type="hidden">
             <input name="kit_type" type="hidden">
@@ -76,7 +94,7 @@
             <input name="socks_status" type="hidden">
             <input name="listing_configuration" type="hidden">
             <div class="product-item-controls">
-              <select id="productAudienceSelect" aria-label="Product audience">
+              <select id="productAudienceSelect" class="hidden" data-enhance="false" aria-label="Product audience" tabindex="-1">
                 <option value="kids">Kids</option>
                 <option value="men">Men</option>
                 <option value="adult">Adult</option>
@@ -111,6 +129,7 @@
                 <option value="plain_customisable">No Printed</option>
                 <option value="pre_applied_player">Printed</option>
               </select>
+              <input id="productPersonalisationDisplay" type="text" value="Personalisation Available" aria-label="Personalisation status" disabled>
               <input id="productOtherKitType" name="kit_type_another" class="another-input" type="text" placeholder="Enter other kit type">
               <div id="productPrintFields" class="product-print-fields">
                 <input id="productPrintName" name="pre_applied_name" type="text" placeholder="Name, e.g. MESSI">
@@ -119,11 +138,33 @@
             </div>
           </div>
 
-          <div class="span-2 image-colour-assistant" id="imageColourAssistant">
+          <div class="span-2">
+            <span class="field-label">Chest badge</span>
+            <div class="piece-product-controls">
+              <select id="chestBadgeStatusSelect" name="chest_badge_status" aria-label="Product chest badge availability">
+                <option value="unavailable">Unavailable</option>
+                <option value="available">Available</option>
+              </select>
+              <input id="chestBadgeLeagueInput" name="chest_badge_league" type="text" list="productChestBadgeOptions" placeholder="Chest badge name">
+              <datalist id="productChestBadgeOptions"></datalist>
+              <button id="chestBadgeChampionToggle" class="champion-toggle" type="button" aria-pressed="false" title="Mark chest badge as Champions">🏆</button>
+              <input id="chestBadgeChampionInput" name="chest_badge_champion_status" type="hidden" value="not_champion">
+            </div>
+          </div>
+
+          <div class="span-2 piece-size-summary product-size-summary">
+            <label>
+              Size range
+              <select id="productSizeRangeSelect" aria-label="Product size range"></select>
+            </label>
+            <span id="productStandardSizeSummary" class="standard-size-summary">Suggested range selected.</span>
+          </div>
+
+          <div class="span-2 image-colour-assistant bundle-colour-assistant" id="imageColourAssistant">
             <div class="assistant-heading">
               <div>
-                <span class="field-label">Image colour assistant</span>
-                <p class="assistant-copy">Optional browser-only helper. Select a colour field, then click the product image or a palette colour. The colour is applied directly and can be edited as text.</p>
+                <span class="field-label">Product image &amp; colour assistant</span>
+                <p class="assistant-copy">Upload this product's image, select a garment field, then click the image or a palette colour.</p>
               </div>
               <span id="imageColourStatus" class="badge neutral">Not used</span>
             </div>
@@ -171,11 +212,6 @@
 
               </div>
             </div>
-          </div>
-
-          <div class="span-2 fixed-facts-panel" aria-label="Fixed KFK facts">
-            <span class="field-label">Fixed KFK facts</span>
-            <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester &middot; League-specific sleeve badge add-on: &pound;3.99 when available</div>
           </div>
 
         </form>
@@ -392,7 +428,7 @@
             </div>
             <div class="fixed-facts-panel" aria-label="Fixed KFK facts for every bundle piece">
               <span class="field-label">Fixed KFK facts for every item</span>
-              <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester &middot; League-specific sleeve badge add-on: &pound;3.99 when available</div>
+              <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester</div>
             </div>
           </div>
 
