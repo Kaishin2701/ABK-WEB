@@ -177,7 +177,7 @@ const forbiddenTerms = [
 ];
 const badgeLeagueOptions = [
   "Premier League",
-  "LaLiga",
+  "La Liga",
   "Serie A",
   "Bundesliga",
   "Ligue 1",
@@ -407,6 +407,12 @@ function normalizeInputText(value) {
     .replace(/[‘’]/g, "'");
 }
 
+function inferSpecialPlayerPrintFromName(productName) {
+  const match = normalizeInputText(productName)
+    .match(/(?:^|[^a-z0-9])McTOMMINAY\s+(\d{1,2})(?=$|[^a-z0-9])/i);
+  return match ? { name: "McTOMMINAY", number: match[1] } : null;
+}
+
 function selectProductKitType(value) {
   const hasOption = [...productKitTypeSelect.options].some((option) => option.value === value);
   if (hasOption) productKitTypeSelect.value = value;
@@ -492,11 +498,15 @@ function inferProductSelectionFromName() {
   if (hasStandaloneKeyword(productName, "with socks")) productSocksSelect.value = "included";
   if (hasStandaloneKeyword(productName, "no socks") || hasStandaloneKeyword(productName, "without socks")) productSocksSelect.value = "unavailable";
 
+  const specialPlayerPrint = inferSpecialPlayerPrintFromName(productName);
   const playerPrintMatch = normalizeInputText(productName).match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
-  if (playerPrintMatch) {
+  const inferredPlayerPrint = specialPlayerPrint || (playerPrintMatch
+    ? { name: playerPrintMatch[1], number: playerPrintMatch[2] }
+    : null);
+  if (inferredPlayerPrint) {
     productPrintSelect.value = "pre_applied_player";
-    productPrintName.value = playerPrintMatch[1];
-    productPrintNumber.value = playerPrintMatch[2];
+    productPrintName.value = inferredPlayerPrint.name;
+    productPrintNumber.value = inferredPlayerPrint.number;
     isPrintInferredFromProductName = true;
   } else if (isPrintInferredFromProductName) {
     productPrintSelect.value = "plain_customisable";
@@ -1408,6 +1418,8 @@ function inferBundleKitTypeFromName(name) {
 }
 
 function inferBundlePlayerPrintFromName(name) {
+  const specialPlayerPrint = inferSpecialPlayerPrintFromName(name);
+  if (specialPlayerPrint) return specialPlayerPrint;
   const match = normalizeInputText(name).match(/(?:^|[^a-z])([A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(\d{1,2})(?=$|[^a-z0-9])/);
   return match ? { name: match[1].trim(), number: match[2] } : null;
 }

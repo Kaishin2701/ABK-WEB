@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.4.2',
+        version: '6.4.3',
         label: 'Current release',
+        title: 'Badge naming and player-print fixes',
+        description: 'Badge suggestions and their search hint now use the correct La Liga spelling. Product and Bundle title inference also recognises McTOMMINAY as a fixed player print while preserving the required lowercase c in the player name.'
+    },
+    {
+        version: '6.4.2',
+        label: 'Previous release',
         title: 'Automatic CFS visual copy',
         description: 'CFS Product no longer requires a separate visual-facts form. Opening and colour copy is now generated automatically from the verified team, season, product type, kit type and garment colours, with controlled wording rotation for repeated generations. Unverified back-design details are omitted instead of being invented.'
     },

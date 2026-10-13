@@ -74,9 +74,11 @@ const leagueArrayMatch = appSource.match(/const badgeLeagueOptions = (\[[\s\S]*?
 assert.ok(leagueArrayMatch, "Badge league source list is missing");
 vm.runInContext(`globalThis.badgeLeagueOptions = ${leagueArrayMatch[1]};`, context);
 
-for (const league of ["FIFA World Cup", "Saudi Pro League", "MLS", "FIFA Club World Cup"]) {
+for (const league of ["La Liga", "FIFA World Cup", "Saudi Pro League", "MLS", "FIFA Club World Cup"]) {
   assert.ok(context.badgeLeagueOptions.includes(league), `${league} is missing from the shared badge list`);
 }
+assert.ok(!context.badgeLeagueOptions.includes("LaLiga"), "Legacy LaLiga spelling must not appear in the badge list");
+assert.match(htmlSource, /placeholder="Search a league, e\.g\. La Liga"/);
 
 const productSleeveAndChestBadge = context.badgeLine({
   badge_status: "available",
@@ -418,6 +420,17 @@ const inferredMctominayPrint = context.inferBundlePlayerPrintFromName(mctominayT
 assert.equal(inferredMctominayPrint.name, "MCTOMINAY");
 assert.equal(inferredMctominayPrint.number, "4");
 assert.equal(context.normalizedFactValue("MC\u200BTOMINAY"), context.normalizedFactValue("MCTOMINAY"));
+const mixedCaseMctomminayPrint = context.inferBundlePlayerPrintFromName(
+  "Scotland Home Kids Football Kit 2026/27 - McTOMMINAY 4"
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(mixedCaseMctomminayPrint)),
+  { name: "McTOMMINAY", number: "4" }
+);
+assert.match(
+  sourceBetween("function inferProductSelectionFromName", "function syncProductSelectionFields"),
+  /inferSpecialPlayerPrintFromName\(productName\)/
+);
 assert.doesNotMatch(validationErrors({
   product_name: mctominayTitleWithHiddenCharacter,
   team: "Scotland",
