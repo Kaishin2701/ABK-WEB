@@ -2854,6 +2854,10 @@ function cfsBadgeOptionLine(facts, position) {
   return `<li><strong>${isChest ? "Chest badge" : "Sleeve badge"}:</strong> ${esc(label)} can be added using the product options.</li>`;
 }
 
+function cfsFixedPlayerPrintText(facts) {
+  return `Pre-printed with ${displayName(facts.pre_applied_name)} ${facts.pre_applied_number} on the back of the shirt. This print can\u2019t be changed.`;
+}
+
 function cfsColourDetails(facts) {
   const shirtColour = String(facts.main_colour_shirt || "").trim().toLowerCase();
   const shortsColour = String(facts.main_colour_shorts || "").trim().toLowerCase();
@@ -2888,7 +2892,7 @@ function cfsOpening(facts) {
 
 function cfsPersonalisationLine(facts) {
   if (facts.listing_configuration === "pre_applied_player") {
-    return `<li><strong>Name and number:</strong> ${esc(displayName(facts.pre_applied_name))} name and number ${esc(facts.pre_applied_number)} are already applied. A different name and number cannot be selected.</li>`;
+    return "<li><strong>Name and number:</strong> The pre-printed name and number are fixed and cannot be changed.</li>";
   }
   return pick([
     "<li><strong>Name and number:</strong> optional, up to 13 letters and 2 digits.</li>",
@@ -2908,8 +2912,6 @@ function cfsGoodToKnowLines(facts) {
       `<li>Check the spelling before ordering. Personalised ${plural} can’t be returned for a change of mind or wrong size unless we made an error.</li>`,
       `<li>Before ordering a personalised ${kind}, check every letter and digit. Returns for a change of mind or wrong size are not available unless we made an error.</li>`
     ], facts, 42));
-  } else {
-    lines.push(`<li>${esc(displayName(facts.pre_applied_name))} name and number ${esc(facts.pre_applied_number)} are fixed on this product; another name or number cannot be selected.</li>`);
   }
   if (facts.product_type === "shirt_only" && facts.sleeve_length !== "baby_suit") {
     lines.push("<li>This listing includes one shirt only. Shorts and socks are not included.</li>");
@@ -2947,7 +2949,7 @@ function renderCfsDescription(facts) {
   factLines.push(`<li><strong>Sizes:</strong> ${esc(cfsSizeLabel(facts))}</li>`);
   factLines.push(`<li><strong>In the parcel:</strong> ${esc(cfsParcelText(facts))}</li>`);
   if (facts.listing_configuration === "pre_applied_player") {
-    factLines.push(`<li><strong>Player print:</strong> ${esc(displayName(facts.pre_applied_name))} name and number ${esc(facts.pre_applied_number)} are already applied to the back.</li>`);
+    factLines.push(`<li><strong>Player print:</strong> ${esc(cfsFixedPlayerPrintText(facts))}</li>`);
   }
 
   const makeItYours = [
@@ -3134,13 +3136,11 @@ function auditCfsDescription(html, facts, blockers, reviewFlags, resolvedBranch 
       blockers.push("CFS plain products must include the approved personalisation return warning and spelling check.");
     }
   } else {
-    const printName = displayName(facts.pre_applied_name).toLowerCase();
-    const printNumber = String(facts.pre_applied_number).toLowerCase();
-    if (!productFacts.includes("player print:") || !productFacts.includes(printName) || !productFacts.includes(printNumber)) {
+    if (!productFacts.includes("player print:") || !productFacts.includes(cfsFixedPlayerPrintText(facts).toLowerCase())) {
       blockers.push("CFS printed products must show the confirmed player name and number in Product Facts.");
     }
-    if (!makeItYours.includes(printName) || !makeItYours.includes(printNumber) || !makeItYours.includes("cannot be selected")) {
-      blockers.push("CFS printed products must state that a different name and number cannot be selected.");
+    if (!makeItYours.includes("pre-printed name and number") || !makeItYours.includes("cannot be changed")) {
+      blockers.push("CFS printed products must state that the fixed print cannot be changed.");
     }
   }
   if (facts.badge_status === "available" && (!makeItYours.includes("sleeve badge:") || !makeItYours.includes(String(facts.badge_league).toLowerCase()))) {

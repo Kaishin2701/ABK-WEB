@@ -291,7 +291,7 @@ const cfsCases = [
       badge_league: ""
     },
     branch: "cfs_pre_applied_player_women_shirt_only",
-    output: /Player print:<\/strong> Putellas name and number 11 are already applied/
+    output: /Player print:<\/strong> Pre-printed with Putellas 11 on the back of the shirt\. This print can\u2019t be changed\./
   },
   {
     name: "plain kids kit with socks",

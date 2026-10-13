@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.4.3',
+        version: '6.4.4',
         label: 'Current release',
+        title: 'Clearer CFS fixed-player wording',
+        description: 'CFS Printed products now state that the confirmed player name and number are pre-printed on the back of the shirt and that the print cannot be changed. The wording applies only to CFS Printed products; CFS customisable products and all KFK templates remain unchanged.'
+    },
+    {
+        version: '6.4.3',
+        label: 'Previous release',
         title: 'Badge naming and player-print fixes',
         description: 'Badge suggestions and their search hint now use the correct La Liga spelling. Product and Bundle title inference also recognises McTOMMINAY as a fixed player print while preserving the required lowercase c in the player name.'
     },
