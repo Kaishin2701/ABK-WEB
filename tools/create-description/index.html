@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Create Description KFK</title>
-    <link rel="stylesheet" href="./styles.css?v=6.4.4">
+    <link rel="stylesheet" href="./styles.css?v=6.5.0">
   </head>
   <body>
     <header class="topbar">
@@ -222,11 +222,11 @@
             <span class="field-label">Bundle type</span>
             <div id="bundleTypeChoices" class="segmented-choice" role="group" aria-label="Bundle type">
               <button type="button" data-bundle-type="piece_bundle">Standard Bundle</button>
-              <button type="button" data-bundle-type="birthday_gift_pack_home_away_kids">KFK Birthday Gift Pack</button>
+              <button id="giftPackBundleTypeButton" type="button" data-bundle-type="birthday_gift_pack_home_away_kids">KFK Birthday Gift Pack</button>
             </div>
             <select id="bundleTypeSelect" class="hidden" name="bundle_type" data-enhance="false" aria-hidden="true" tabindex="-1">
               <option value="piece_bundle">Standard Bundle</option>
-              <option value="birthday_gift_pack_home_away_kids">KFK Birthday Gift Pack</option>
+              <option id="giftPackBundleTypeOption" value="birthday_gift_pack_home_away_kids">KFK Birthday Gift Pack</option>
             </select>
           </div>
 
@@ -427,9 +427,9 @@
               <button id="cancelBundlePieceEditBtn" class="hidden" type="button">Cancel edit</button>
               <button id="addBundleItemBtn" class="primary" type="button">Add item</button>
             </div>
-            <div class="fixed-facts-panel" aria-label="Fixed KFK facts for every bundle piece">
-              <span class="field-label">Fixed KFK facts for every item</span>
-              <div class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester</div>
+            <div id="bundleFixedFactsPanel" class="fixed-facts-panel" aria-label="Fixed KFK facts for every bundle item">
+              <span id="bundleFixedFactsLabel" class="field-label">Fixed KFK facts for every item</span>
+              <div id="bundleFixedFactsSummary" class="fixed-facts-summary">Version: Fan version &middot; Material: Polyester</div>
             </div>
           </div>
 
@@ -479,6 +479,6 @@
     <script src="./templates/product/product-templates.js?v=20260804h"></script>
     <script src="./templates/bundle/bundle-templates.js?v=20261001a"></script>
     <script src="./templates/template-registry.js?v=20261001a"></script>
-    <script src="./app.js?v=6.4.4"></script>
+    <script src="./app.js?v=6.5.0"></script>
   </body>
 </html>

@@ -32,6 +32,7 @@ const context = vm.createContext({
   titleCaseToken: (value) => String(value || "").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
   uniqueTextValues: (values) => [...new Set(values)],
   humanList: (values) => values.length < 2 ? (values[0] || "") : values.length === 2 ? `${values[0]} and ${values[1]}` : `${values.slice(0, -1).join(", ")} and ${values.at(-1)}`,
+  numberWord: (value) => ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"][value] || String(value),
   esc: (value) => String(value),
   sentenceStart: (value) => String(value || "").replace(/^./, (letter) => letter.toUpperCase()),
   stableHash: (text) => String(text).split("").reduce((sum, char) => sum + char.charCodeAt(0), 0),
@@ -62,22 +63,27 @@ vm.runInContext(sourceBetween("function inferBundleAudienceFromName", "function 
 vm.runInContext(sourceBetween("function expectedAudienceForRecipient", "function showBundlePieceErrors"), context);
 vm.runInContext(sourceBetween("function detectBranch", "function productNameConflict"), context);
 vm.runInContext(sourceBetween("function productNameConflict", "function sizeGuideSentence"), context);
+vm.runInContext(sourceBetween("function normaliseBadgeName", "function configureActiveSite"), context);
 vm.runInContext(sourceBetween("function badgeLine", "function sizingWarningLine"), context);
 vm.runInContext(sourceBetween("function pick(", "function pickBranchVariant"), context);
 vm.runInContext(sourceBetween("function cfsPossessive", "function renderDescription"), context);
 vm.runInContext(sourceBetween("function removeDashesFromText", "function removeDescriptionDashes"), context);
+vm.runInContext(sourceBetween("function bundleHash", "function readBundleDescriptionHistory"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
 vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthdayGiftPack"), context);
+vm.runInContext(sourceBetween("function assignCfsBundlePieceReferences", "function isBirthdayGiftPack"), context);
 vm.runInContext(sourceBetween("function isBirthdayGiftPack", "function auditPieceBasedBundleDescription"), context);
+vm.runInContext(sourceBetween("function cfsBundleSampleFacts", "function loadBundleSample"), context);
 
 const leagueArrayMatch = appSource.match(/const badgeLeagueOptions = (\[[\s\S]*?\]);/);
 assert.ok(leagueArrayMatch, "Badge league source list is missing");
 vm.runInContext(`globalThis.badgeLeagueOptions = ${leagueArrayMatch[1]};`, context);
 
-for (const league of ["La Liga", "FIFA World Cup", "Saudi Pro League", "MLS", "FIFA Club World Cup"]) {
+for (const league of ["La Liga", "World Cup", "Saudi Pro League", "MLS", "FIFA Club World Cup"]) {
   assert.ok(context.badgeLeagueOptions.includes(league), `${league} is missing from the shared badge list`);
 }
 assert.ok(!context.badgeLeagueOptions.includes("LaLiga"), "Legacy LaLiga spelling must not appear in the badge list");
+assert.ok(!context.badgeLeagueOptions.includes("FIFA World Cup"), "Legacy FIFA World Cup label must not appear in the badge list");
 assert.match(htmlSource, /placeholder="Search a league, e\.g\. La Liga"/);
 
 const productSleeveAndChestBadge = context.badgeLine({
@@ -96,6 +102,14 @@ assert.match(context.badgeLine({
   chest_badge_league: "FIFA Club World Cup",
   chest_badge_champion_status: "not_champion"
 }), /FIFA Club World Cup chest badge can be added\./);
+const legacyWorldCupBadge = context.badgeLine({
+  badge_status: "available",
+  badge_league: "FIFA World Cup",
+  badge_champion_status: "not_champion",
+  chest_badge_status: "unavailable"
+});
+assert.match(legacyWorldCupBadge, /World Cup sleeve badge can be added\./);
+assert.doesNotMatch(legacyWorldCupBadge, /FIFA World Cup/);
 assert.equal(context.badgeLine({ badge_status: "unavailable", chest_badge_status: "unavailable" }), "");
 assert.equal(context.removeDashesFromText("Men sizes S–XXL"), "Men sizes S-XXL");
 assert.equal(context.removeDashesFromText("Kids sizes 16—28, suggested ages 3–13"), "Kids sizes 16-28, suggested ages 3-13");
@@ -570,7 +584,8 @@ const sameBadgeBothPositions = context.renderPositionedBadgeOption({
   chest_badge_league: "FIFA World Cup",
   chest_badge_champion_status: "champion"
 }, "Argentina Home kit");
-assert.match(sameBadgeBothPositions, /FIFA Club World Cup Champions sleeve badge and FIFA World Cup Champions chest badge can be added\./);
+assert.match(sameBadgeBothPositions, /FIFA Club World Cup Champions sleeve badge and World Cup Champions chest badge can be added\./);
+assert.doesNotMatch(sameBadgeBothPositions, /FIFA World Cup Champions chest badge/);
 
 const chestOnlyBadge = context.renderPositionedBadgeOption({
   ...positionedBadgePiece,
@@ -617,8 +632,12 @@ assert.doesNotMatch(htmlSource, /id="bundleAdvancedOptions"/);
 assert.doesNotMatch(htmlSource, /Custom range/);
 assert.match(htmlSource, /id="bundleRecipientLabelField" class="hidden"/);
 assert.doesNotMatch(htmlSource, />\s*Bundle label\s*</);
-assert.match(appSource, /bundle_label: isGiftPack \? "KFK Birthday Gift Pack" : "Standard Bundle"/);
-assert.match(appSource, /gift_pack_returns_policy: isGiftPack \? "approved" : ""/);
+assert.match(appSource, /bundle_label: isGiftPack \? \(activeSite === "CFS" \? "CFS Gift Pack" : "KFK Birthday Gift Pack"\) : "Standard Bundle"/);
+assert.match(appSource, /gift_pack_returns_policy: isGiftPack && activeSite === "KFK" \? "approved" : ""/);
+assert.match(appSource, /bundleModeTab\.disabled = false/);
+assert.match(appSource, /giftPackBundleTypeButton\.textContent = giftPackLabel/);
+assert.match(appSource, /activeSite === "CFS"[\s\S]*renderCfsBundleDescription/);
+assert.match(appSource, /Load CFS Bundle sample/);
 assert.match(appSource, /syncBirthdayGiftPackEditorConstraints/);
 assert.doesNotMatch(appSource, /isGiftPack \? new Set\(\["kids"\]\)/);
 assert.doesNotMatch(appSource, /isGiftPack \? new Set\(\["Kit"\]\)/);
@@ -866,4 +885,293 @@ const allNoSocksHtml = context.renderBirthdayGiftPackDescription({
 assert.match(allNoSocksHtml, /The Home kit and Away kit include shirts and matching shorts\. Socks are not included\./);
 assert.equal((allNoSocksHtml.match(/socks are not included/gi) || []).length, 3);
 
+const cfsBundlePiece = (overrides = {}) => ({
+  piece_id: "cfs-item",
+  recipient_role: "none",
+  recipient_label: "",
+  audience: "men",
+  product_name: "England Home Men's Shirt 2026",
+  team: "England",
+  season: "2026",
+  badge_status: "available",
+  badge_league: "World Cup",
+  badge_champion_status: "not_champion",
+  chest_badge_status: "unavailable",
+  chest_badge_league: "",
+  chest_badge_champion_status: "not_champion",
+  product_kind: "Shirt",
+  product_type: "shirt_only",
+  kit_type: "home",
+  sleeve_length: "short_sleeve",
+  socks_status: "not_applicable",
+  included_items: "shirt_only",
+  listing_configuration: "plain_customisable",
+  personalisation_status: "available",
+  print_price_included: "not_applicable",
+  pre_applied_name: "",
+  pre_applied_number: "",
+  size_range_mode: "standard",
+  visible_size_range: "Men sizes S-XXL",
+  size_profile: "adult_s_2xl",
+  main_colour_shirt: "White",
+  main_colour_shorts: "",
+  main_colour_socks: "",
+  ...overrides
+});
+const cfsBundleFacts = (pieces, overrides = {}) => ({
+  site: "CFS",
+  bundle_type: "piece_bundle",
+  bundle_name: "CFS Regression Gift Pack",
+  bundle_label: "Standard Bundle",
+  bundle_items_list: pieces,
+  ...overrides
+});
+const cfsKidsKit = (overrides = {}) => cfsBundlePiece({
+  audience: "kids",
+  product_name: "England Home Kids Football Kit 2026",
+  product_kind: "Kit",
+  product_type: "full_kit",
+  socks_status: "included",
+  included_items: "shirt_shorts_and_socks",
+  visible_size_range: "Kids sizes 16-28, suggested ages 3-13",
+  size_profile: "kids_16_28",
+  main_colour_shorts: "Navy",
+  main_colour_socks: "White",
+  ...overrides
+});
+const cfsPrinted = (piece, name, number) => ({
+  ...piece,
+  listing_configuration: "pre_applied_player",
+  personalisation_status: "unavailable",
+  print_price_included: "yes",
+  pre_applied_name: name,
+  pre_applied_number: number
+});
+const renderCfsBundleCase = (pieces, overrides = {}, revision = 0) => {
+  const summary = context.buildCfsBundleSummary(cfsBundleFacts(pieces, overrides));
+  return { summary, html: context.renderCfsBundleDescription(summary, revision) };
+};
+
+const cfsBundleCases = [
+  renderCfsBundleCase([
+    cfsBundlePiece(),
+    cfsBundlePiece({ piece_id: "away", product_name: "England Away Men's Shirt 2026", kit_type: "away", main_colour_shirt: "Red" })
+  ]),
+  renderCfsBundleCase([
+    cfsBundlePiece({ recipient_role: "dad" }),
+    cfsKidsKit({ piece_id: "son", recipient_role: "son" })
+  ]),
+  renderCfsBundleCase([
+    cfsBundlePiece({ recipient_role: "dad", team: "Brazil", product_name: "Brazil Away Men's Shirt 2026", kit_type: "away", main_colour_shirt: "Navy" }),
+    cfsBundlePiece({ piece_id: "mum", recipient_role: "mum", audience: "women", team: "Brazil", product_name: "Brazil Away Women's Shirt 2026", kit_type: "away", visible_size_range: "Women sizes S-XXL", size_profile: "women_s_2xl", main_colour_shirt: "Navy" }),
+    cfsKidsKit({ piece_id: "kid", recipient_role: "kid", team: "Brazil", product_name: "Brazil Away Kids Football Kit 2026", kit_type: "away", main_colour_shirt: "Navy" })
+  ]),
+  renderCfsBundleCase([
+    cfsBundlePiece({ recipient_role: "men", team: "Brazil", main_colour_shirt: "Yellow" }),
+    cfsBundlePiece({ piece_id: "women", recipient_role: "women", audience: "women", team: "Brazil", product_name: "Brazil Home Women's Shirt 2026", visible_size_range: "Women sizes S-XXL", size_profile: "women_s_2xl", main_colour_shirt: "Yellow" })
+  ]),
+  renderCfsBundleCase([
+    cfsPrinted(cfsBundlePiece({ product_name: "Manchester City Home Men's Shirt 2026/27 HAALAND 9", team: "Manchester City", season: "2026/27", main_colour_shirt: "Sky blue" }), "HAALAND", "9"),
+    cfsPrinted(cfsBundlePiece({ piece_id: "enzo", product_name: "Manchester City Home Men's Shirt 2026/27 ENZO 17", team: "Manchester City", season: "2026/27", main_colour_shirt: "Sky blue" }), "ENZO", "17")
+  ]),
+  renderCfsBundleCase([
+    cfsPrinted(cfsKidsKit({ product_name: "Argentina Home Kids Kit 2026 MESSI 10", team: "Argentina", main_colour_shirt: "Sky blue and white" }), "MESSI", "10"),
+    cfsPrinted(cfsKidsKit({ piece_id: "portugal", product_name: "Portugal Away Kids Kit 2026 RONALDO 7", team: "Portugal", kit_type: "away", main_colour_shirt: "Mint white" }), "RONALDO", "7")
+  ]),
+  renderCfsBundleCase([
+    cfsBundlePiece({ recipient_role: "dad" }),
+    cfsKidsKit({ piece_id: "kid-1", recipient_role: "son" }),
+    cfsKidsKit({ piece_id: "kid-2", recipient_role: "son" })
+  ]),
+  renderCfsBundleCase([
+    cfsPrinted(cfsKidsKit({ product_name: "France Home Kids Kit 2026 MBAPPE 10", team: "France", socks_status: "unavailable", included_items: "shirt_and_shorts", main_colour_shirt: "Dark blue", main_colour_socks: "" }), "MBAPPE", "10"),
+    cfsPrinted(cfsKidsKit({ piece_id: "argentina", product_name: "Argentina Home Kids Kit 2026 MESSI 10", team: "Argentina", main_colour_shirt: "Sky blue and white" }), "MESSI", "10")
+  ]),
+  renderCfsBundleCase([
+    cfsBundlePiece({ team: "Argentina", product_name: "Argentina Home Men's Shirt 2026" }),
+    cfsBundlePiece({ piece_id: "portugal", team: "Portugal", product_name: "Portugal Away Men's Shirt 2026", kit_type: "away", main_colour_shirt: "Red" })
+  ]),
+  renderCfsBundleCase([
+    cfsBundlePiece({ recipient_role: "dad" }),
+    cfsPrinted(cfsKidsKit({ piece_id: "printed-son", recipient_role: "son", product_name: "England Home Kids Kit 2026 BELLINGHAM 10" }), "BELLINGHAM", "10")
+  ])
+];
+
+for (const { summary, html } of cfsBundleCases) {
+  assert.match(html, /^<p>[^<]+<\/p>/);
+  assert.match(html, /<h3>Bundle Facts<\/h3>/);
+  assert.match(html, /<h3>What's Included<\/h3>/);
+  assert.match(html, /<h3>Good to Know<\/h3>/);
+  assert.equal(context.cfsBundleWordCount(context.cfsBundleOpening(summary, 0)) >= 20, true);
+  assert.equal(context.cfsBundleWordCount(context.cfsBundleOpening(summary, 0)) <= 35, true);
+  assert.match(html, /<strong>In the parcel:<\/strong>/);
+  assert.doesNotMatch(html, /can be added|optional sleeve badge/i);
+}
+assert.match(cfsBundleCases[1].html, /<strong>Dad's shirt:<\/strong>/);
+assert.match(cfsBundleCases[1].html, /<strong>Son's kit:<\/strong>/);
+assert.match(cfsBundleCases[2].html, /<strong>Mum's shirt:<\/strong>/);
+assert.match(cfsBundleCases[6].html, /Kids' kit 1/);
+assert.match(cfsBundleCases[6].html, /Kids' kit 2/);
+assert.doesNotMatch(cfsBundleCases[4].html, /<h3>Make It Yours<\/h3>/);
+assert.match(cfsBundleCases[4].html, /Pre-printed with Haaland 9 on the back of the shirt\. This print can’t be changed\./);
+assert.match(cfsBundleCases[7].html, /No socks included/);
+assert.match(cfsBundleCases[9].html, /Name and number:<\/strong> optional for Dad's shirt/);
+assert.doesNotMatch(cfsBundleCases[9].html, /optional for Son's kit/);
+assert.match(cfsBundleCases[0].html, /Sleeve badge:<\/strong> Free sleeve badges included\./);
+const cfsNoBadge = renderCfsBundleCase([
+  cfsBundlePiece({ badge_status: "unavailable", badge_league: "" }),
+  cfsBundlePiece({ piece_id: "away", kit_type: "away", badge_status: "unavailable", badge_league: "" })
+]).html;
+assert.doesNotMatch(cfsNoBadge, /Sleeve badge:/);
+const cfsPartialBadge = renderCfsBundleCase([
+  cfsBundlePiece({ recipient_role: "dad" }),
+  cfsKidsKit({ piece_id: "son", recipient_role: "son", badge_status: "unavailable", badge_league: "" })
+]).html;
+assert.match(cfsPartialBadge, /Free sleeve badge included for the Dad's shirt\./);
+const cfsUniqueFacts = cfsBundleCases[1].summary;
+assert.notEqual(context.renderCfsBundleDescription(cfsUniqueFacts, 0), context.renderCfsBundleDescription(cfsUniqueFacts, 1));
+const cfsFourItems = renderCfsBundleCase([
+  cfsBundlePiece(),
+  cfsKidsKit({ piece_id: "kids-home" }),
+  cfsBundlePiece({ piece_id: "women-away", recipient_role: "women", audience: "women", kit_type: "away", visible_size_range: "Women sizes S-XXL", size_profile: "women_s_2xl", main_colour_shirt: "Red" }),
+  cfsPrinted(cfsKidsKit({ piece_id: "kids-third", kit_type: "third", product_name: "England Third Kids Kit 2026 KANE 9", socks_status: "unavailable", included_items: "shirt_and_shorts", main_colour_socks: "" }), "KANE", "9")
+]).html;
+assert.equal((cfsFourItems.match(/<strong>[^<]+:<\/strong>/g) || []).length > 10, true);
+assert.match(cfsFourItems, /Kids' kit 1/);
+assert.match(cfsFourItems, /Kids' kit 2/);
+const cfsSpecialLongSleeve = renderCfsBundleCase([
+  cfsBundlePiece({ product_kind: "Long Sleeve Shirt", sleeve_length: "long_sleeve", kit_type: "special_edition", product_name: "England Special Edition Men's Long Sleeve Shirt 2026", main_colour_shirt: "Black" }),
+  cfsKidsKit({ piece_id: "goalkeeper", product_kind: "Long Sleeve Kit", sleeve_length: "long_sleeve", kit_type: "goalkeeper", product_name: "England Goalkeeper Kids Long Sleeve Kit 2026", socks_status: "unavailable", included_items: "shirt_and_shorts", main_colour_shirt: "Yellow", main_colour_shorts: "Yellow", main_colour_socks: "" })
+]).html;
+assert.match(cfsSpecialLongSleeve, /Special Edition/);
+assert.match(cfsSpecialLongSleeve, /Goalkeeper/);
+assert.match(cfsSpecialLongSleeve, /long sleeves/);
+assert.match(cfsSpecialLongSleeve, /No socks included/);
+const cfsBabyAndAdult = renderCfsBundleCase([
+  cfsBundlePiece({ audience: "baby", product_kind: "Suit", product_type: "shirt_only", sleeve_length: "baby_suit", socks_status: "not_applicable", included_items: "shirt_only", product_name: "Inter Miami Home Baby Suit 2026/27", team: "Inter Miami", season: "2026/27", visible_size_range: "Baby sizes 9 and 12 (3-24 months)", size_profile: "baby_9_12", main_colour_shirt: "Pink" }),
+  cfsBundlePiece({ piece_id: "adult", team: "Barcelona", season: "2025/26", product_name: "Barcelona Away Men's Shirt 2025/26", kit_type: "away", main_colour_shirt: "Black" })
+]).html;
+assert.match(cfsBabyAndAdult, /Baby suit/);
+assert.match(cfsBabyAndAdult, /<strong>Teams:<\/strong> Inter Miami and Barcelona/);
+assert.match(cfsBabyAndAdult, /<strong>Seasons:<\/strong>/);
+assert.match(appSource, /CFS Bundle source does not define customer-facing chest badge wording/);
+const loadedCfsBundleSample = context.cfsBundleSampleFacts();
+assert.equal(loadedCfsBundleSample.bundle_type, "birthday_gift_pack_home_away_kids");
+assert.equal(loadedCfsBundleSample.pieces.length, 2);
+assert.deepEqual(Array.from(context.validateBundlePiece(loadedCfsBundleSample.pieces[0])), []);
+assert.deepEqual(Array.from(context.validateBundlePiece(loadedCfsBundleSample.pieces[1])), []);
+const loadedCfsBundleSummary = context.buildCfsBundleSummary({
+  site: "CFS",
+  bundle_type: loadedCfsBundleSample.bundle_type,
+  bundle_name: loadedCfsBundleSample.bundle_name,
+  bundle_label: "CFS Gift Pack",
+  bundle_items_list: Array.from(loadedCfsBundleSample.pieces)
+});
+const loadedCfsBundleHtml = context.renderCfsBundleDescription(loadedCfsBundleSummary, 0);
+assert.match(loadedCfsBundleHtml, /<strong>Dad's shirt:<\/strong>/);
+assert.match(loadedCfsBundleHtml, /<strong>Son's kit:<\/strong>/);
+assert.match(loadedCfsBundleHtml, /Free sleeve badges included\./);
+assert.match(loadedCfsBundleHtml, /1 men's Home shirt \(shirt only; no shorts or socks\)/);
+assert.match(loadedCfsBundleHtml, /1 kids' Home kit \(shirt, shorts and socks\)/);
+
+const cfsMatrixArchetypes = [
+  () => cfsKidsKit({ product_kind: "Kit", sleeve_length: "short_sleeve" }),
+  () => cfsKidsKit({ product_kind: "Long Sleeve Kit", sleeve_length: "long_sleeve", product_name: "England Home Kids Long Sleeve Football Kit 2026" }),
+  () => cfsBundlePiece({ product_kind: "Shirt", sleeve_length: "short_sleeve" }),
+  () => cfsBundlePiece({ ...context.standardBundleSizeFacts("women"), audience: "women", product_kind: "Long Sleeve Shirt", sleeve_length: "long_sleeve", product_name: "England Home Women's Long Sleeve Shirt 2026" }),
+  () => cfsBundlePiece({ ...context.standardBundleSizeFacts("baby"), audience: "baby", product_kind: "Suit", product_type: "shirt_only", sleeve_length: "baby_suit", socks_status: "not_applicable", included_items: "shirt_only", product_name: "England Home Baby Suit 2026" })
+];
+const orderedTypeSequences = [];
+const addTypeSequences = (length, prefix = []) => {
+  if (prefix.length === length) {
+    orderedTypeSequences.push(prefix);
+    return;
+  }
+  cfsMatrixArchetypes.forEach((_factory, index) => addTypeSequences(length, [...prefix, index]));
+};
+[2, 3, 4].forEach((length) => addTypeSequences(length));
+assert.equal(orderedTypeSequences.length, 775);
+
+let cfsValidMatrixBundles = 0;
+let cfsValidMatrixItems = 0;
+const cfsUnexpectedBlocks = [];
+orderedTypeSequences.forEach((sequence, sequenceIndex) => {
+  for (let configuration = 0; configuration < 3; configuration += 1) {
+    const pieces = sequence.map((typeIndex, itemIndex) => {
+      let piece = cfsMatrixArchetypes[typeIndex]();
+      const isKit = piece.product_type === "full_kit";
+      const withSocks = isKit && (sequenceIndex + itemIndex + configuration) % 2 === 0;
+      if (isKit) {
+        piece = {
+          ...piece,
+          socks_status: withSocks ? "included" : "unavailable",
+          included_items: withSocks ? "shirt_shorts_and_socks" : "shirt_and_shorts",
+          main_colour_socks: withSocks ? "White" : ""
+        };
+      }
+      const printed = configuration === 1 || (configuration === 2 && itemIndex % 2 === 1);
+      if (printed) piece = cfsPrinted(piece, `PLAYER${itemIndex + 1}`, String(itemIndex + 1));
+      const sleeveAvailable = configuration === 0 || (configuration === 2 && itemIndex % 2 === 0);
+      const chestAvailable = configuration === 2 && itemIndex % 2 === 1;
+      return {
+        ...piece,
+        piece_id: `matrix-${sequenceIndex}-${configuration}-${itemIndex}`,
+        badge_status: sleeveAvailable ? "available" : "unavailable",
+        badge_league: sleeveAvailable ? "World Cup" : "",
+        chest_badge_status: chestAvailable ? "available" : "unavailable",
+        chest_badge_league: chestAvailable ? "FIFA Club World Cup" : ""
+      };
+    });
+    pieces.forEach((piece, itemIndex) => {
+      const errors = Array.from(context.validateBundlePiece(piece));
+      cfsValidMatrixItems += 1;
+      if (errors.length) cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}, item ${itemIndex}: ${errors.join(" | ")}`);
+    });
+    const facts = cfsBundleFacts(pieces, {
+      bundle_name: `CFS matrix ${sequenceIndex}-${configuration}`,
+      bundle_type: configuration === 2 ? "birthday_gift_pack_home_away_kids" : "piece_bundle",
+      bundle_label: configuration === 2 ? "CFS Gift Pack" : "Standard Bundle"
+    });
+    const summary = context.buildCfsBundleSummary(facts);
+    const revision = (sequenceIndex + configuration) % 15;
+    const html = context.renderCfsBundleDescription(summary, revision);
+    const openingWords = context.cfsBundleWordCount(context.cfsBundleOpening(summary, revision));
+    if (openingWords < 20 || openingWords > 35) cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: opening has ${openingWords} words`);
+    if (!html.includes("<h3>Bundle Facts</h3>") || !html.includes("<h3>What's Included</h3>") || !html.includes("<h3>Good to Know</h3>")) {
+      cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: required CFS sections are missing`);
+    }
+    if (html.includes("can be added") || html.includes("Options You Can Add") || html.includes("Before You Order")) {
+      cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: KFK wording leaked into CFS output`);
+    }
+    const shouldShowPersonalisation = pieces.some((piece) => piece.personalisation_status === "available");
+    if (html.includes("<h3>Make It Yours</h3>") !== shouldShowPersonalisation) {
+      cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: Make It Yours visibility is wrong`);
+    }
+    summary.pieces.forEach((piece) => {
+      if (!html.toLowerCase().includes(piece.reference.toLowerCase())) {
+        cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: ${piece.reference} is missing`);
+      }
+    });
+    cfsValidMatrixBundles += 1;
+  }
+});
+assert.equal(cfsValidMatrixBundles, 2325);
+assert.equal(cfsUnexpectedBlocks.length, 0, cfsUnexpectedBlocks.slice(0, 20).join("\n"));
+
+const deliberatelyInvalidCfsItems = [
+  cfsBundlePiece({ socks_status: "included" }),
+  cfsKidsKit({ socks_status: "unknown", included_items: "unknown" }),
+  cfsPrinted(cfsKidsKit(), "", ""),
+  { ...cfsPrinted(cfsKidsKit(), "MESSI", "10"), personalisation_status: "available" },
+  cfsBundlePiece({ personalisation_status: "unavailable" }),
+  cfsBundlePiece({ recipient_role: "dad", audience: "kids", visible_size_range: "Kids sizes 16-28, suggested ages 3-13", size_profile: "kids_16_28" }),
+  cfsBundlePiece({ size_profile: "kids_16_28" }),
+  cfsBundlePiece({ main_colour_shirt: "" }),
+  cfsBundlePiece({ badge_status: "available", badge_league: "" })
+];
+const deliberateBlockResults = deliberatelyInvalidCfsItems.map((piece) => Array.from(context.validateBundlePiece(piece)));
+deliberateBlockResults.forEach((errors) => assert.ok(errors.length > 0));
+
+console.log(`CFS Bundle matrix passed: ${cfsValidMatrixBundles} bundles, ${cfsValidMatrixItems} item validations, 0 unexpected blocks.`);
+console.log(`CFS expected-block checks passed: ${deliberateBlockResults.length} invalid configurations blocked.`);
 console.log("Create Description feedback regression tests passed.");

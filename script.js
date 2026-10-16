@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.4.4',
+        version: '6.5.0',
         label: 'Current release',
+        title: 'Complete CFS Bundle builder',
+        description: 'CFS Bundle now uses the full two-to-four-item editor available in KFK while generating its own approved CFS description structure. It supports shirts, kits, long-sleeve products and Baby Suits in plain, pre-printed and mixed combinations, with item-specific socks, sizes, colours and badge facts. A dedicated CFS Bundle sample and an exhaustive regression matrix cover 2,325 valid bundle configurations without unexpected blocks.'
+    },
+    {
+        version: '6.4.4',
+        label: 'Previous release',
         title: 'Clearer CFS fixed-player wording',
         description: 'CFS Printed products now state that the confirmed player name and number are pre-printed on the back of the shirt and that the print cannot be changed. The wording applies only to CFS Printed products; CFS customisable products and all KFK templates remain unchanged.'
     },

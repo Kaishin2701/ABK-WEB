@@ -1,7 +1,7 @@
 # CREATE-DESCRIPTION
 
-A small, static description builder for KFK 2026/27 football-kit listings. It
-turns verified product facts into consistent, customer-facing HTML and a
+A small, static description builder for KFK and CFS football-kit listings. It
+turns verified product facts into site-specific customer-facing HTML and a
 readable audit result.
 
 It is a drafting and checking tool. It does not publish to WooCommerce, verify
@@ -14,8 +14,8 @@ There is nothing to install. Open [`index.html`](./index.html) in a browser.
 1. Stay in **Product** mode for individual products.
 2. Enter only confirmed facts: product identity, contents, socks status, sizes,
    main colours and the correct print configuration.
-3. Fixed KFK facts are pre-applied: Fan version, Polyester and a £3.99
-   league-specific sleeve-badge price when a badge option is available.
+3. Fixed KFK facts are pre-applied only on KFK. CFS uses its own approved
+   product and Bundle rules.
 4. Select the sleeve-badge availability and enter the badge league when it is
    available.
 5. For shirt-only products, the shorts-colour field is disabled and omitted
@@ -34,7 +34,7 @@ HTML.
 Men and Women can be selected directly as Piece recipients for couple bundles
 or bundles containing multiple adult shirts.
 
-Both **Standard Bundle** and **KFK Birthday Gift Pack** accept the same complete
+On KFK, both **Standard Bundle** and **KFK Birthday Gift Pack** accept the same complete
 range of independently configured Pieces, including Kids, Men, Women, Baby,
 shirts, kits, suits, short sleeves and long sleeves. A Birthday Gift Pack made
 entirely from standard Kids kits keeps the Boss-approved Kids Gift Pack wording;
@@ -43,8 +43,16 @@ Birthday descriptions also include the controlled personalised-returns,
 promotion and packaging statements; these policies are never inherited by a
 Standard Piece Bundle.
 
+CFS uses the same Bundle editor and supports the same two-to-four-item product
+combinations. Its generated HTML follows the CFS structure: an opening,
+**Bundle Facts**, **What's Included**, conditional **Make It Yours** and
+**Good to Know**. CFS sleeve badges are described as free included badges only
+for the applicable items; they are not presented as optional product add-ons.
+Plain, pre-printed and mixed bundles keep item-specific personalisation, socks,
+sizes, colours and parcel contents.
+
 Product and Bundle badge selectors share one maintained league list. This list
-includes FIFA World Cup, FIFA Club World Cup, Saudi Pro League and MLS alongside
+includes World Cup, FIFA Club World Cup, Saudi Pro League and MLS alongside
 the supported European competitions. National-team titles may use a standalone
 tournament year, for example `Spain World Cup Champions 2026` maps to season
 `2026`; club-season titles continue to use the `YYYY/YY` format.
@@ -59,7 +67,7 @@ facts as evidence for a real product.
 - plain customisable versus fixed player-print listings;
 - visible size range and Size Guide wording;
 - required player name and number for fixed-print products;
-- fixed KFK facts and approved material wording;
+- site-specific fixed facts and approved wording;
 - main-colour and sleeve-badge details, including the league when available; and
 - unsupported claims and unsafe HTML.
 
@@ -123,12 +131,13 @@ short, approved sizing and personalisation warnings used by this builder. The
 KFK content knowledge base remains the source of truth for claim safety and
 publishing approval.
 
-Bundle descriptions are assembled from the verified Piece records using the
-Boss-approved deterministic four-section structure: What's Included, Product
-Details, Options You Can Add and Before You Order. Standard Bundles and the
-Birthday Gift Pack branch now share this structure; Gift Pack returns,
-promotion and packaging statements remain exclusive to the explicitly selected
-and confirmed Birthday Gift Pack branch.
+KFK Bundle descriptions are assembled from the verified Piece records using
+the approved four-section structure: What's Included, Product Details, Options
+You Can Add and Before You Order. Standard Bundles and the Birthday Gift Pack
+branch share this structure; Gift Pack returns, promotion and packaging
+statements remain exclusive to the explicitly selected KFK Birthday Gift Pack
+branch. CFS Bundle descriptions use their separate approved CFS structure and
+never inherit those KFK policies.
 When a Bundle Piece uses the pre-applied-player configuration, its exact player
 name and number are shown on that Piece under What's Included and Product
 Details. It is never presented as an option the customer can add. Before You
