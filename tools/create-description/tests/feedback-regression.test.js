@@ -1005,10 +1005,13 @@ for (const { summary, html } of cfsBundleCases) {
   assert.equal(context.cfsBundleWordCount(context.cfsBundleOpening(summary, 0)) >= 20, true);
   assert.equal(context.cfsBundleWordCount(context.cfsBundleOpening(summary, 0)) <= 35, true);
   assert.match(html, /<strong>In the parcel:<\/strong>/);
+  assert.doesNotMatch(html, /<strong>Back:<\/strong>/);
   assert.doesNotMatch(html, /can be added|optional sleeve badge/i);
 }
 assert.match(cfsBundleCases[1].html, /<strong>Dad's shirt:<\/strong>/);
 assert.match(cfsBundleCases[1].html, /<strong>Son's kit:<\/strong>/);
+assert.match(cfsBundleCases[1].html, /White Home shirt with short sleeves/);
+assert.match(cfsBundleCases[1].html, /White Home shirt with short sleeves and navy shorts, plus white socks/);
 assert.match(cfsBundleCases[2].html, /<strong>Mum's shirt:<\/strong>/);
 assert.match(cfsBundleCases[6].html, /Kids' kit 1/);
 assert.match(cfsBundleCases[6].html, /Kids' kit 2/);
@@ -1139,6 +1142,9 @@ orderedTypeSequences.forEach((sequence, sequenceIndex) => {
     if (openingWords < 20 || openingWords > 35) cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: opening has ${openingWords} words`);
     if (!html.includes("<h3>Bundle Facts</h3>") || !html.includes("<h3>What's Included</h3>") || !html.includes("<h3>Good to Know</h3>")) {
       cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: required CFS sections are missing`);
+    }
+    if (html.includes("<strong>Back:</strong>")) {
+      cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: redundant Back fact is present`);
     }
     if (html.includes("can be added") || html.includes("Options You Can Add") || html.includes("Before You Order")) {
       cfsUnexpectedBlocks.push(`sequence ${sequenceIndex}, config ${configuration}: KFK wording leaked into CFS output`);

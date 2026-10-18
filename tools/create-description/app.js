@@ -3977,14 +3977,6 @@ function cfsBundleOpening(summary, revision = 0) {
   return Object.entries(values).reduce((text, [key, value]) => text.replaceAll(`{${key}}`, value), template);
 }
 
-function cfsBundleBackText(piece) {
-  const colour = String(piece.main_colour_shirt || "").toLowerCase();
-  if (piece.listing_configuration === "pre_applied_player") {
-    return `${colour} with ${displayName(piece.pre_applied_name)} ${piece.pre_applied_number} printed on the back`;
-  }
-  return colour;
-}
-
 function cfsBundleSleeveText(piece) {
   if (piece.sleeve_length === "long_sleeve") return "long";
   if (piece.sleeve_length === "short_sleeve") return "short";
@@ -4035,7 +4027,6 @@ function renderCfsBundleFacts(summary) {
     ? `<li><strong>Season:</strong> ${esc(summary.sharedSeason)}</li>`
     : `<li><strong>Seasons:</strong> ${esc(summary.pieces.map((piece) => `${piece.reference}: ${piece.season}`).join("; "))}</li>`);
   lines.push(`<li><strong>Kit Type:</strong> ${esc(cfsBundleKitTypeText(summary))}</li>`);
-  lines.push(`<li><strong>Back:</strong> ${esc(summary.pieces.map((piece) => `${piece.reference}: ${cfsBundleBackText(piece)}`).join("; "))}.</li>`);
   if (summary.sharedSleeve) lines.push(`<li><strong>Sleeves:</strong> ${esc(cfsBundleSleeveText(summary.pieces[0]))}</li>`);
   else lines.push(`<li><strong>Sleeves:</strong> ${esc(summary.pieces.map((piece) => `${piece.reference}: ${cfsBundleSleeveText(piece)}`).join("; "))}</li>`);
   lines.push(`<li><strong>Sizes:</strong> ${esc(cfsBundleSizesText(summary))}</li>`);
@@ -4144,7 +4135,7 @@ function auditCfsBundleDescription(html, summary, fingerprint, revision) {
   if (!bundleFactsItems.length || !bundleFactsItems.at(-1).textContent.trim().toLowerCase().startsWith("in the parcel:")) {
     blockers.push("In the parcel must be the final Bundle Facts line.");
   }
-  ["kit type:", "back:", "sleeves:", "sizes:", "in the parcel:"].forEach((label) => {
+  ["kit type:", "sleeves:", "sizes:", "in the parcel:"].forEach((label) => {
     if (!bundleFactsText.includes(label)) blockers.push(`CFS Bundle Facts is missing ${label}`);
   });
   if (!bundleFactsText.includes(summary.sharedTeam ? "team:" : "teams:")) blockers.push("CFS Bundle Facts is missing the team summary.");

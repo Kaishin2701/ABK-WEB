@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.5.0',
+        version: '6.5.1',
         label: 'Current release',
+        title: 'Lean CFS Bundle facts',
+        description: 'CFS Bundle descriptions no longer repeat item colours in a separate Back line. Each shirt, kit and Baby Suit keeps its verified colours, garment contents, socks status and fixed player print under What\'s Included, while Bundle Facts remains focused on shared buying details.'
+    },
+    {
+        version: '6.5.0',
+        label: 'Previous release',
         title: 'Complete CFS Bundle builder',
         description: 'CFS Bundle now uses the full two-to-four-item editor available in KFK while generating its own approved CFS description structure. It supports shirts, kits, long-sleeve products and Baby Suits in plain, pre-printed and mixed combinations, with item-specific socks, sizes, colours and badge facts. A dedicated CFS Bundle sample and an exhaustive regression matrix cover 2,325 valid bundle configurations without unexpected blocks.'
     },
