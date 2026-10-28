@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Batch-process product images with manually entered subtext boxes, watermarking and metadata-free PNG export." />
+  <title>Auto Watermark Plus</title>
+  <link rel="stylesheet" href="styles.css?v=7.0.0" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><div class="mark">ABK</div><div><h1>Auto Watermark Plus</h1><p class="subtitle">Batch subtext, watermark and clean export</p></div></div>
+      <span class="demo-badge">PLUS</span>
+    </header>
+    <main>
+      <aside class="panel controls">
+        <section class="section">
+          <h2 class="section-title"><span class="step">1</span>Add product images</h2>
+          <p class="section-note">Add multiple JPG, PNG or WebP images, then enter the three white-box values manually for each result.</p>
+          <label class="dropzone" id="dropzone" for="imageFiles"><div><strong>Choose images or drop them here</strong><span>Multiple files are supported</span></div></label>
+          <input id="imageFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        </section>
+        <section class="section">
+          <h2 class="section-title"><span class="step">2</span>Add a watermark</h2>
+          <p class="section-note">One transparent watermark is applied automatically to every result. Leave empty to export without one.</p>
+          <div class="setting-row"><div class="readout" id="watermarkName">No watermark selected</div><button class="file-button" id="openWatermarkLibrary" type="button">Add</button></div>
+          <input id="watermarkFile" type="file" accept="image/png,image/webp,image/jpeg" />
+          <div class="setting-row"><select id="watermarkPosition" aria-label="Watermark position"><option value="center">Centre</option><option value="cover" selected>Full image</option><option value="bottom-right">Bottom right</option></select><button class="button small" id="clearWatermark" type="button" disabled>Clear</button></div>
+        </section>
+        <section class="section">
+          <h2 class="section-title"><span class="step">3</span>Choose an output folder</h2>
+          <p class="section-note">Supported browsers can save all results directly into one folder. Otherwise, each PNG downloads normally.</p>
+          <div class="setting-row"><div class="readout" id="folderName">Browser downloads</div><button class="button small" id="chooseFolder" type="button">Select</button></div>
+        </section>
+        <section class="section">
+          <div class="actions">
+            <button class="button primary" id="exportAll" type="button" disabled>Export all processed images</button>
+            <button class="button danger" id="clearAll" type="button" disabled>Clear all</button>
+          </div>
+          <div class="progress"><span id="progressBar"></span></div>
+          <p class="privacy">ⓘ Exported images are rebuilt as PNG files, so original EXIF metadata is not carried into the result.</p>
+        </section>
+      </aside>
+      <section class="panel workspace" aria-label="Processed image results">
+        <div class="workspace-top"><div><h2>Processed results</h2><p>Click each image and enter its box content before exporting.</p></div><span class="count" id="resultCount">0 images</span></div>
+        <div class="gallery" id="gallery" hidden></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="watermarkLibraryDialog" class="watermark-library-dialog" aria-labelledby="watermarkLibraryTitle">
+    <div class="watermark-library-panel">
+      <div class="watermark-library-header"><div><p class="watermark-library-eyebrow">AUTO WATERMARK PLUS</p><h2 id="watermarkLibraryTitle">Choose a watermark</h2></div><button class="icon-button" id="closeWatermarkLibrary" type="button" aria-label="Close watermark library">×</button></div>
+      <p class="section-note">Select a saved watermark or choose Other to upload one from your device.</p>
+      <div class="watermark-library-grid" id="watermarkLibraryGrid" aria-label="Saved watermarks"></div>
+      <div class="watermark-library-actions"><button class="button" id="otherWatermark" type="button">Other…</button><button class="button" id="cancelWatermarkLibrary" type="button">Cancel</button></div>
+    </div>
+  </dialog>
+  <dialog id="editorDialog">
+    <div class="dialog-head"><div><h2>Enter image content</h2><p class="subtitle" id="editorFilename"></p></div><button class="icon-button" id="closeEditor" type="button" aria-label="Close">×</button></div>
+    <div class="editor">
+      <div class="editor-preview"><canvas id="editorCanvas" width="1000" height="1000"></canvas></div>
+      <form id="editorForm">
+        <div class="field"><label for="editTitle">Product name</label><input id="editTitle" type="text" maxlength="90" required /></div>
+        <div class="field"><label for="editType">Product type</label><select id="editType"><option>Kids Kit</option><option>Men Shirt</option><option>Women Shirt</option><option>Adult Kit</option><option>Baby Body Suit</option></select></div>
+        <div class="field"><label>Personalisation type</label><div class="toggle"><input id="editOptional" name="editMode" type="radio" value="optional" /><label for="editOptional">Optional</label><input id="editPlayer" name="editMode" type="radio" value="player" /><label for="editPlayer">Player</label></div></div>
+        <div class="field" id="editPlayerField"><label for="editPlayerText">Player name and number</label><input id="editPlayerText" type="text" maxlength="55" placeholder="Example: McTOMMINAY 4" /></div>
+        <div class="dialog-actions"><button class="button primary" type="submit">Save changes</button><button class="button" id="cancelEditor" type="button">Cancel</button></div>
+      </form>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js?v=7.0.0"></script>
+</body>
+</html>

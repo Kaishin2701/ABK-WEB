@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.6.0',
+        version: '7.0.0',
         label: 'Current release',
+        title: 'Auto Watermark Standard and Plus',
+        description: 'Auto Watermark now opens with a mode selector. Standard preserves the original single-workflow processor, while Plus adds batch image intake, manual per-image subtext editing, the shared built-in watermark library, custom watermark uploads, folder export and metadata-free PNG output. Full image is the default watermark position in Plus.'
+    },
+    {
+        version: '6.6.0',
+        label: 'Previous release',
         title: 'Built-in Auto Watermark library',
         description: 'Auto Watermark now opens a visual library of saved website watermarks, while Other still supports a watermark file from the user\'s device. The selected watermark is previewed and can be cleared before processing. Image quality and watermark opacity are fixed at 100%, and the compact Add, Clear and Select controls align with their adjacent fields.'
     },
@@ -222,6 +228,11 @@ function openTool(tabId) {
 }
 
 function returnToToolLibrary() {
+    const activeTabId = document.querySelector('.tab-content.active')?.id;
+    if (['tab-watermark', 'tab-watermark-plus'].includes(activeTabId)) {
+        switchTab('tab-auto-watermark');
+        return;
+    }
     switchTab('tab-tool-library');
 }
 

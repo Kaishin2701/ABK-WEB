@@ -7,8 +7,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
-    <link rel="icon" type="image/png" href="assets/logo.png?v=6.6.0">
-    <link rel="stylesheet" href="style.css?v=6.6.0">
+    <link rel="icon" type="image/png" href="assets/logo.png?v=7.0.0">
+    <link rel="stylesheet" href="style.css?v=7.0.0">
 </head>
 <body>
 
@@ -23,10 +23,26 @@
             </div>
             <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
         </nav>
-        <div class="app-version">Ver 6.6.0 Web</div>
+        <div class="app-version">Ver 7.0.0 Web</div>
     </header>
 
     <main>
+        <div id="tab-auto-watermark" class="tab-content cdf-site-page">
+            <section class="cdf-site-page-header">
+                <p>AUTO WATERMARK</p>
+                <h1>Choose a mode</h1>
+                <span>Use the original processor or open the batch workflow with editable image subtext.</span>
+            </section>
+            <div class="cdf-site-selector-grid" aria-label="Auto Watermark modes">
+                <button class="cdf-site-selector-card available" type="button" onclick="openTool('tab-watermark')">
+                    <strong>Standard</strong><span>Open original</span>
+                </button>
+                <button class="cdf-site-selector-card available" type="button" onclick="openTool('tab-watermark-plus')">
+                    <strong>Plus</strong><span>Open batch processor</span>
+                </button>
+            </div>
+        </div>
+
         <div id="tab-watermark" class="tab-content">
             <div class="header-title">ABK IMAGE PROCESSOR</div>
             
@@ -81,6 +97,19 @@
             <p id="status-lbl">Ready.</p>
             <button id="btn-start-wm" class="btn-big-green">START PROCESSING</button>
             <div id="download-area" style="display:none"></div>
+        </div>
+
+        <div id="tab-watermark-plus" class="tab-content description-tool-tab">
+            <div class="header-title">AUTO WATERMARK PLUS</div>
+            <div class="description-tool-shell">
+                <iframe
+                    id="auto-watermark-plus-frame"
+                    class="description-tool-frame"
+                    src="tools/auto-watermark-plus/index.html?v=7.0.0"
+                    title="Auto Watermark Plus"
+                    loading="lazy"
+                ></iframe>
+            </div>
         </div>
 
         <dialog id="watermark-library-dialog" class="watermark-library-dialog" aria-labelledby="watermark-library-title">
@@ -262,7 +291,7 @@
                 <iframe
                     id="create-description-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?v=6.6.0"
+                    src="tools/create-description/index.html?v=7.0.0"
                     title="Create Description KFK"
                     loading="lazy"
                     allow="clipboard-write"
@@ -276,7 +305,7 @@
                 <iframe
                     id="create-description-cfs-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?site=CFS&amp;v=6.6.0"
+                    src="tools/create-description/index.html?site=CFS&amp;v=7.0.0"
                     title="Create Description CFS"
                     loading="lazy"
                     allow="clipboard-write"
@@ -291,7 +320,7 @@
                 <p>Choose a workspace below. Your selected tool opens without leaving ABK Web.</p>
             </section>
             <div class="tool-library-grid" aria-label="Available tools">
-                <button class="tool-card" type="button" data-tab-target="tab-watermark" onclick="openTool('tab-watermark')">
+                <button class="tool-card" type="button" data-tab-target="tab-auto-watermark" onclick="openTool('tab-auto-watermark')">
                     <span class="tool-card-icon" aria-hidden="true">◈</span><span class="tool-card-copy"><strong>Auto Watermark</strong><small>Process and watermark product images.</small></span><span class="tool-card-arrow" aria-hidden="true">→</span>
                 </button>
                 <button class="tool-card" type="button" data-tab-target="tab-linkcheck" onclick="openTool('tab-linkcheck')">
@@ -328,7 +357,7 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=6.6.0"></script>
+    <script src="script.js?v=7.0.0"></script>
     <script src="modules/watermark.js?v=1.2"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>
