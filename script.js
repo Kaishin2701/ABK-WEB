@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.5.1',
+        version: '6.5.2',
         label: 'Current release',
+        title: 'Cleaner conditional sections and responsive builder',
+        description: 'KFK and CFS descriptions now remove an optional section automatically when it has no content, preventing empty headings such as Options You Can Add or Make It Yours. Create Description also switches to a full-width single-column layout when its iframe becomes too narrow, so the Input and Output panels remain readable without horizontal clipping.'
+    },
+    {
+        version: '6.5.1',
+        label: 'Previous release',
         title: 'Lean CFS Bundle facts',
         description: 'CFS Bundle descriptions no longer repeat item colours in a separate Back line. Each shirt, kit and Baby Suit keeps its verified colours, garment contents, socks status and fixed player print under What\'s Included, while Bundle Facts remains focused on shared buying details.'
     },

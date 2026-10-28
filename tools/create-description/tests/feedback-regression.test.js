@@ -6,9 +6,13 @@ const vm = require("node:vm");
 const toolRoot = path.resolve(__dirname, "..");
 const appSource = fs.readFileSync(path.join(toolRoot, "app.js"), "utf8");
 const htmlSource = fs.readFileSync(path.join(toolRoot, "index.html"), "utf8");
+const stylesSource = fs.readFileSync(path.join(toolRoot, "styles.css"), "utf8");
 const shellRoot = path.resolve(toolRoot, "..", "..");
 const shellHtmlSource = fs.readFileSync(path.join(shellRoot, "index.html"), "utf8");
 const shellAppSource = fs.readFileSync(path.join(shellRoot, "script.js"), "utf8");
+
+assert.match(stylesSource, /@media \(max-width: 1320px\)[\s\S]*?\.layout\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
+assert.match(stylesSource, /\.description-preview\s*\{[\s\S]*?overflow-wrap: anywhere/);
 
 function sourceBetween(startMarker, endMarker) {
   const start = appSource.indexOf(startMarker);
@@ -74,6 +78,18 @@ vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthd
 vm.runInContext(sourceBetween("function assignCfsBundlePieceReferences", "function isBirthdayGiftPack"), context);
 vm.runInContext(sourceBetween("function isBirthdayGiftPack", "function auditPieceBasedBundleDescription"), context);
 vm.runInContext(sourceBetween("function cfsBundleSampleFacts", "function loadBundleSample"), context);
+
+const prunedEmptySections = context.removeEmptyDescriptionSections([
+  "<h3>Options You Can Add</h3>",
+  "<ul></ul>",
+  "<h3>Make It Yours</h3>",
+  "<ul>   </ul>",
+  "<h3>Before You Order</h3>",
+  "<ul><li>Keep this content.</li></ul>"
+].join("\n"));
+assert.doesNotMatch(prunedEmptySections, /Options You Can Add|Make It Yours/);
+assert.doesNotMatch(prunedEmptySections, /<ul>\s*<\/ul>/);
+assert.match(prunedEmptySections, /<h3>Before You Order<\/h3>/);
 
 const leagueArrayMatch = appSource.match(/const badgeLeagueOptions = (\[[\s\S]*?\]);/);
 assert.ok(leagueArrayMatch, "Badge league source list is missing");
@@ -764,6 +780,25 @@ const duplicatePrintedHomeDetails = duplicatePrintedHomeHtml.slice(duplicatePrin
 assert.match(duplicatePrintedHomeDetails, /<strong>Home kit 1:<\/strong> Bellingham name and number 10 are already applied and included; red shirt/);
 assert.match(duplicatePrintedHomeDetails, /<strong>Home kit 2:<\/strong> Kane name and number 9 are already applied and included; blue shirt/);
 assert.doesNotMatch(duplicatePrintedHomeDetails, /Home kit [12] colours|Home kit [12] player print/);
+
+const noOptionalGiftPackPieces = duplicatePrintedHomePieces.map((piece) => ({
+  ...piece,
+  badge_status: "unavailable",
+  badge_league: "",
+  chest_badge_status: "unavailable",
+  chest_badge_league: ""
+}));
+const noOptionalGiftPackHtml = context.renderBirthdayGiftPackDescription({
+  ...giftPackSummary,
+  pieces: noOptionalGiftPackPieces,
+  personalisable: [],
+  fixedPrint: noOptionalGiftPackPieces,
+  badgeEligible: []
+});
+assert.doesNotMatch(noOptionalGiftPackHtml, /<h3>Options You Can Add<\/h3>/);
+assert.doesNotMatch(noOptionalGiftPackHtml, /<ul>\s*<\/ul>/);
+assert.match(noOptionalGiftPackHtml, /<h3>Before You Order<\/h3>/);
+assert.match(appSource, /renderBirthdayGiftPackOptions\(summary\)\.length \? \["Options You Can Add"\]/);
 
 const independentGiftPackHtml = context.renderBirthdayGiftPackDescription({
   ...giftPackSummary,

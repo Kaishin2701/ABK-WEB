@@ -2255,6 +2255,13 @@ function containsForbiddenDescriptionDash(value) {
   return descriptionDashCheckPattern.test(withoutSizeRanges);
 }
 
+function removeEmptyDescriptionSections(html) {
+  return String(html || "")
+    .replace(/\s*<h3>[^<]*<\/h3>\s*<ul>\s*<\/ul>/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function removeDescriptionDashes(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div id="description-dash-root">${html}</div>`, "text/html");
@@ -2985,7 +2992,7 @@ function renderCfsDescription(facts) {
     cfsBadgeOptionLine(facts, "chest")
   ].filter(Boolean);
 
-  return [
+  const html = [
     `<p>${esc(cfsOpening(facts))}</p>`,
     `<h3>${factsHeading}</h3>`,
     "<ul>",
@@ -3000,6 +3007,7 @@ function renderCfsDescription(facts) {
     ...cfsGoodToKnowLines(facts),
     "</ul>"
   ].join("\n");
+  return removeEmptyDescriptionSections(html);
 }
 
 function renderDescription(facts, branch) {
@@ -3053,7 +3061,7 @@ function renderDescription(facts, branch) {
     "</ul>"
   ].join("\n");
 
-  return removeDescriptionDashes(html);
+  return removeEmptyDescriptionSections(removeDescriptionDashes(html));
 }
 
 function renderBundleDescription(facts) {
@@ -3086,7 +3094,7 @@ function renderBundleDescription(facts) {
     "</ul>"
   ].join("\n");
 
-  return removeDescriptionDashes(html);
+  return removeEmptyDescriptionSections(removeDescriptionDashes(html));
 }
 
 function validateBundleFacts(facts) {
@@ -3853,7 +3861,7 @@ function renderPieceBasedBundleDescription(summary) {
     "</ul>"
   ].join("\n");
 
-  return html;
+  return removeEmptyDescriptionSections(html);
 }
 
 function assignCfsBundlePieceReferences(pieces) {
@@ -4099,7 +4107,7 @@ function renderCfsBundleDescription(summary, revision = 0) {
     sections.push("", "<h3>Make It Yours</h3>", "<ul>", makeItYours.join("\n"), "</ul>");
   }
   sections.push("", "<h3>Good to Know</h3>", "<ul>", renderCfsBundleGoodToKnow(summary).join("\n"), "</ul>");
-  return sections.join("\n");
+  return removeEmptyDescriptionSections(sections.join("\n"));
 }
 
 function cfsBundleWordCount(value) {
@@ -4350,7 +4358,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     ? "Choose the Home and Away sizes separately."
     : "Choose each kit size separately.";
 
-  return [
+  const html = [
     "<h3>What's Included</h3>",
     "<ul>",
     ...pieces.map((piece) => birthdayGiftPackIncludedLine(piece, pieces)),
@@ -4379,6 +4387,7 @@ function renderLegacyBirthdayGiftPackDescription(summary) {
     beforeOrder.join("\n"),
     "</ul>"
   ].join("\n");
+  return removeEmptyDescriptionSections(html);
 }
 
 function auditBirthdayGiftPackDescription(html, summary, fingerprint) {
@@ -4412,7 +4421,12 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   const root = doc.querySelector("#gift-pack-audit-root");
   const textValue = root.textContent.toLowerCase();
   const headings = [...root.querySelectorAll("h3")].map((node) => node.textContent.trim());
-  const expectedHeadings = ["What's Included", "Product Details", "Options You Can Add", "Before You Order"];
+  const expectedHeadings = [
+    "What's Included",
+    "Product Details",
+    ...(renderBirthdayGiftPackOptions(summary).length ? ["Options You Can Add"] : []),
+    "Before You Order"
+  ];
   const sectionText = (heading) => [...root.querySelectorAll("h3")]
     .find((node) => node.textContent.trim() === heading)?.nextElementSibling?.textContent.toLowerCase() || "";
   const includedText = sectionText("What's Included");
@@ -4422,7 +4436,7 @@ function auditLegacyBirthdayGiftPackDescription(html, summary, fingerprint) {
   const pieces = birthdayGiftPackPieces(summary);
   const badTags = [...root.querySelectorAll("*")].map((node) => node.tagName).filter((tag) => !allowedTags.has(tag));
   if (badTags.length) blockers.push(`HTML contains prohibited tag(s): ${[...new Set(badTags)].join(", ")}.`);
-  if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Birthday Gift Pack must use the four approved sections in order.");
+  if (headings.join("|") !== expectedHeadings.join("|")) blockers.push("Birthday Gift Pack must use the applicable approved sections in order.");
   if (root.querySelector("p")) blockers.push("Birthday Gift Pack must not add an opening paragraph before What's Included.");
   if (textValue.includes("key buying details")) blockers.push("Birthday Gift Pack must not use the legacy Key Buying Details section.");
   ["lightweight polyester fabric", "standard packaging, not gift-wrapped"].forEach((phrase) => {
