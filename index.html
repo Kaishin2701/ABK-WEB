@@ -7,8 +7,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
-    <link rel="icon" type="image/png" href="assets/logo.png?v=6.5.2">
-    <link rel="stylesheet" href="style.css?v=6.5.2">
+    <link rel="icon" type="image/png" href="assets/logo.png?v=6.6.0">
+    <link rel="stylesheet" href="style.css?v=6.6.0">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
             </div>
             <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
         </nav>
-        <div class="app-version">Ver 6.5.2 Web</div>
+        <div class="app-version">Ver 6.6.0 Web</div>
     </header>
 
     <main>
@@ -43,10 +43,15 @@
 
             <div class="group-box">
                 <div class="lbl-title">WATERMARK SETTINGS</div>
-                <div class="input-row">
+                <div class="input-row watermark-action-row">
                     <input type="text" id="wm-path-display" placeholder="No logo selected..." readonly>
-                    <button class="btn-accent" onclick="document.getElementById('inp-wm').click()">Add </button>
+                    <button id="open-watermark-library" class="btn-accent watermark-compact-button" type="button">Add</button>
+                    <button id="clear-watermark" class="btn-secondary watermark-compact-button" type="button" disabled>Clear</button>
                     <input type="file" id="inp-wm" accept="image/*" hidden>
+                </div>
+                <div id="selected-watermark-preview" class="selected-watermark-preview" hidden>
+                    <img id="selected-watermark-image" alt="">
+                    <span id="selected-watermark-name"></span>
                 </div>
                 
                 <div class="input-row">
@@ -60,23 +65,12 @@
                     <input type="text" id="inp-rename" value="{default name}">
                 </div>
 
-                <div class="input-row">
+                <div class="input-row watermark-action-row">
                     <label>Output:</label>
                     <input type="text" id="output-path-display" placeholder="Downloads (default)" readonly>
-                    <button id="btn-select-output" class="btn-secondary" type="button">Select Folder</button>
+                    <button id="btn-select-output" class="btn-secondary watermark-compact-button" type="button">Select</button>
                 </div>
                 <p id="output-folder-note" class="muted">No folder selected: files will download normally.</p>
-
-                <div class="sliders-row">
-                    <div class="slider-group">
-                        <label id="lbl-quality">Quality: 85</label>
-                        <input type="range" id="rng-quality" min="10" max="100" value="85">
-                    </div>
-                    <div class="slider-group">
-                        <label id="lbl-opacity">Opacity: 100%</label>
-                        <input type="range" id="rng-opacity" min="0" max="100" value="100">
-                    </div>
-                </div>
             </div>
 
             <div class="log-container">
@@ -88,6 +82,24 @@
             <button id="btn-start-wm" class="btn-big-green">START PROCESSING</button>
             <div id="download-area" style="display:none"></div>
         </div>
+
+        <dialog id="watermark-library-dialog" class="watermark-library-dialog" aria-labelledby="watermark-library-title">
+            <div class="watermark-library-panel">
+                <div class="watermark-library-header">
+                    <div>
+                        <p class="watermark-library-eyebrow">AUTO WATERMARK</p>
+                        <h2 id="watermark-library-title">Choose a watermark</h2>
+                    </div>
+                    <button id="close-watermark-library" class="watermark-library-close" type="button" aria-label="Close watermark library">&times;</button>
+                </div>
+                <p class="watermark-library-copy">Select a saved watermark or choose Other to upload one from your device.</p>
+                <div id="watermark-library-grid" class="watermark-library-grid" aria-label="Saved watermarks"></div>
+                <div class="watermark-library-actions">
+                    <button id="choose-other-watermark" class="btn-secondary" type="button">Other&hellip;</button>
+                    <button id="cancel-watermark-library" class="btn-secondary" type="button">Cancel</button>
+                </div>
+            </div>
+        </dialog>
 
         <div id="tab-linkcheck" class="tab-content">
             <div class="header-title">MASS LINK CHECKER</div>
@@ -250,7 +262,7 @@
                 <iframe
                     id="create-description-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?v=6.5.2"
+                    src="tools/create-description/index.html?v=6.6.0"
                     title="Create Description KFK"
                     loading="lazy"
                     allow="clipboard-write"
@@ -264,7 +276,7 @@
                 <iframe
                     id="create-description-cfs-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?site=CFS&amp;v=6.5.2"
+                    src="tools/create-description/index.html?site=CFS&amp;v=6.6.0"
                     title="Create Description CFS"
                     loading="lazy"
                     allow="clipboard-write"
@@ -316,8 +328,8 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=6.5.2"></script>
-    <script src="modules/watermark.js?v=1.1"></script>
+    <script src="script.js?v=6.6.0"></script>
+    <script src="modules/watermark.js?v=1.2"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>
     <script src="modules/product-checker/core/contracts.js"></script>

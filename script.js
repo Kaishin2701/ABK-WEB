@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '6.5.2',
+        version: '6.6.0',
         label: 'Current release',
+        title: 'Built-in Auto Watermark library',
+        description: 'Auto Watermark now opens a visual library of saved website watermarks, while Other still supports a watermark file from the user\'s device. The selected watermark is previewed and can be cleared before processing. Image quality and watermark opacity are fixed at 100%, and the compact Add, Clear and Select controls align with their adjacent fields.'
+    },
+    {
+        version: '6.5.2',
+        label: 'Previous release',
         title: 'Cleaner conditional sections and responsive builder',
         description: 'KFK and CFS descriptions now remove an optional section automatically when it has no content, preventing empty headings such as Options You Can Add or Make It Yours. Create Description also switches to a full-width single-column layout when its iframe becomes too narrow, so the Input and Output panels remain readable without horizontal clipping.'
     },

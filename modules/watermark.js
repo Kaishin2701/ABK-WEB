@@ -1,14 +1,49 @@
 let inputFiles = [];
 let wmImg = null;
 let outputDirectoryHandle = null;
+let selectedWatermarkKey = '';
+
+const WATERMARK_LIBRARY = Object.freeze([
+    { key: 'KFK', label: 'KFK', src: 'watermark/KFK.png' },
+    { key: 'RFK', label: 'RFK', src: 'watermark/RFK.png' },
+    { key: 'RFS', label: 'RFS', src: 'watermark/RFS.jpg' },
+    { key: 'Germany', label: 'Germany', src: 'watermark/Germany.png' },
+    { key: 'DFSH', label: 'DFSH', src: 'watermark/DFSH.png' },
+    { key: 'FCSH', label: 'FCSH', src: 'watermark/FCSH.png' },
+    { key: 'FKDE', label: 'FKDE', src: 'watermark/FKDE.png' },
+    { key: 'FKDI', label: 'FKDI', src: 'watermark/FKDI.png' },
+    { key: 'FSCD', label: 'FSCD', src: 'watermark/FSCD.png' },
+    { key: 'FSS', label: 'FSS', src: 'watermark/FSS.png' },
+    { key: 'PLSH', label: 'PLSH', src: 'watermark/PLSH.png' },
+    { key: 'Empty', label: 'Empty', src: 'watermark/Empty.png' }
+]);
+
+const watermarkLibraryDialog = document.getElementById('watermark-library-dialog');
+const watermarkLibraryGrid = document.getElementById('watermark-library-grid');
+const watermarkFileInput = document.getElementById('inp-wm');
+const clearWatermarkButton = document.getElementById('clear-watermark');
+const selectedWatermarkPreview = document.getElementById('selected-watermark-preview');
+const selectedWatermarkImage = document.getElementById('selected-watermark-image');
+const selectedWatermarkName = document.getElementById('selected-watermark-name');
 
 // UI Connect
 document.getElementById('inp-files').addEventListener('change', handleFileSelect);
-document.getElementById('inp-wm').addEventListener('change', handleWmSelect);
+watermarkFileInput.addEventListener('change', handleWmSelect);
 document.getElementById('btn-start-wm').addEventListener('click', startProcess);
 document.getElementById('btn-select-output').addEventListener('click', selectOutputFolder);
-document.getElementById('rng-quality').addEventListener('input', (e) => document.getElementById('lbl-quality').innerText = `Quality: ${e.target.value}`);
-document.getElementById('rng-opacity').addEventListener('input', (e) => document.getElementById('lbl-opacity').innerText = `Opacity: ${e.target.value}%`);
+document.getElementById('open-watermark-library').addEventListener('click', openWatermarkLibrary);
+document.getElementById('close-watermark-library').addEventListener('click', closeWatermarkLibrary);
+document.getElementById('cancel-watermark-library').addEventListener('click', closeWatermarkLibrary);
+document.getElementById('choose-other-watermark').addEventListener('click', () => {
+    closeWatermarkLibrary();
+    watermarkFileInput.click();
+});
+clearWatermarkButton.addEventListener('click', clearWatermarkSelection);
+watermarkLibraryDialog.addEventListener('click', (event) => {
+    if (event.target === watermarkLibraryDialog) closeWatermarkLibrary();
+});
+
+renderWatermarkLibrary();
 
 // Logger
 function log(msg) {
@@ -28,15 +63,93 @@ function handleFileSelect(e) {
 function handleWmSelect(e) {
     const file = e.target.files[0];
     if(file) {
-        document.getElementById('wm-path-display').value = file.name;
         const reader = new FileReader();
         reader.onload = (ev) => {
-            wmImg = new Image();
-            wmImg.src = ev.target.result;
-            log(`Đã load Watermark: ${file.name}`);
+            const image = new Image();
+            image.onload = () => applyWatermarkSelection(image, file.name, ev.target.result, '');
+            image.onerror = () => {
+                alert('Unable to load this watermark image. Please choose another file.');
+                log(`Unable to load watermark: ${file.name}`);
+            };
+            image.src = ev.target.result;
         };
         reader.readAsDataURL(file);
     }
+}
+
+function renderWatermarkLibrary() {
+    watermarkLibraryGrid.innerHTML = '';
+    WATERMARK_LIBRARY.forEach((watermark) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `watermark-library-item${selectedWatermarkKey === watermark.key ? ' active' : ''}`;
+        button.dataset.watermarkKey = watermark.key;
+        button.setAttribute('aria-pressed', String(selectedWatermarkKey === watermark.key));
+        button.innerHTML = `
+            <span class="watermark-library-thumb"><img src="${watermark.src}" alt="" loading="lazy"></span>
+            <strong>${watermark.label}</strong>
+        `;
+        button.addEventListener('click', () => loadBuiltInWatermark(watermark));
+        watermarkLibraryGrid.appendChild(button);
+    });
+}
+
+function openWatermarkLibrary() {
+    renderWatermarkLibrary();
+    if (typeof watermarkLibraryDialog.showModal === 'function') {
+        watermarkLibraryDialog.showModal();
+        return;
+    }
+    watermarkLibraryDialog.setAttribute('open', '');
+}
+
+function closeWatermarkLibrary() {
+    if (typeof watermarkLibraryDialog.close === 'function' && watermarkLibraryDialog.open) {
+        watermarkLibraryDialog.close();
+        return;
+    }
+    watermarkLibraryDialog.removeAttribute('open');
+}
+
+function loadBuiltInWatermark(watermark) {
+    const image = new Image();
+    image.onload = () => {
+        watermarkFileInput.value = '';
+        applyWatermarkSelection(image, watermark.label, watermark.src, watermark.key);
+        closeWatermarkLibrary();
+    };
+    image.onerror = () => {
+        alert(`Unable to load the saved ${watermark.label} watermark.`);
+        log(`Unable to load saved watermark: ${watermark.label}`);
+    };
+    image.src = watermark.src;
+}
+
+function applyWatermarkSelection(image, label, previewSource, libraryKey) {
+    wmImg = image;
+    selectedWatermarkKey = libraryKey;
+    document.getElementById('wm-path-display').value = label;
+    selectedWatermarkImage.src = previewSource;
+    selectedWatermarkImage.alt = `${label} watermark preview`;
+    selectedWatermarkName.textContent = label;
+    selectedWatermarkPreview.hidden = false;
+    clearWatermarkButton.disabled = false;
+    renderWatermarkLibrary();
+    log(`Watermark selected: ${label}`);
+}
+
+function clearWatermarkSelection() {
+    wmImg = null;
+    selectedWatermarkKey = '';
+    watermarkFileInput.value = '';
+    document.getElementById('wm-path-display').value = '';
+    selectedWatermarkImage.removeAttribute('src');
+    selectedWatermarkImage.alt = '';
+    selectedWatermarkName.textContent = '';
+    selectedWatermarkPreview.hidden = true;
+    clearWatermarkButton.disabled = true;
+    renderWatermarkLibrary();
+    log('Watermark selection cleared.');
 }
 
 function renderGallery() {
@@ -110,8 +223,8 @@ async function startProcess() {
     document.getElementById('log-box').value = ""; // Clear log
 
     const mode = document.getElementById('sel-mode').value;
-    const opacity = parseInt(document.getElementById('rng-opacity').value) / 100;
-    const quality = parseInt(document.getElementById('rng-quality').value) / 100;
+    const opacity = 1;
+    const quality = 1;
     const renameTpl = document.getElementById('inp-rename').value;
     const downloadArea = document.getElementById('download-area');
     downloadArea.innerHTML = ''; // Reset link tải
