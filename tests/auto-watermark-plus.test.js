@@ -25,7 +25,10 @@ assert.match(plusScript, /configured: false/);
 assert.match(plusScript, /Enter the content for every image before exporting/);
 
 const libraryEntries = [...plusScript.matchAll(/src: '\.\.\/\.\.\/watermark\/([^']+)'/g)].map(match => match[1]);
-assert.equal(libraryEntries.length, 12);
+assert.equal(libraryEntries.length, 13);
+assert.ok(!libraryEntries.includes('KFK.png'));
+assert.ok(libraryEntries.includes('New KFK WTM.png'));
+assert.ok(libraryEntries.includes('KFK WTM NO LOGO.png'));
 libraryEntries.forEach(file => assert.ok(fs.existsSync(path.join(root, 'watermark', file)), `Missing watermark: ${file}`));
 
 console.log('Auto Watermark Standard/Plus integration tests passed.');

@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.0.0',
+        version: '7.0.1',
         label: 'Current release',
+        title: 'Updated KFK watermark choices',
+        description: 'The Standard and Plus watermark libraries now include dedicated KFK - New logo and KFK - No logo choices. The obsolete KFK library card has been removed, while the original asset remains available in the project for safe rollback.'
+    },
+    {
+        version: '7.0.0',
+        label: 'Previous release',
         title: 'Auto Watermark Standard and Plus',
         description: 'Auto Watermark now opens with a mode selector. Standard preserves the original single-workflow processor, while Plus adds batch image intake, manual per-image subtext editing, the shared built-in watermark library, custom watermark uploads, folder export and metadata-free PNG output. Full image is the default watermark position in Plus.'
     },

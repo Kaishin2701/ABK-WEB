@@ -16,12 +16,15 @@ assert.match(html, /id="watermark-library-grid"/);
 assert.match(html, /id="choose-other-watermark"/);
 assert.match(html, /id="clear-watermark"[^>]*disabled/);
 assert.match(html, /id="selected-watermark-preview"[^>]*hidden/);
-assert.match(html, /modules\/watermark\.js\?v=1\.2/);
+assert.match(html, /modules\/watermark\.js\?v=1\.4/);
 assert.doesNotMatch(html, /id="rng-quality"|id="rng-opacity"|Quality:|Opacity:/);
 
 const libraryPaths = [...script.matchAll(/src: '(watermark\/[^']+)'/g)].map((match) => match[1]);
-assert.equal(libraryPaths.length, 12);
-assert.equal(new Set(libraryPaths).size, 12);
+assert.equal(libraryPaths.length, 13);
+assert.equal(new Set(libraryPaths).size, 13);
+assert.ok(!libraryPaths.includes('watermark/KFK.png'));
+assert.ok(libraryPaths.includes('watermark/New KFK WTM.png'));
+assert.ok(libraryPaths.includes('watermark/KFK WTM NO LOGO.png'));
 for (const relativePath of libraryPaths) {
   assert.ok(fs.existsSync(path.join(root, relativePath)), `${relativePath} is missing`);
 }
@@ -106,9 +109,9 @@ vm.runInContext(script, runtimeContext);
 
 elements["open-watermark-library"].click();
 assert.equal(elements["watermark-library-dialog"].open, true);
-assert.equal(elements["watermark-library-grid"].children.length, 12);
+assert.equal(elements["watermark-library-grid"].children.length, 13);
 elements["watermark-library-grid"].children[0].click();
-assert.equal(elements["wm-path-display"].value, "KFK");
+assert.equal(elements["wm-path-display"].value, "KFK - New logo");
 assert.equal(elements["selected-watermark-preview"].hidden, false);
 assert.equal(elements["clear-watermark"].disabled, false);
 assert.equal(elements["watermark-library-dialog"].open, false);

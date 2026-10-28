@@ -4,7 +4,8 @@ let outputDirectoryHandle = null;
 let selectedWatermarkKey = '';
 
 const WATERMARK_LIBRARY = Object.freeze([
-    { key: 'KFK', label: 'KFK', src: 'watermark/KFK.png' },
+    { key: 'KFK-new-logo', label: 'KFK - New logo', src: 'watermark/New KFK WTM.png' },
+    { key: 'KFK-no-logo', label: 'KFK - No logo', src: 'watermark/KFK WTM NO LOGO.png' },
     { key: 'RFK', label: 'RFK', src: 'watermark/RFK.png' },
     { key: 'RFS', label: 'RFS', src: 'watermark/RFS.jpg' },
     { key: 'Germany', label: 'Germany', src: 'watermark/Germany.png' },
