@@ -76,11 +76,14 @@
       ];
       for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <= 1; z++) {
         const element = document.createElement('div'); element.className = 'cubie';
-        const cubie = { element, x, y, z, orientation: new DOMMatrix() };
+        const cubie = { element, x, y, z, orientation: new DOMMatrix(), stickers: [], activeLayer: null };
         for (const [face, axis, side] of faces) {
           const tile = document.createElement('div');
           tile.className = `cubie-face c-${face}`;
-          if (cubie[axis] === side) tile.classList.add('sticker', `${face}-sticker`);
+          if (cubie[axis] === side) {
+            tile.classList.add('sticker');
+            cubie.stickers.push({ tile, x: axis === 'x' ? side : 0, y: axis === 'y' ? side : 0, z: axis === 'z' ? side : 0, last: null });
+          }
           const isCentre = axis === 'x' ? y === 0 && z === 0 : axis === 'y' ? x === 0 && z === 0 : x === 0 && y === 0;
           if (cubie[axis] === side && isCentre) tile.classList.add('logo');
           element.appendChild(tile);
@@ -92,11 +95,36 @@
         cubie.element.style.transform = `translate3d(${offset(cubie.x)}, ${offset(cubie.y)}, ${offset(cubie.z)}) ${cubie.orientation.toString()}`;
       }
       cubies.forEach(position);
+      function cssMatrix(element) {
+        const transform = getComputedStyle(element).transform;
+        return transform && transform !== 'none' ? new DOMMatrix(transform) : new DOMMatrix();
+      }
+      function updateLighting() {
+        if (!document.hidden && interaction.getClientRects().length) {
+          const world = cssMatrix(tilt).multiply(cssMatrix(cube));
+          const layerMatrices = new Map();
+          cubies.forEach(cubie => {
+            if (!cubie.stickers.length) return;
+            let parent = world;
+            if (cubie.activeLayer) {
+              if (!layerMatrices.has(cubie.activeLayer)) layerMatrices.set(cubie.activeLayer, world.multiply(cssMatrix(cubie.activeLayer)));
+              parent = layerMatrices.get(cubie.activeLayer);
+            }
+            const matrix = parent.multiply(cubie.orientation);
+            cubie.stickers.forEach(sticker => {
+              const level = RubikLighting.brightness(matrix, sticker.x, sticker.y, sticker.z);
+              if (sticker.last !== level) { sticker.tile.style.filter = `brightness(${level})`; sticker.last = level; }
+            });
+          });
+        }
+        requestAnimationFrame(updateLighting);
+      }
+      requestAnimationFrame(updateLighting);
       function turn(axis, slice, direction) {
         return new Promise(resolve => {
           const layer = document.createElement('div'); layer.className = 'rubik-layer';
           const selected = cubies.filter(cubie => cubie[axis] === slice);
-          cube.appendChild(layer); selected.forEach(cubie => layer.appendChild(cubie.element));
+          cube.appendChild(layer); selected.forEach(cubie => { cubie.activeLayer = layer; layer.appendChild(cubie.element); });
           const angle = 90 * direction;
           requestAnimationFrame(() => requestAnimationFrame(() => {
             layer.style.transition = 'transform 650ms cubic-bezier(.4,0,.2,1)';
@@ -107,6 +135,7 @@
                 const point = new DOMPoint(cubie.x, cubie.y, cubie.z).matrixTransform(rotation);
                 cubie.x = Math.round(point.x); cubie.y = Math.round(point.y); cubie.z = Math.round(point.z);
                 cubie.orientation = rotation.multiply(cubie.orientation);
+                cubie.activeLayer = null;
                 position(cubie); cube.appendChild(cubie.element);
               });
               layer.remove(); resolve();
