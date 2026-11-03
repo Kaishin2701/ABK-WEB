@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.2.0',
+        version: '7.2.1',
         label: 'Current release',
+        title: 'A fresh ABK home',
+        description: 'The new Home introduces an animated wireframe sphere, direct shortcuts to key tools and a cleaner What’s New section with expandable release history. The Home and Tools navigation is balanced, and Auto Watermark Plus now highlights the image upload area on hover.'
+    },
+    {
+        version: '7.2.0',
+        label: 'Previous release',
         title: 'Image previews and individual controls',
         description: 'Standard and Plus now combine image selection and previews in one workspace, including drag and drop, adding more images and clearing the batch. Standard adds per-image output names and watermark choices, image removal and duplicate-name protection. On narrow screens, the Standard image workspace appears before the settings. Oversized WebP images are compressed automatically.'
     },
@@ -94,118 +100,20 @@ const UPDATE_LOG_ENTRIES = [
 function renderUpdateLog() {
     const list = document.getElementById('update-log-list');
     if (!list) return;
-
-    list.innerHTML = UPDATE_LOG_ENTRIES.slice(0, 5).map((entry, index) => `
-        <article class="update-entry" data-update-card data-update-index="${index}">
-            <div class="update-entry-meta"><strong>Ver ${entry.version}</strong><span>${entry.label}</span></div>
-            <h3>${entry.title}</h3>
-            <p>${entry.description}</p>
-        </article>
-    `).join('');
-}
-
-let activeUpdateIndex = 0;
-let updateWheelDelta = 0;
-let updateCarouselLocked = false;
-let updateCarouselUnlockTimer = null;
-let updatePointerStartY = null;
-
-function circularUpdateOffset(index, activeIndex, total) {
-    let offset = (index - activeIndex + total) % total;
-    if (offset > Math.floor(total / 2)) offset -= total;
-    return offset;
-}
-
-function renderUpdateCarousel() {
-    const cards = [...document.querySelectorAll('[data-update-card]')];
-    if (!cards.length) return;
-
-    const total = cards.length;
-    const isMobile = window.innerWidth <= 768;
-    const cardStep = isMobile ? 70 : 92;
-    activeUpdateIndex = ((activeUpdateIndex % total) + total) % total;
-
-    cards.forEach((card, index) => {
-        const offset = circularUpdateOffset(index, activeUpdateIndex, total);
-        const distance = Math.abs(offset);
-        const isActive = offset === 0;
-        card.style.setProperty('--carousel-y', `${offset * cardStep}px`);
-        card.style.setProperty('--carousel-scale', Math.max(0.82, 1 - (distance * (isMobile ? 0.065 : 0.055))).toFixed(3));
-        card.style.setProperty('--carousel-opacity', Math.max(0.28, 1 - (distance * 0.3)).toFixed(2));
-        card.style.setProperty('--carousel-depth', `${distance * -90}px`);
-        card.style.setProperty('--carousel-tilt', `${offset * -2.5}deg`);
-        card.style.zIndex = String(30 - distance);
-        card.classList.toggle('active', isActive);
-        card.setAttribute('aria-hidden', String(!isActive));
-    });
-
-    const currentEntry = UPDATE_LOG_ENTRIES[activeUpdateIndex];
-    const status = document.getElementById('update-carousel-status');
-    if (status && currentEntry) {
-        status.textContent = `${activeUpdateIndex + 1} / ${total} · Ver ${currentEntry.version}`;
+    const [latest, ...previous] = UPDATE_LOG_ENTRIES;
+    if (!latest) return;
+    const escapeText = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    list.innerHTML = `<article class="home-update-latest"><div class="home-update-meta"><strong>Ver ${escapeText(latest.version)}</strong><span>Latest update</span></div><h3>${escapeText(latest.title)}</h3><p>${escapeText(latest.description)}</p></article><div class="home-update-history">${previous.map((entry, index) => `<details class="home-update-item"${index >= 3 ? ' hidden' : ''}><summary><span class="home-update-version">${escapeText(entry.version)}</span><strong>${escapeText(entry.title)}</strong><span class="home-update-toggle" aria-hidden="true"></span></summary><p>${escapeText(entry.description)}</p></details>`).join('')}</div>`;
+    const button = document.getElementById('show-all-updates');
+    if (button) {
+        button.hidden = previous.length <= 3;
+        button.addEventListener('click', () => {
+            const expanded = button.getAttribute('aria-expanded') === 'true';
+            list.querySelectorAll('.home-update-item').forEach((item, index) => { if (index >= 3) { item.hidden = expanded; if (expanded) item.open = false; } });
+            button.setAttribute('aria-expanded', String(!expanded));
+            button.textContent = expanded ? 'View all updates →' : 'Show fewer updates ↑';
+        });
     }
-
-    const list = document.getElementById('update-log-list');
-    if (list && currentEntry) {
-        list.setAttribute('aria-label', `Update history carousel. Showing version ${currentEntry.version}.`);
-    }
-}
-
-function moveUpdateCarousel(direction) {
-    const total = document.querySelectorAll('[data-update-card]').length;
-    if (!total) return;
-    activeUpdateIndex = (activeUpdateIndex + direction + total) % total;
-    renderUpdateCarousel();
-}
-
-function handleUpdateCarouselWheel(event) {
-    if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-    event.preventDefault();
-    if (updateCarouselLocked) return;
-
-    updateWheelDelta += event.deltaY;
-    if (Math.abs(updateWheelDelta) < 35) return;
-
-    moveUpdateCarousel(updateWheelDelta > 0 ? 1 : -1);
-    updateWheelDelta = 0;
-    updateCarouselLocked = true;
-    window.clearTimeout(updateCarouselUnlockTimer);
-    updateCarouselUnlockTimer = window.setTimeout(() => {
-        updateCarouselLocked = false;
-    }, 380);
-}
-
-function initialiseUpdateLogCarousel() {
-    const list = document.getElementById('update-log-list');
-    if (!list) return;
-
-    list.tabIndex = 0;
-    list.setAttribute('role', 'region');
-    list.setAttribute('aria-roledescription', 'carousel');
-    list.addEventListener('wheel', handleUpdateCarouselWheel, { passive: false });
-    list.addEventListener('keydown', (event) => {
-        if (event.key === 'ArrowDown' || event.key === 'PageDown') {
-            event.preventDefault();
-            moveUpdateCarousel(1);
-        } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
-            event.preventDefault();
-            moveUpdateCarousel(-1);
-        }
-    });
-    list.addEventListener('pointerdown', (event) => {
-        if (event.pointerType !== 'mouse') updatePointerStartY = event.clientY;
-    });
-    list.addEventListener('pointerup', (event) => {
-        if (updatePointerStartY === null) return;
-        const movement = event.clientY - updatePointerStartY;
-        updatePointerStartY = null;
-        if (Math.abs(movement) >= 38) moveUpdateCarousel(movement < 0 ? 1 : -1);
-    });
-    list.addEventListener('pointercancel', () => {
-        updatePointerStartY = null;
-    });
-    window.addEventListener('resize', renderUpdateCarousel);
-    renderUpdateCarousel();
 }
 
 function switchTab(tabId) {
@@ -339,7 +247,6 @@ function skuExportCsv() {
 
 document.addEventListener('DOMContentLoaded', () => {
     renderUpdateLog();
-    initialiseUpdateLogCarousel();
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && document.getElementById('top-navigation')?.classList.contains('tool-open')) {
             returnToToolLibrary();

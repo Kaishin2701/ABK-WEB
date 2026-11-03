@@ -7,8 +7,9 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
-    <link rel="icon" type="image/png" href="assets/logo.png?v=7.2.0">
-    <link rel="stylesheet" href="style.css?v=7.2.0">
+    <link rel="icon" type="image/png" href="assets/logo.png?v=7.2.1">
+    <link rel="stylesheet" href="style.css?v=7.2.1">
+    <link rel="stylesheet" href="home-sphere.css?v=1.3">
 </head>
 <body>
 
@@ -18,12 +19,12 @@
         </div>
         <nav id="top-navigation" class="top-nav" aria-label="Main navigation">
             <div class="nav-primary">
-                <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Information</button>
+                <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Home</button>
                 <button class="top-tab" type="button" data-section="tools" onclick="switchTab('tab-tool-library')">Tools</button>
             </div>
             <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
         </nav>
-        <div class="app-version">Ver 7.2.0 Web</div>
+        <div class="app-version">Ver 7.2.1 Web</div>
     </header>
 
     <main>
@@ -111,7 +112,7 @@
                 <iframe
                     id="auto-watermark-plus-frame"
                     class="description-tool-frame"
-                    src="tools/auto-watermark-plus/index.html?v=7.2.0"
+                    src="tools/auto-watermark-plus/index.html?v=7.2.1"
                     title="Auto Watermark Plus"
                     loading="lazy"
                 ></iframe>
@@ -297,7 +298,7 @@
                 <iframe
                     id="create-description-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?v=7.2.0"
+                    src="tools/create-description/index.html?v=7.2.1"
                     title="Create Description KFK"
                     loading="lazy"
                     allow="clipboard-write"
@@ -311,7 +312,7 @@
                 <iframe
                     id="create-description-cfs-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?site=CFS&amp;v=7.2.0"
+                    src="tools/create-description/index.html?site=CFS&amp;v=7.2.1"
                     title="Create Description CFS"
                     loading="lazy"
                     allow="clipboard-write"
@@ -348,14 +349,15 @@
         </div>
 
         <div id="tab-information" class="tab-content active information-page">
-            <div class="group-box update-log">
-                <h1 class="update-log-title">UPDATE LOG</h1>
-                <div id="update-log-list" class="update-log-list" aria-live="polite"></div>
-                <div class="update-carousel-help">
-                    <span id="update-carousel-status">1 / 5</span>
-                    <span>Scroll, swipe, or use the Up and Down arrow keys</span>
-                </div>
-            </div>
+            <section class="home-hero" aria-labelledby="home-title">
+                <div class="home-copy"><p class="home-eyebrow">Your creative workspace</p><h1 id="home-title">Work smarter.<br><span>Create more.</span></h1><p class="home-intro">Everything you need to manage product content and creative workflows, brought together in one place.</p><div class="home-actions"><button class="home-button home-button-primary" type="button" onclick="switchTab('tab-tool-library')">Explore the workspace <span aria-hidden="true">→</span></button><a class="home-button" href="#home-update-log">View update log</a></div></div>
+                <div class="home-scene" role="img" aria-label="Decorative rotating wireframe sphere around the ABK logo"><div class="home-sphere-tilt" id="home-sphere-tilt" aria-hidden="true"><div class="home-sphere-float"><div class="home-sphere" id="home-sphere"></div><div class="home-sphere-core">ABK</div><div class="home-sphere-orbit"></div></div></div><div class="home-scene-label"><strong>Built for your workflow</strong><span>One workspace. More possibilities.</span></div></div>
+            </section>
+            <section class="home-shortcuts" aria-labelledby="home-shortcuts-title"><div class="home-section-head"><div><p class="home-eyebrow">The workspace</p><h2 id="home-shortcuts-title">Your tools, together.</h2></div><button type="button" onclick="switchTab('tab-tool-library')">View all tools →</button></div><div class="home-card-grid"><button class="home-tool-card" type="button" onclick="openTool('tab-auto-watermark')"><span class="home-tool-icon">◈</span><strong>Auto Watermark</strong><small>Prepare and watermark product images.</small></button><button class="home-tool-card" type="button" onclick="openTool('tab-create-description')"><span class="home-tool-icon">✎</span><strong>Create Description</strong><small>Build consistent product descriptions.</small></button><button class="home-tool-card" type="button" onclick="openTool('tab-product')"><span class="home-tool-icon">✓</span><strong>Product Checker</strong><small>Review product information in one place.</small></button></div></section>
+            <section id="home-update-log" class="home-updates" aria-labelledby="home-updates-title">
+                <div class="home-section-head"><div><p class="home-eyebrow">The latest from ABK</p><h2 id="home-updates-title">What's new</h2></div><button type="button" id="show-all-updates" aria-expanded="false" aria-controls="update-log-list">View all updates →</button></div>
+                <div id="update-log-list" class="home-updates-list"></div>
+            </section>
         </div>
     </main>
 
@@ -363,7 +365,8 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=7.2.0"></script>
+    <script src="script.js?v=7.2.1"></script>
+    <script src="modules/home-sphere.js?v=1.0"></script>
     <script src="modules/webp-limit.js?v=1.1"></script>
     <script src="modules/watermark.js?v=1.7"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
