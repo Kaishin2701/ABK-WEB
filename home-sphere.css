@@ -1,4 +1,4 @@
-.information-page { width:min(100%,1280px); margin:0 auto; }
+.information-page { width:min(100%,1280px); margin:0 auto; align-items:stretch; }
 .home-hero { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; min-height:580px; gap:30px; }
 .home-eyebrow { display:flex; align-items:center; gap:10px; margin:0; color:#00f98c; font-size:11px; font-weight:800; letter-spacing:.17em; text-transform:uppercase; }
 .home-eyebrow::before { content:""; width:7px; height:7px; border-radius:50%; background:#00f98c; box-shadow:0 0 15px #00f98c; }
@@ -15,8 +15,8 @@
 .home-sphere-tilt { position:relative; width:310px; height:310px; transform-style:preserve-3d; transform:rotateX(var(--home-tilt-x,0deg)) rotateY(var(--home-tilt-y,0deg)); transition:transform .2s ease-out; }
 .home-sphere-float { position:absolute; inset:0; transform-style:preserve-3d; animation:home-sphere-float 7s ease-in-out infinite; }
 .home-sphere { position:absolute; inset:0; transform-style:preserve-3d; animation:home-sphere-spin 30s linear infinite; }
-.home-sphere-ring { position:absolute; left:50%; top:50%; width:310px; height:310px; margin:-155px; border:1px solid rgba(0,249,140,.42); border-radius:50%; box-shadow:0 0 9px rgba(0,249,140,.13),inset 0 0 9px rgba(0,249,140,.08); backface-visibility:visible; }
-.home-sphere-latitude { border-color:rgba(96,255,174,.38); }
+.home-sphere-ring { position:absolute; left:50%; top:50%; width:310px; height:310px; margin:-155px; border:1.5px solid rgba(0,249,140,.8); border-radius:50%; box-shadow:0 0 3px rgba(0,249,140,.22); backface-visibility:visible; }
+.home-sphere-latitude { border-color:rgba(96,255,174,.7); }
 .home-sphere-core { position:absolute; inset:50%; display:grid; place-items:center; width:140px; height:140px; margin:-70px; border:1px solid rgba(0,249,140,.24); border-radius:50%; background:radial-gradient(circle,rgba(5,53,29,.94),rgba(4,19,12,.88) 65%,transparent 72%); box-shadow:0 0 50px rgba(0,249,140,.14); color:#00f98c; font-size:49px; font-weight:1000; font-style:italic; letter-spacing:-4px; text-shadow:0 0 28px rgba(0,249,140,.65); }
 .home-sphere-orbit { position:absolute; inset:-36px; border:1px solid rgba(0,249,140,.24); border-radius:50%; transform:rotateX(68deg) rotateZ(-24deg); animation:home-orbit-reverse 24s linear infinite; pointer-events:none; }
 .home-sphere-orbit::after { content:""; position:absolute; top:49%; left:-3px; width:7px; height:7px; border-radius:50%; background:#b0ffcd; box-shadow:0 0 14px 4px rgba(0,249,140,.65); animation:home-sphere-glow 5s ease-in-out infinite; }
@@ -28,11 +28,11 @@
 .home-section-head button { border:0; color:#98ada1; background:none; font:inherit; font-size:13px; cursor:pointer; }
 .home-section-head button:hover { color:#00f98c; }
 .home-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
-.home-tool-card { display:grid; justify-items:start; min-height:170px; padding:22px; border:1px solid rgba(161,255,205,.14); border-radius:16px; color:#f3f8f5; background:linear-gradient(145deg,rgba(24,42,30,.65),rgba(12,19,15,.86)); font:inherit; text-align:left; cursor:pointer; transition:transform .2s,border-color .2s; }
+.home-tool-card { display:grid; justify-items:start; min-height:190px; padding:26px; border:1px solid rgba(161,255,205,.14); border-radius:16px; color:#f3f8f5; background:linear-gradient(145deg,rgba(24,42,30,.65),rgba(12,19,15,.86)); font:inherit; text-align:left; cursor:pointer; transition:transform .2s,border-color .2s; }
 .home-tool-card:hover,.home-tool-card:focus-visible { transform:translateY(-5px); border-color:rgba(0,249,140,.5); outline:none; }
 .home-tool-icon { display:grid; place-items:center; width:37px; height:37px; border:1px solid rgba(0,249,140,.2); border-radius:10px; color:#00f98c; background:rgba(0,249,140,.08); font-size:18px; }
-.home-tool-card strong { margin-top:18px; font-size:15px; }
-.home-tool-card small { margin-top:5px; color:#8d9a94; font-size:12px; }
+.home-tool-card strong { margin-top:18px; font-size:17px; }
+.home-tool-card small { margin-top:5px; color:#a5b4ab; font-size:14px; line-height:1.5; }
 .home-updates { padding:0 0 75px; scroll-margin-top:95px; }
 .home-update-latest { padding:30px; border:1px solid rgba(0,249,140,.3); border-radius:16px; background:linear-gradient(145deg,rgba(17,44,27,.82),rgba(12,19,15,.95)); }
 .home-update-meta { display:flex; align-items:center; flex-wrap:wrap; gap:12px; color:#99a99f; font-size:12px; }
