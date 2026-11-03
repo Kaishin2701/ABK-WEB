@@ -218,7 +218,6 @@ function saveEditor(event) {
   refreshCard(item); updateUI(); closeEditor(); notify('Image content saved.');
 }
 function slug(value) { return clean(value).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'processed-image'; }
-function canvasBlob(canvas) { return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG export failed')), 'image/png', 1)); }
 async function chooseOutputFolder() {
   if (!window.showDirectoryPicker) { notify('Folder selection is not supported here. Files will download normally.', true); return; }
   try { state.outputDirectory = await window.showDirectoryPicker({ mode: 'readwrite' }); els.folderName.textContent = state.outputDirectory.name; notify(`Output folder: ${state.outputDirectory.name}`); }
@@ -226,22 +225,39 @@ async function chooseOutputFolder() {
 }
 async function exportAll() {
   if (!state.items.length) return;
+  let maxBytes;
+  try { maxBytes = WebpLimit.limitBytes($('#maxFileSize').value); } catch (error) { notify(error.message, true); return; }
   const incomplete = state.items.find(item => !item.configured);
   if (incomplete) { notify('Enter the content for every image before exporting.', true); openEditor(incomplete.id); return; }
+  $('#exportReport').hidden = true; $('#exportResults').replaceChildren();
   els.exportAll.disabled = true; let completed = 0;
   try {
+    const prepared = [];
     for (let index = 0; index < state.items.length; index++) {
       const item = state.items[index], canvas = document.createElement('canvas'); canvas.width = OUTPUT_SIZE; canvas.height = OUTPUT_SIZE;
-      renderComposite(item, canvas); const blob = await canvasBlob(canvas); const filename = `${slug(item.title)}-${String(index + 1).padStart(2, '0')}.png`;
+      renderComposite(item, canvas); const blob = await WebpLimit.encode(canvas, 1); const filename = `${slug(item.title)}-${String(index + 1).padStart(2, '0')}.webp`;
+      prepared.push({ blob, name: filename });
+    }
+    const limited = await WebpLimit.applyLimit(prepared, maxBytes);
+    if (limited.cancelled) { notify('Export cancelled. No files were saved.'); return; }
+    for (const file of limited.failed) {
+      const row = document.createElement('li'); row.textContent = `${file.name}: NOT EXPORTED — ${file.reason}`; $('#exportResults').appendChild(row);
+    }
+    $('#exportReport').hidden = false;
+    if (limited.failed.length) alert(`Could not compress these images below the limit; they will not be exported:\n\n${limited.failed.map(file => `${file.name}: ${file.reason}`).join('\n')}`);
+    if (!limited.files.length) return;
+    for (const file of limited.files) {
+      const { blob, name: filename } = file;
       if (state.outputDirectory) {
         const handle = await state.outputDirectory.getFileHandle(filename, { create: true }); const writable = await handle.createWritable(); await writable.write(blob); await writable.close();
       } else {
         const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(anchor.href), 1500); await new Promise(resolve => setTimeout(resolve, 120));
       }
       completed++; els.progress.style.width = `${Math.round(completed / state.items.length * 100)}%`;
+      const row = document.createElement('li'); row.textContent = `${filename}: ${(blob.size / 1000).toFixed(1)} KB`; $('#exportResults').appendChild(row);
     }
-    notify(`${completed} metadata-free PNG${completed === 1 ? '' : 's'} exported.`);
-  } catch (error) { notify(`Export stopped after ${completed} image${completed === 1 ? '' : 's'}.`, true); }
+    notify(`${completed} WebP image${completed === 1 ? '' : 's'} exported below ${maxBytes / 1000} KB.`);
+  } catch (error) { notify(`Export stopped after ${completed} images: ${error.message}`, true); }
   finally { els.exportAll.disabled = false; }
 }
 

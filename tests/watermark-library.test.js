@@ -16,7 +16,7 @@ assert.match(html, /id="watermark-library-grid"/);
 assert.match(html, /id="choose-other-watermark"/);
 assert.match(html, /id="clear-watermark"[^>]*disabled/);
 assert.match(html, /id="selected-watermark-preview"[^>]*hidden/);
-assert.match(html, /modules\/watermark\.js\?v=1\.4/);
+assert.match(html, /modules\/watermark\.js\?v=1\.5/);
 assert.doesNotMatch(html, /id="rng-quality"|id="rng-opacity"|Quality:|Opacity:/);
 
 const libraryPaths = [...script.matchAll(/src: '(watermark\/[^']+)'/g)].map((match) => match[1]);

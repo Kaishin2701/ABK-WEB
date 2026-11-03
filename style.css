@@ -128,6 +128,12 @@ main { min-width: 0; max-width: 1600px; margin: 0 auto; padding: 28px 24px; }
 .input-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
 .watermark-action-row { align-items: stretch; }
 .watermark-compact-button { display: inline-grid; flex: 0 0 80px; place-items: center; width: 80px; min-width: 80px; height: auto; min-height: 0; padding: 4px 6px; font-size: 11px; line-height: 1; text-align: center; white-space: nowrap; }
+.watermark-size-setting { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.watermark-size-setting label { color: #ddd; font-size: 13px; font-weight: 700; }
+.watermark-size-input { display: flex; align-items: center; width: 160px; max-width: 100%; overflow: hidden; border: 1px solid #333; border-radius: 7px; background: #121212; transition: border-color .2s, box-shadow .2s; }
+.watermark-size-input:focus-within { border-color: var(--green); box-shadow: 0 0 8px rgba(0, 255, 136, .2); }
+.watermark-size-input input { min-width: 0; width: 100%; height: 40px; padding: 0 12px; border: 0; outline: 0; background: transparent; color: #eee; font: inherit; }
+.watermark-size-input span { padding: 0 12px; color: #aaa; font-size: 12px; font-weight: 700; }
 input[type="text"], select, textarea { background: #121212; border: 1px solid #333; color: white; padding: 8px; border-radius: 5px; width: 100%; transition: all 0.3s ease; }
 input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); box-shadow: 0 0 8px rgba(0, 255, 136, 0.2); }
 .btn-secondary { background: #1e1e1e; border: 1px solid #333; color: #eee; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: all 0.3s ease; }

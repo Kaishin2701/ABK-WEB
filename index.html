@@ -7,8 +7,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
-    <link rel="icon" type="image/png" href="assets/logo.png?v=7.0.1">
-    <link rel="stylesheet" href="style.css?v=7.0.1">
+    <link rel="icon" type="image/png" href="assets/logo.png?v=7.1.0">
+    <link rel="stylesheet" href="style.css?v=7.1.0">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
             </div>
             <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
         </nav>
-        <div class="app-version">Ver 7.0.1 Web</div>
+        <div class="app-version">Ver 7.1.0 Web</div>
     </header>
 
     <main>
@@ -59,6 +59,7 @@
 
             <div class="group-box">
                 <div class="lbl-title">WATERMARK SETTINGS</div>
+                <div class="watermark-size-setting"><label for="wm-max-kb">Max file size</label><div class="watermark-size-input"><input type="number" id="wm-max-kb" min="1" max="100000" step="1" value="200" aria-describedby="wm-size-unit"><span id="wm-size-unit">KB</span></div></div>
                 <div class="input-row watermark-action-row">
                     <input type="text" id="wm-path-display" placeholder="No logo selected..." readonly>
                     <button id="open-watermark-library" class="btn-accent watermark-compact-button" type="button">Add</button>
@@ -105,7 +106,7 @@
                 <iframe
                     id="auto-watermark-plus-frame"
                     class="description-tool-frame"
-                    src="tools/auto-watermark-plus/index.html?v=7.0.1"
+                    src="tools/auto-watermark-plus/index.html?v=7.1.0"
                     title="Auto Watermark Plus"
                     loading="lazy"
                 ></iframe>
@@ -291,7 +292,7 @@
                 <iframe
                     id="create-description-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?v=7.0.1"
+                    src="tools/create-description/index.html?v=7.1.0"
                     title="Create Description KFK"
                     loading="lazy"
                     allow="clipboard-write"
@@ -305,7 +306,7 @@
                 <iframe
                     id="create-description-cfs-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?site=CFS&amp;v=7.0.1"
+                    src="tools/create-description/index.html?site=CFS&amp;v=7.1.0"
                     title="Create Description CFS"
                     loading="lazy"
                     allow="clipboard-write"
@@ -357,8 +358,9 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=7.0.1"></script>
-    <script src="modules/watermark.js?v=1.4"></script>
+    <script src="script.js?v=7.1.0"></script>
+    <script src="modules/webp-limit.js?v=1.0"></script>
+    <script src="modules/watermark.js?v=1.5"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>
     <script src="modules/product-checker/core/contracts.js"></script>

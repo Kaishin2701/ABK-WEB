@@ -218,6 +218,9 @@ async function saveProcessedFilesToFolder(processedFiles) {
 
 async function startProcess() {
     if(!inputFiles.length) return alert("Chưa chọn ảnh!");
+    let maxBytes;
+    try { maxBytes = WebpLimit.limitBytes(document.getElementById('wm-max-kb').value); }
+    catch (error) { alert(error.message); return; }
 
     const btn = document.getElementById('btn-start-wm');
     btn.disabled = true; btn.innerText = "ĐANG XỬ LÝ...";
@@ -256,6 +259,16 @@ async function startProcess() {
         await new Promise(r => setTimeout(r, 100)); // Delay để UI mượt
     }
 
+    if (!processedFiles.length) { btn.disabled = false; btn.innerText = 'START PROCESSING'; alert('No images could be processed. See the log for details.'); return; }
+    let limited;
+    try { limited = await WebpLimit.applyLimit(processedFiles, maxBytes); }
+    catch (error) { btn.disabled = false; btn.innerText = 'START PROCESSING'; alert(`Compression failed: ${error.message}`); return; }
+    if (limited.cancelled) { btn.disabled = false; btn.innerText = 'START PROCESSING'; log('Export cancelled. No files were saved.'); return; }
+    limited.failed.forEach(file => log(`NOT EXPORTED: ${file.name} - ${file.reason}`));
+    if (limited.failed.length) alert(`Could not compress these images below the limit; they will not be exported:\n\n${limited.failed.map(file => `${file.name}: ${file.reason}`).join('\n')}`);
+    processedFiles.splice(0, processedFiles.length, ...limited.files);
+    processedFiles.forEach(file => log(`READY: ${file.name} - ${(file.blob.size / 1000).toFixed(1)} KB`));
+    if (!processedFiles.length) { btn.disabled = false; btn.innerText = 'START PROCESSING'; return; }
     const outputFileCount = processedFiles.length;
     const savedToFolder = outputFileCount > 0 && await saveProcessedFilesToFolder(processedFiles);
     if (savedToFolder) processedFiles.length = 0;
@@ -295,10 +308,12 @@ async function startProcess() {
 }
 
 function processImage(file, mode, opacity, quality) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Unable to read image.'));
         reader.onload = (e) => {
             const img = new Image();
+            img.onerror = () => reject(new Error('Unable to decode image.'));
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 canvas.width = img.width; canvas.height = img.height;
@@ -338,7 +353,7 @@ function processImage(file, mode, opacity, quality) {
                     }
                 }
 
-                canvas.toBlob(resolve, 'image/webp', quality);
+                WebpLimit.encode(canvas, quality).then(resolve, reject);
             };
             img.src = e.target.result;
         };

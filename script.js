@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.0.1',
+        version: '7.1.0',
         label: 'Current release',
+        title: 'WebP size limits for Auto Watermark',
+        description: 'Standard and Plus now export WebP images with a configurable maximum file size, defaulting to 200 KB. Images at or above the limit are listed for confirmation before quality is reduced. Images that still exceed the limit are reported and excluded from export, and Plus displays the resulting file sizes.'
+    },
+    {
+        version: '7.0.1',
+        label: 'Previous release',
         title: 'Updated KFK watermark choices',
         description: 'The Standard and Plus watermark libraries now include dedicated KFK - New logo and KFK - No logo choices. The obsolete KFK library card has been removed, while the original asset remains available in the project for safe rollback.'
     },
