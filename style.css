@@ -67,6 +67,20 @@ body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); co
 .top-nav.tool-open .nav-back { opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; color: var(--green); }
 .app-version { justify-self: end; padding: 7px 11px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 999px; background: rgba(255, 255, 255, 0.035); color: #888; font-size: 12px; white-space: nowrap; }
 
+/* Flat navigation: keep the animated ABK wordmark unchanged. */
+.top-toolbar { background:rgba(5,15,10,.94); border-bottom:1px solid rgba(0,255,136,.14); box-shadow:0 8px 24px rgba(0,0,0,.22); }
+.top-nav, .top-nav.tool-open { padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; backdrop-filter:none; }
+.top-tab { position:relative; border:0; border-radius:0; background:transparent; color:#9eaaa3; box-shadow:none; }
+.top-tab:hover, .top-tab:focus-visible { color:#fff; background:transparent; border:0; box-shadow:none; }
+.top-tab:focus-visible { outline:2px solid rgba(0,255,136,.65); outline-offset:-3px; border-radius:4px; }
+.nav-primary .top-tab.active { color:#f4fff8; background:transparent; border:0; box-shadow:none; }
+.nav-primary .top-tab::after { content:''; position:absolute; left:32%; right:32%; bottom:4px; height:2px; border-radius:2px; background:var(--green); opacity:0; transform:scaleX(.5); transition:opacity .2s,transform .2s; }
+.nav-primary .top-tab.active::after { opacity:1; transform:scaleX(1); }
+.nav-back #nav-back-label { font-size:15px; line-height:normal; }
+.nav-back:hover #nav-back-label { transform:none; }
+.app-version { display:flex; align-items:center; gap:8px; padding:0; border:0; border-radius:0; background:transparent; color:#98a69e; }
+.app-version::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px rgba(0,255,136,.55); }
+
 /* Main */
 main { min-width: 0; max-width: 1600px; margin: 0 auto; padding: 28px 24px; }
 .tab-content { display: none; min-height: 0; flex-direction: column; opacity: 0; animation: fadeIn 0.4s ease-out forwards; }

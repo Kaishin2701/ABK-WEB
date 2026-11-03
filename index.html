@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
     <link rel="icon" type="image/png" href="assets/logo.png?v=7.2.1">
-    <link rel="stylesheet" href="style.css?v=7.2.1">
+    <link rel="stylesheet" href="style.css?v=7.2.1-nav2">
     <link rel="stylesheet" href="home-sphere.css?v=2.2">
 </head>
 <body>
@@ -22,7 +22,7 @@
                 <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Home</button>
                 <button class="top-tab" type="button" data-section="tools" onclick="switchTab('tab-tool-library')">Tools</button>
             </div>
-            <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
+            <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span><span id="nav-back-label">All tools</span></button>
         </nav>
         <div class="app-version">Ver 7.2.1 Web</div>
     </header>
@@ -365,7 +365,7 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=7.2.1"></script>
+    <script src="script.js?v=7.2.1-nav2"></script>
     <script src="modules/rubik-lighting.js?v=1.0"></script>
     <script src="modules/home-rubik.js?v=1.4"></script>
     <script src="modules/webp-limit.js?v=1.1"></script>

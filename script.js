@@ -124,6 +124,8 @@ function switchTab(tabId) {
 
     const isToolWorkspace = !['tab-information', 'tab-tool-library'].includes(tabId);
     const section = tabId === 'tab-information' ? 'information' : 'tools';
+    const backLabel = document.getElementById('nav-back-label');
+    if (backLabel) backLabel.textContent = ['tab-watermark', 'tab-watermark-plus'].includes(tabId) ? 'Modes' : 'All tools';
     document.querySelectorAll('[data-section]').forEach((button) => {
         button.classList.toggle('active', button.dataset.section === section);
     });
