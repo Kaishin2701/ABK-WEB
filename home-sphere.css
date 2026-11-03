@@ -9,8 +9,9 @@
 .home-button { display:inline-flex; justify-content:center; align-items:center; gap:10px; min-height:50px; padding:0 22px; border:1px solid rgba(161,255,205,.14); border-radius:9px; color:#eee; background:rgba(255,255,255,.03); font:inherit; font-weight:750; text-decoration:none; cursor:pointer; }
 .home-button-primary { border-color:#00f98c; color:#03130a; background:#00f98c; }
 .home-button:hover,.home-button:focus-visible { filter:brightness(1.12); outline:2px solid rgba(0,249,140,.4); outline-offset:2px; }
-.home-scene { position:relative; display:grid; place-items:center; min-height:500px; perspective:1100px; isolation:isolate; }
-.home-scene::before { content:""; position:absolute; width:420px; height:420px; border:1px solid rgba(0,249,140,.16); border-radius:50%; transform:rotateX(68deg) rotateZ(-20deg); pointer-events:none; }
+.home-scene { position:relative; display:grid; place-items:center; min-height:500px; perspective:1100px; isolation:isolate; cursor:grab; touch-action:none; }
+.home-scene.is-dragging { cursor:grabbing; }
+.home-scene::before { content:""; position:absolute; width:420px; height:420px; border:1px solid rgba(0,249,140,.13); border-radius:50%; box-shadow:0 0 0 75px rgba(0,249,140,.025); transform:rotateX(68deg) rotateZ(-20deg); pointer-events:none; }
 .home-scene::after { content:""; position:absolute; bottom:55px; width:300px; height:55px; background:#00fd88; filter:blur(50px); opacity:.1; z-index:-1; pointer-events:none; }
 .home-sphere-tilt { position:relative; width:310px; height:310px; transform-style:preserve-3d; transform:rotateX(var(--home-tilt-x,0deg)) rotateY(var(--home-tilt-y,0deg)); transition:transform .2s ease-out; }
 .home-sphere-float { position:absolute; inset:0; transform-style:preserve-3d; animation:home-sphere-float 7s ease-in-out infinite; }
@@ -22,6 +23,15 @@
 .home-sphere-orbit::after { content:""; position:absolute; top:49%; left:-3px; width:7px; height:7px; border-radius:50%; background:#b0ffcd; box-shadow:0 0 14px 4px rgba(0,249,140,.65); animation:home-sphere-glow 5s ease-in-out infinite; }
 .home-scene-label { position:absolute; right:0; top:8%; display:grid; padding:12px 15px; border:1px solid rgba(161,255,205,.14); border-radius:11px; color:#c5d5cb; background:rgba(11,25,17,.94); font-size:11px; box-shadow:0 16px 40px #0006; pointer-events:none; }
 .home-scene-label strong { color:#00f98c; font-size:13px; }
+.home-rubik-tilt { position:relative; width:220px; height:220px; transform-style:preserve-3d; transform:rotateX(var(--pointer-x,0deg)) rotateY(var(--pointer-y,0deg)); will-change:transform; pointer-events:none; }
+.home-rubik { --unit:73.333333px; --half:36.666667px; position:relative; width:220px; height:220px; transform-style:preserve-3d; transform:rotateX(-19deg) rotateY(32deg); animation:home-rubik-hover 7s ease-in-out infinite; }
+.home-rubik .rubik-layer,.home-rubik .cubie { position:absolute; inset:0; transform-style:preserve-3d; }
+.home-rubik .cubie-face { position:absolute; left:50%; top:50%; width:calc(var(--unit) - 3px); height:calc(var(--unit) - 3px); margin:calc(1.5px - var(--half)); border:3px solid #06100a; border-radius:6px; background:#0a160f; backface-visibility:hidden; }
+.home-rubik .cubie-face.sticker { background-color:#07814a; background-image:linear-gradient(145deg,rgba(156,255,200,.35),transparent 65%); box-shadow:inset 0 0 14px rgba(0,32,14,.55); }
+.home-rubik .front-sticker { background-color:#00a95e!important; } .home-rubik .right-sticker { background-color:#087142!important; } .home-rubik .top-sticker { background-color:#31c982!important; } .home-rubik .back-sticker { background-color:#16815b!important; } .home-rubik .left-sticker { background-color:#075b3b!important; } .home-rubik .bottom-sticker { background-color:#075130!important; }
+.home-rubik .c-front { transform:translateZ(var(--half)); } .home-rubik .c-back { transform:rotateY(180deg) translateZ(var(--half)); } .home-rubik .c-right { transform:rotateY(90deg) translateZ(var(--half)); } .home-rubik .c-left { transform:rotateY(-90deg) translateZ(var(--half)); } .home-rubik .c-top { transform:rotateX(90deg) translateZ(var(--half)); } .home-rubik .c-bottom { transform:rotateX(-90deg) translateZ(var(--half)); }
+.home-rubik .cubie-face.logo::after { content:'ABK'; position:absolute; inset:0; display:grid; place-items:center; color:#d5ffe6; font-size:17px; font-weight:900; font-style:italic; letter-spacing:-1px; text-shadow:0 0 10px #00f98c; }
+@keyframes home-rubik-hover { 0%,100% { transform:translateY(0) rotateX(-19deg) rotateY(32deg) rotateZ(0); } 50% { transform:translateY(-13px) rotateX(-16deg) rotateY(36deg) rotateZ(2deg); } }
 .home-shortcuts { padding:15px 0 64px; }
 .home-section-head { display:flex; justify-content:space-between; align-items:end; gap:15px; margin-bottom:22px; }
 .home-section-head h2 { margin:8px 0 0; font-size:30px; letter-spacing:-.04em; }
@@ -56,3 +66,5 @@
 @keyframes home-orbit-reverse { from { transform:rotateX(68deg) rotateZ(-24deg); } to { transform:rotateX(68deg) rotateZ(336deg); } }
 @media(max-width:850px) { .home-hero { grid-template-columns:1fr; padding-top:35px; } .home-scene { min-height:390px; overflow:hidden; } .home-scene::before { width:280px; height:280px; } .home-sphere-tilt { transform:scale(.76) rotateX(var(--home-tilt-x,0deg)) rotateY(var(--home-tilt-y,0deg)); } .home-card-grid { grid-template-columns:1fr; } .home-section-head { align-items:start; flex-direction:column; } .home-update-latest { padding:22px; } .home-update-item summary { grid-template-columns:65px minmax(0,1fr) 20px; gap:8px; } .home-update-item p { padding-left:73px; padding-right:15px; } }
 @media(prefers-reduced-motion:reduce) { .home-sphere,.home-sphere-float,.home-sphere-orbit,.home-sphere-orbit::after { animation:none; } .home-sphere-tilt,.home-tool-card { transition:none; } }
+@media(max-width:850px) { .home-rubik-tilt,.home-rubik { width:160px; height:160px; } .home-rubik { --unit:53.333333px; --half:26.666667px; } .home-rubik .cubie-face.logo::after { font-size:12px; } }
+@media(prefers-reduced-motion:reduce) { .home-rubik { animation:none; } .home-rubik-tilt { transition:none; } }
