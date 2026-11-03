@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Batch-process product images with manually entered subtext boxes, watermarking and metadata-free PNG export." />
   <title>Auto Watermark Plus</title>
-  <link rel="stylesheet" href="styles.css?v=7.1.0" />
+  <link rel="stylesheet" href="styles.css?v=7.2.0" />
 </head>
 <body>
   <div class="app">
@@ -16,35 +16,31 @@
     <main>
       <aside class="panel controls">
         <section class="section">
-          <h2 class="section-title"><span class="step">1</span>Add product images</h2>
-          <p class="section-note">Add multiple JPG, PNG or WebP images, then enter the three white-box values manually for each result.</p>
-          <label class="dropzone" id="dropzone" for="imageFiles"><div><strong>Choose images or drop them here</strong><span>Multiple files are supported</span></div></label>
-          <input id="imageFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple />
-        </section>
-        <section class="section">
-          <h2 class="section-title"><span class="step">2</span>Add a watermark</h2>
+          <h2 class="section-title"><span class="step">1</span>Add a watermark</h2>
           <p class="section-note">One transparent watermark is applied automatically to every result. Leave empty to export without one.</p>
           <div class="setting-row"><div class="readout" id="watermarkName">No watermark selected</div><button class="file-button" id="openWatermarkLibrary" type="button">Add</button></div>
           <input id="watermarkFile" type="file" accept="image/png,image/webp,image/jpeg" />
           <div class="setting-row"><select id="watermarkPosition" aria-label="Watermark position"><option value="center">Centre</option><option value="cover" selected>Full image</option><option value="bottom-right">Bottom right</option></select><button class="button small" id="clearWatermark" type="button" disabled>Clear</button></div>
         </section>
         <section class="section">
-          <h2 class="section-title"><span class="step">3</span>Choose an output folder</h2>
+          <h2 class="section-title"><span class="step">2</span>Choose an output folder</h2>
           <div class="field"><label for="maxFileSize">Max file size (KB)</label><input id="maxFileSize" type="number" min="1" max="100000" step="1" value="200" /></div>
-          <p class="section-note">Supported browsers can save all results directly into one folder. Otherwise, each PNG downloads normally.</p>
+          <p class="section-note">Supported browsers can save all results directly into one folder. Otherwise, each WebP downloads normally.</p>
           <div class="setting-row"><div class="readout" id="folderName">Browser downloads</div><button class="button small" id="chooseFolder" type="button">Select</button></div>
         </section>
         <section class="section">
           <div class="actions">
             <button class="button primary" id="exportAll" type="button" disabled>Export all processed images</button>
-            <button class="button danger" id="clearAll" type="button" disabled>Clear all</button>
           </div>
           <div class="progress"><span id="progressBar"></span></div>
           <p class="privacy">ⓘ Exported images are rebuilt as WebP files, so original EXIF metadata is not carried into the result.</p>
         </section>
       </aside>
       <section class="panel workspace" aria-label="Processed image results">
-        <div class="workspace-top"><div><h2>Processed results</h2><p>Click each image and enter its box content before exporting.</p></div><span class="count" id="resultCount">0 images</span></div>
+        <div class="workspace-top"><div><h2>Images</h2><p>Click each image and enter its box content before exporting.</p></div><span class="count" id="resultCount">0 images</span></div>
+        <input id="imageFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        <div id="imageActions" class="image-actions" hidden><label class="file-button" for="imageFiles">Add images</label><button class="button small danger" id="clearAll" type="button" disabled>Clear all</button></div>
+        <label class="dropzone" id="dropzone" for="imageFiles"><div><strong>Choose images or drop them here</strong><span>Multiple files are supported</span></div></label>
         <div class="gallery" id="gallery" hidden></div>
         <section class="export-report" id="exportReport" aria-live="polite" hidden><h3>Export results</h3><ul id="exportResults"></ul></section>
       </section>
@@ -73,6 +69,6 @@
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="../../modules/webp-limit.js?v=1.1"></script>
-  <script src="app.js?v=7.1.0a"></script>
+  <script src="app.js?v=7.2.0"></script>
 </body>
 </html>

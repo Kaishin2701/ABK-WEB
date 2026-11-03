@@ -164,6 +164,8 @@ function updateUI() {
   const ready = state.items.filter(item => item.configured).length;
   els.count.textContent = total ? `${ready} of ${total} ready` : '0 images';
   els.gallery.hidden = total === 0;
+  els.dropzone.hidden = total > 0;
+  $('#imageActions').hidden = total === 0;
   [els.exportAll, els.clearAll].forEach(button => { button.disabled = total === 0; });
 }
 async function addFiles(fileList) {

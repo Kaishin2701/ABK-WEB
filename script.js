@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.1.0',
+        version: '7.2.0',
         label: 'Current release',
+        title: 'Image previews and individual controls',
+        description: 'Standard and Plus now combine image selection and previews in one workspace, including drag and drop, adding more images and clearing the batch. Standard adds per-image output names and watermark choices, image removal and duplicate-name protection. On narrow screens, the Standard image workspace appears before the settings. Oversized WebP images are compressed automatically.'
+    },
+    {
+        version: '7.1.0',
+        label: 'Previous release',
         title: 'WebP size limits for Auto Watermark',
         description: 'Standard and Plus now export WebP images with a configurable maximum file size, defaulting to 200 KB. Images at or above the limit are listed for confirmation before quality is reduced. Images that still exceed the limit are reported and excluded from export, and Plus displays the resulting file sizes.'
     },

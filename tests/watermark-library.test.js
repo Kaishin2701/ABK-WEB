@@ -16,7 +16,7 @@ assert.match(html, /id="watermark-library-grid"/);
 assert.match(html, /id="choose-other-watermark"/);
 assert.match(html, /id="clear-watermark"[^>]*disabled/);
 assert.match(html, /id="selected-watermark-preview"[^>]*hidden/);
-assert.match(html, /modules\/watermark\.js\?v=1\.6/);
+assert.match(html, /modules\/watermark\.js\?v=1\.7/);
 assert.doesNotMatch(html, /id="rng-quality"|id="rng-opacity"|Quality:|Opacity:/);
 
 const libraryPaths = [...script.matchAll(/src: '(watermark\/[^']+)'/g)].map((match) => match[1]);
@@ -106,6 +106,21 @@ const runtimeContext = vm.createContext({
   clearTimeout
 });
 vm.runInContext(script, runtimeContext);
+
+vm.runInContext(`
+  globalThis.firstFile = { name: 'first.png' };
+  globalThis.secondFile = { name: 'second.png' };
+  globalThis.sharedWatermark = { id: 'shared' };
+  globalThis.individualWatermark = { id: 'individual' };
+  wmImg = sharedWatermark;
+  itemSettings.set(firstFile, { name: 'Special Name.webp', watermarkMode: 'custom', watermarkImage: individualWatermark });
+`, runtimeContext);
+assert.equal(vm.runInContext("outputName(firstFile, 'prefix-{default name}')", runtimeContext), 'Special Name.webp');
+assert.equal(vm.runInContext("outputName(secondFile, 'prefix-{default name}')", runtimeContext), 'prefix-second.webp');
+assert.equal(vm.runInContext('watermarkForFile(firstFile) === individualWatermark', runtimeContext), true);
+assert.equal(vm.runInContext('watermarkForFile(secondFile) === sharedWatermark', runtimeContext), true);
+vm.runInContext("itemSettings.set(firstFile, { watermarkMode: 'none', watermarkImage: null })", runtimeContext);
+assert.equal(vm.runInContext('watermarkForFile(firstFile)', runtimeContext), null);
 
 elements["open-watermark-library"].click();
 assert.equal(elements["watermark-library-dialog"].open, true);

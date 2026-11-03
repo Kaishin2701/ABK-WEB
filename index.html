@@ -7,8 +7,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
-    <link rel="icon" type="image/png" href="assets/logo.png?v=7.1.0">
-    <link rel="stylesheet" href="style.css?v=7.1.0">
+    <link rel="icon" type="image/png" href="assets/logo.png?v=7.2.0">
+    <link rel="stylesheet" href="style.css?v=7.2.0">
 </head>
 <body>
 
@@ -23,7 +23,7 @@
             </div>
             <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span> Back</button>
         </nav>
-        <div class="app-version">Ver 7.1.0 Web</div>
+        <div class="app-version">Ver 7.2.0 Web</div>
     </header>
 
     <main>
@@ -44,21 +44,12 @@
         </div>
 
         <div id="tab-watermark" class="tab-content">
-            <div class="header-title">ABK IMAGE PROCESSOR</div>
+            <div class="wm-standard-header"><div class="wm-standard-brand"><span>ABK</span><div><h1>Auto Watermark Standard</h1><p>Batch watermark and clean export</p></div></div><strong>STANDARD</strong></div>
+            <div class="wm-standard-layout"><div class="wm-standard-controls">
             
-            <div class="group-box">
-                <div id="gallery-area" class="gallery-scroll">
-                    <p id="gallery-placeholder">Drop files or click Select Images...</p>
-                </div>
-                <div class="btn-row">
-                    <button class="btn-secondary" onclick="document.getElementById('inp-files').click()">Select Images</button>
-                    <button class="btn-secondary" onclick="clearGallery()">Clear Gallery</button>
-                    <input type="file" id="inp-files" multiple accept="image/*" hidden>
-                </div>
-            </div>
-
-            <div class="group-box">
-                <div class="lbl-title">WATERMARK SETTINGS</div>
+            <div class="wm-standard-section">
+                <h2><span class="wm-step">1</span>Add a watermark</h2>
+                <p class="muted">Select a shared watermark for your images. You can change it for each image in the preview.</p>
                 <div class="watermark-size-setting"><label for="wm-max-kb">Max file size</label><div class="watermark-size-input"><input type="number" id="wm-max-kb" min="1" max="100000" step="1" value="200" aria-describedby="wm-size-unit"><span id="wm-size-unit">KB</span></div></div>
                 <div class="input-row watermark-action-row">
                     <input type="text" id="wm-path-display" placeholder="No logo selected..." readonly>
@@ -98,7 +89,21 @@
             <p id="status-lbl">Ready.</p>
             <button id="btn-start-wm" class="btn-big-green">START PROCESSING</button>
             <div id="download-area" style="display:none"></div>
+            </div><section class="wm-preview-workspace" aria-label="Images"><div class="wm-preview-header"><div><h2>Images</h2><p class="muted">Click an image to review or change its export settings.</p></div><span id="wm-image-count">0 images</span></div><input type="file" id="inp-files" multiple accept="image/*" hidden><div id="wm-image-actions" class="wm-image-actions" hidden><button class="btn-secondary" type="button" onclick="document.getElementById('inp-files').click()">Add images</button><button class="btn-secondary wm-remove" type="button" onclick="clearGallery()">Clear all</button></div><label id="wm-dropzone" class="wm-upload-area" for="inp-files"><strong>Choose images or drop them here</strong><span>Multiple files are supported</span></label><div id="gallery-area" class="wm-preview-grid"></div></section></div>
         </div>
+
+        <dialog id="wm-item-dialog" class="watermark-library-dialog" aria-labelledby="wm-item-title">
+            <div class="watermark-library-panel">
+                <div class="watermark-library-header"><div><p class="watermark-library-eyebrow">AUTO WATERMARK STANDARD</p><h2 id="wm-item-title">Edit image</h2></div><button id="wm-item-close" class="watermark-library-close" type="button" aria-label="Close">&times;</button></div>
+                <div class="wm-item-editor"><div class="wm-item-preview"><img id="wm-item-preview-image" alt="Preview of selected image"></div><div class="wm-item-fields">
+                    <p id="wm-item-original" class="muted"></p>
+                    <label for="wm-item-name">Custom output name</label><input id="wm-item-name" type="text" placeholder="Leave blank to use the shared rename formula" maxlength="180"><p class="muted">The .webp extension is added automatically.</p>
+                    <label for="wm-item-watermark">Watermark for this image</label><select id="wm-item-watermark"><option value="shared">Use shared watermark</option><option value="none">No watermark</option><option value="custom">Upload a watermark…</option></select>
+                    <input id="wm-item-watermark-file" type="file" accept="image/*" hidden><p id="wm-item-watermark-note" class="muted"></p>
+                    <div class="wm-item-actions"><button id="wm-item-save" class="btn-accent" type="button">Save changes</button><button id="wm-item-remove" class="btn-secondary wm-remove" type="button">Remove image</button></div>
+                </div></div>
+            </div>
+        </dialog>
 
         <div id="tab-watermark-plus" class="tab-content description-tool-tab">
             <div class="header-title">AUTO WATERMARK PLUS</div>
@@ -106,7 +111,7 @@
                 <iframe
                     id="auto-watermark-plus-frame"
                     class="description-tool-frame"
-                    src="tools/auto-watermark-plus/index.html?v=7.1.0a"
+                    src="tools/auto-watermark-plus/index.html?v=7.2.0"
                     title="Auto Watermark Plus"
                     loading="lazy"
                 ></iframe>
@@ -292,7 +297,7 @@
                 <iframe
                     id="create-description-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?v=7.1.0"
+                    src="tools/create-description/index.html?v=7.2.0"
                     title="Create Description KFK"
                     loading="lazy"
                     allow="clipboard-write"
@@ -306,7 +311,7 @@
                 <iframe
                     id="create-description-cfs-frame"
                     class="description-tool-frame"
-                    src="tools/create-description/index.html?site=CFS&amp;v=7.1.0"
+                    src="tools/create-description/index.html?site=CFS&amp;v=7.2.0"
                     title="Create Description CFS"
                     loading="lazy"
                     allow="clipboard-write"
@@ -358,9 +363,9 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=7.1.0"></script>
+    <script src="script.js?v=7.2.0"></script>
     <script src="modules/webp-limit.js?v=1.1"></script>
-    <script src="modules/watermark.js?v=1.6"></script>
+    <script src="modules/watermark.js?v=1.7"></script>
     <script src="modules/linkCheck.js?v=1.1"></script>
     <script src="modules/htmlClean.js"></script>
     <script src="modules/product-checker/core/contracts.js"></script>
