@@ -26,9 +26,6 @@
   async function applyLimit(files, maxBytes, options = {}) {
     const over = files.filter(file => file.blob.size >= maxBytes);
     if (!over.length) return { files, failed: [], cancelled: false };
-    const lines = over.map(file => `${file.name}: ${(file.blob.size / 1000).toFixed(1)} KB`).join('\n');
-    const confirmAction = options.confirm || (message => window.confirm(message));
-    if (!await confirmAction(`The following images are at or above ${(maxBytes / 1000)} KB:\n\n${lines}\n\nReduce their image quality to fit the limit?`)) return { files: [], failed: [], cancelled: true };
     const output = [], failed = [];
     for (const file of files) {
       if (file.blob.size < maxBytes) { output.push(file); continue; }

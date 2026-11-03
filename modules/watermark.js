@@ -263,7 +263,6 @@ async function startProcess() {
     let limited;
     try { limited = await WebpLimit.applyLimit(processedFiles, maxBytes); }
     catch (error) { btn.disabled = false; btn.innerText = 'START PROCESSING'; alert(`Compression failed: ${error.message}`); return; }
-    if (limited.cancelled) { btn.disabled = false; btn.innerText = 'START PROCESSING'; log('Export cancelled. No files were saved.'); return; }
     limited.failed.forEach(file => log(`NOT EXPORTED: ${file.name} - ${file.reason}`));
     if (limited.failed.length) alert(`Could not compress these images below the limit; they will not be exported:\n\n${limited.failed.map(file => `${file.name}: ${file.reason}`).join('\n')}`);
     processedFiles.splice(0, processedFiles.length, ...limited.files);

@@ -239,7 +239,6 @@ async function exportAll() {
       prepared.push({ blob, name: filename });
     }
     const limited = await WebpLimit.applyLimit(prepared, maxBytes);
-    if (limited.cancelled) { notify('Export cancelled. No files were saved.'); return; }
     for (const file of limited.failed) {
       const row = document.createElement('li'); row.textContent = `${file.name}: NOT EXPORTED — ${file.reason}`; $('#exportResults').appendChild(row);
     }
