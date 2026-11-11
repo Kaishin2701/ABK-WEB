@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.2.1',
+        version: '7.2.2',
         label: 'Current release',
+        title: 'Clearer KFK product and bundle descriptions',
+        description: 'KFK printed products no longer list their fixed player print as an optional extra. Multi-team KFK bundles now identify items by team throughout the description, with additional distinctions when needed.'
+    },
+    {
+        version: '7.2.1',
+        label: 'Previous release',
         title: 'A fresh ABK home',
         description: 'The new Home introduces an animated wireframe sphere, direct shortcuts to key tools and a cleaner What’s New section with expandable release history. The Home and Tools navigation is balanced, and Auto Watermark Plus now highlights the image upload area on hover.'
     },

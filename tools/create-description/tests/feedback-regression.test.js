@@ -71,6 +71,7 @@ vm.runInContext(sourceBetween("function normaliseBadgeName", "function configure
 vm.runInContext(sourceBetween("function badgeLine", "function sizingWarningLine"), context);
 vm.runInContext(sourceBetween("function pick(", "function pickBranchVariant"), context);
 vm.runInContext(sourceBetween("function cfsPossessive", "function renderDescription"), context);
+vm.runInContext(sourceBetween("function renderDescription", "function renderBundleDescription"), context);
 vm.runInContext(sourceBetween("function removeDashesFromText", "function removeDescriptionDashes"), context);
 vm.runInContext(sourceBetween("function bundleHash", "function readBundleDescriptionHistory"), context);
 vm.runInContext(sourceBetween("function assignBundlePieceReferences", "function bundleCompositionSummary"), context);
@@ -78,6 +79,32 @@ vm.runInContext(sourceBetween("function bundlePieceIdentity", "function isBirthd
 vm.runInContext(sourceBetween("function assignCfsBundlePieceReferences", "function isBirthdayGiftPack"), context);
 vm.runInContext(sourceBetween("function isBirthdayGiftPack", "function auditPieceBasedBundleDescription"), context);
 vm.runInContext(sourceBetween("function cfsBundleSampleFacts", "function loadBundleSample"), context);
+
+const productTestContext = vm.createContext({
+  pickBranchVariant: () => ({ opening: "Opening", keyDetail: "<li>Player print: fixed</li>", beforeOrder: [] }),
+  interpolate: (value) => value,
+  esc: String,
+  sizeGuideSentence: () => "",
+  titleCaseToken: String,
+  productItemLabel: () => "shirt",
+  sleeveLengthLabel: () => "Short sleeve",
+  badgeLine: (facts) => facts.badge_status === "available" ? "<li>Badge option</li>" : "",
+  insertSizingWarning: (lines) => lines,
+  mainColoursLine: () => "",
+  materialLine: () => "<li>Material</li>",
+  includedItemsHtml: () => "<li>Fixed player print included</li>",
+  removeEmptyDescriptionSections: (html) => html.replace(/<h3>Options You Can Add<\/h3>\s*<ul>\s*<\/ul>/, ""),
+  removeDescriptionDashes: (html) => html
+});
+vm.runInContext(sourceBetween("function renderDescription", "function renderBundleDescription"), productTestContext);
+for (const badge_status of ["available", "unavailable"]) {
+  const html = productTestContext.renderDescription({ listing_configuration: "pre_applied_player", badge_status }, "printed");
+  assert.match(html, /Fixed player print included/);
+  assert.doesNotMatch(html, /Player print: fixed/);
+  assert.equal(html.includes("Badge option"), badge_status === "available");
+  assert.equal(html.includes("Options You Can Add"), badge_status === "available");
+}
+assert.match(productTestContext.renderDescription({ listing_configuration: "plain_customisable" }, "plain"), /Player print: fixed/);
 
 const prunedEmptySections = context.removeEmptyDescriptionSections([
   "<h3>Options You Can Add</h3>",
@@ -812,9 +839,10 @@ const independentGiftPackHtml = context.renderBirthdayGiftPackDescription({
   fixedPrint: [],
   badgeEligible: independentGiftPackPieces
 });
-assert.match(independentGiftPackHtml, /Teams:<\/strong> Home kit 1 — Nottingham Forest; Home kit 2 — Arsenal\./);
-assert.match(independentGiftPackHtml, /Home kit 1 season:<\/strong> 2026\/27\./);
-assert.match(independentGiftPackHtml, /Home kit 2 season:<\/strong> 2025\/26\./);
+assert.match(independentGiftPackHtml, /Teams:<\/strong> Nottingham Forest kit — Nottingham Forest; Arsenal kit — Arsenal\./);
+assert.match(independentGiftPackHtml, /Nottingham Forest kit season:<\/strong> 2026\/27\./);
+assert.match(independentGiftPackHtml, /Arsenal kit season:<\/strong> 2025\/26\./);
+assert.doesNotMatch(independentGiftPackHtml, /Home kit [12]/);
 assert.doesNotMatch(independentGiftPackHtml, /<strong>Season:<\/strong> \./);
 
 const printedAway = {

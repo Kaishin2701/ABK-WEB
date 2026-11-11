@@ -3021,7 +3021,7 @@ function renderDescription(facts, branch) {
   const sleeveLabel = sleeveLengthLabel(facts);
   const sleeveLine = sleeveLabel ? `<li><strong>Sleeve length:</strong> ${esc(sleeveLabel)}.</li>` : "";
   const optionLines = [
-    interpolate(template.keyDetail, facts),
+    facts.listing_configuration === "pre_applied_player" ? "" : interpolate(template.keyDetail, facts),
     badgeLine(facts)
   ].filter(Boolean);
   const beforeOrderLines = template.beforeOrder
@@ -3552,12 +3552,13 @@ function bundlePieceAudienceLabel(audience) {
 }
 
 function assignBundlePieceReferences(pieces) {
+  const multipleTeams = uniqueTextValues(pieces.map((piece) => piece.team)).length > 1;
   const prepared = pieces.map((piece) => {
     const owner = bundleRecipientLabelForPiece(piece);
     const kind = bundlePieceKindLabel(piece);
     const genericOwner = piece.recipient_role === "none";
     const usesProductReference = ["men", "women"].includes(piece.recipient_role);
-    const base = genericOwner
+    const base = multipleTeams ? `${piece.team} ${kind}` : genericOwner
       ? `${titleCaseToken(piece.kit_type)} ${kind}`
       : usesProductReference ? `${owner}'s ${kind}` : owner;
     return { ...piece, reference: base, reference_owner: owner };
@@ -3572,7 +3573,7 @@ function assignBundlePieceReferences(pieces) {
   prepared.forEach((piece) => {
     if (baseCounts[piece.reference.toLowerCase()] < 2) return;
     const kind = `${titleCaseToken(piece.kit_type)} ${bundlePieceKindLabel(piece)}`;
-    piece.reference = piece.recipient_role === "none"
+    piece.reference = multipleTeams ? `${piece.team} ${kind}` : piece.recipient_role === "none"
       ? kind
       : `${piece.reference_owner}'s ${kind}`;
   });
@@ -4261,6 +4262,12 @@ function birthdayGiftPackColours(piece) {
 }
 
 function birthdayGiftPackKitLabel(piece, pieces) {
+  if (uniqueTextValues(pieces.map((item) => item.team)).length > 1) {
+    const teamPieces = pieces.filter((item) => String(item.team).toLowerCase() === String(piece.team).toLowerCase());
+    const base = `${piece.team} ${teamPieces.length > 1 ? `${titleCaseToken(piece.kit_type)} ` : ""}kit`;
+    const matching = teamPieces.filter((item) => item.kit_type === piece.kit_type);
+    return matching.length > 1 ? `${base} ${matching.indexOf(piece) + 1}` : base;
+  }
   const matchingPieces = pieces.filter((item) => item.kit_type === piece.kit_type);
   const baseLabel = `${titleCaseToken(piece.kit_type)} kit`;
   if (matchingPieces.length < 2) return baseLabel;
