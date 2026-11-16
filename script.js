@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.2.2',
+        version: '7.3.0',
         label: 'Current release',
+        title: 'A unified Auto Watermark workspace',
+        description: 'Standard and Plus are now combined in one workflow with optional text boxes, per-image watermark and output settings, and a clearer settings layout. Move and zoom the main image independently of its watermark and text boxes, with live previews and a reset control.'
+    },
+    {
+        version: '7.2.2',
+        label: 'Previous release',
         title: 'Clearer KFK product and bundle descriptions',
         description: 'KFK printed products no longer list their fixed player print as an optional extra. Multi-team KFK bundles now identify items by team throughout the description, with additional distinctions when needed.'
     },
@@ -131,7 +137,7 @@ function switchTab(tabId) {
     const isToolWorkspace = !['tab-information', 'tab-tool-library'].includes(tabId);
     const section = tabId === 'tab-information' ? 'information' : 'tools';
     const backLabel = document.getElementById('nav-back-label');
-    if (backLabel) backLabel.textContent = ['tab-watermark', 'tab-watermark-plus'].includes(tabId) ? 'Modes' : 'All tools';
+    if (backLabel) backLabel.textContent = 'All tools';
     document.querySelectorAll('[data-section]').forEach((button) => {
         button.classList.toggle('active', button.dataset.section === section);
     });
@@ -150,6 +156,7 @@ function updateNavigationMode(showBackButton) {
 }
 
 function openTool(tabId) {
+    if (tabId === 'tab-auto-watermark') tabId = 'tab-watermark';
     switchTab(tabId);
     if (tabId === 'tab-create-description-kfk') {
         const frame = document.getElementById('create-description-frame');
@@ -163,10 +170,6 @@ function openTool(tabId) {
 
 function returnToToolLibrary() {
     const activeTabId = document.querySelector('.tab-content.active')?.id;
-    if (['tab-watermark', 'tab-watermark-plus'].includes(activeTabId)) {
-        switchTab('tab-auto-watermark');
-        return;
-    }
     switchTab('tab-tool-library');
 }
 

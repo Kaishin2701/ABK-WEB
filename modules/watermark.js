@@ -36,6 +36,48 @@ const itemDialog = document.getElementById('wm-item-dialog');
 const itemName = document.getElementById('wm-item-name');
 const itemWatermark = document.getElementById('wm-item-watermark');
 const itemWatermarkFile = document.getElementById('wm-item-watermark-file');
+const itemPreview = document.getElementById('wm-item-preview-image');
+const itemZoom = document.getElementById('wm-item-zoom');
+const itemZoomValue = document.getElementById('wm-item-zoom-value');
+let imageDrag = null;
+function draftTransform() { return itemDraft.transform || { zoom: 1, x: 0, y: 0 }; }
+function updateTransformControls() { itemZoom.value = Math.round(draftTransform().zoom * 100); itemZoomValue.textContent = `${itemZoom.value}%`; }
+itemZoom.addEventListener('input', () => { if (!itemDraft) return; itemDraft.transform = { ...draftTransform(), zoom: Number(itemZoom.value) / 100 }; updateTransformControls(); updateItemEditorPreview(); });
+document.getElementById('wm-item-reset-transform').addEventListener('click', () => { if (!itemDraft) return; itemDraft.transform = { zoom: 1, x: 0, y: 0 }; updateTransformControls(); updateItemEditorPreview(); });
+itemPreview.addEventListener('pointerdown', event => {
+    if (!itemDraft || event.button !== 0 || !itemPreview.naturalWidth || !itemPreview.naturalHeight) return;
+    const rect = itemPreview.getBoundingClientRect();
+    const scale = Math.min(rect.width / itemPreview.naturalWidth, rect.height / itemPreview.naturalHeight);
+    const width = itemPreview.naturalWidth * scale, height = itemPreview.naturalHeight * scale;
+    imageDrag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, width, height, transform: { ...draftTransform() } };
+    itemPreview.setPointerCapture(event.pointerId); event.preventDefault();
+});
+itemPreview.addEventListener('pointermove', event => {
+    if (!itemDraft || !imageDrag || imageDrag.pointerId !== event.pointerId) return;
+    itemDraft.transform = { ...imageDrag.transform, x: imageDrag.transform.x + (event.clientX - imageDrag.x) / imageDrag.width, y: imageDrag.transform.y + (event.clientY - imageDrag.y) / imageDrag.height };
+    updateItemEditorPreview();
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => itemPreview.addEventListener(type, () => { imageDrag = null; }));
+itemPreview.addEventListener('keydown', event => {
+    const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (!itemDraft || !directions[event.key]) return;
+    const [dx, dy] = directions[event.key], step = event.shiftKey ? 0.05 : 0.01, transform = draftTransform();
+    itemDraft.transform = { ...transform, x: transform.x + dx * step, y: transform.y + dy * step };
+    event.preventDefault(); updateItemEditorPreview();
+});
+const textEnabled = document.getElementById('wm-text-enabled');
+const textFields = document.getElementById('wm-text-fields');
+const textTitle = document.getElementById('wm-text-title');
+const textType = document.getElementById('wm-text-type');
+const textMode = document.getElementById('wm-text-mode');
+const textPlayer = document.getElementById('wm-text-player');
+textEnabled.addEventListener('change', () => { textFields.hidden = !textEnabled.checked; renderGallery(); });
+[textTitle, textType, textMode, textPlayer].forEach(input => input.addEventListener('input', () => {
+    if (!itemDraft) return;
+    itemDraft.text = { title: textTitle.value, type: textType.value, mode: textMode.value, playerText: textPlayer.value };
+    document.getElementById('wm-text-player-field').hidden = textMode.value !== 'player';
+    updateItemEditorPreview();
+}));
 
 // UI Connect
 document.getElementById('inp-files').addEventListener('change', handleFileSelect);
@@ -232,6 +274,12 @@ function openItemEditor(file) {
     editingFile = file;
     const saved = itemSettings.get(file) || { name: '', watermarkMode: 'shared', watermarkImage: null, watermarkLabel: '' };
     itemDraft = { ...saved };
+    itemDraft.transform = { zoom: 1, x: 0, y: 0, ...saved.transform }; updateTransformControls();
+    const text = saved.text || {};
+    textTitle.value = text.title || ''; textType.value = text.type || 'Kids Kit';
+    textMode.value = text.mode || 'optional'; textPlayer.value = text.playerText || '';
+    textFields.hidden = !textEnabled.checked;
+    document.getElementById('wm-text-player-field').hidden = textMode.value !== 'player';
     document.getElementById('wm-item-original').textContent = file.name;
     itemName.value = saved.name; itemWatermark.value = saved.watermarkMode;
     itemWatermarkFile.value = ''; updateItemEditorPreview(); itemDialog.showModal();
@@ -273,7 +321,7 @@ function updateItemEditorPreview() {
     document.getElementById('wm-item-watermark-note').textContent = itemDraft.watermarkMode === 'shared' ? 'Using the shared watermark.' : itemDraft.watermarkMode === 'none' ? 'No watermark on this image.' : itemDraft.watermarkLabel || 'Loading watermark…';
     const token = ++editorPreviewGeneration;
     const watermark = itemDraft.watermarkMode === 'shared' ? wmImg : itemDraft.watermarkImage;
-    processImage(editingFile, document.getElementById('sel-mode').value, 1, 0.75, watermark, 800).then(blob => {
+    processImage(editingFile, document.getElementById('sel-mode').value, 1, 0.75, watermark, 800, itemDraft.text, { ...draftTransform() }).then(blob => {
         if (token !== editorPreviewGeneration || !editingFile) return;
         if (editorPreviewUrl) URL.revokeObjectURL(editorPreviewUrl);
         editorPreviewUrl = URL.createObjectURL(blob); document.getElementById('wm-item-preview-image').src = editorPreviewUrl;
@@ -412,7 +460,37 @@ async function startProcess() {
     alert(msg);
 }
 
-function processImage(file, mode, opacity, quality, watermark = wmImg, maxDimension = 0) {
+function drawTextBoxes(ctx, width, height, text) {
+    if (!textEnabled.checked || !text || !String(text.title || '').trim()) return;
+    const values = [String(text.title).trim(), text.type || 'Kids Kit', text.mode === 'player' ? String(text.playerText || '').trim() || 'PLAYER NAME 00' : 'Optional Personalisation'];
+    ctx.save(); ctx.globalAlpha = 1; ctx.scale(width / 1000, height / 1000);
+    const measure = (value, size) => { ctx.font = `700 ${size}px Arial, Helvetica, sans-serif`; return ctx.measureText(value).width; };
+    let typeSize = 32, detailSize = 32, typeWidth, detailWidth;
+    do {
+        typeWidth = Math.ceil(measure(values[1], typeSize) + 60); detailWidth = Math.ceil(measure(values[2], detailSize) + 60);
+        if (typeWidth + detailWidth <= 972) break;
+        if (detailWidth >= typeWidth && detailSize > 20) detailSize--; else if (typeSize > 20) typeSize--; else break;
+    } while (true);
+    const scale = Math.min(1, 972 / (typeWidth + detailWidth));
+    typeWidth = Math.floor(typeWidth * scale); detailWidth = Math.floor(detailWidth * scale);
+    const shared = Math.min(972, Math.max(600, typeWidth + detailWidth, Math.ceil(measure(values[0], 32) + 60)));
+    typeWidth += Math.floor((shared - typeWidth - detailWidth) / 2); detailWidth = shared - typeWidth;
+    let titleSize = 32; while (titleSize > 20 && measure(values[0], titleSize) + 60 > shared) titleSize--;
+    const boxes = [[14, 848, shared, values[0], titleSize], [14, 920, typeWidth, values[1], typeSize], [14 + typeWidth, 920, detailWidth, values[2], detailSize]];
+    boxes.forEach(([x, y, w, value, size]) => {
+        const r = Math.min(30, w / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + 60, r); ctx.arcTo(x + w, y + 60, x, y + 60, r); ctx.arcTo(x, y + 60, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+        ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#000'; ctx.stroke(); ctx.font = `700 ${size}px Arial, Helvetica, sans-serif`; ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(value, x + w / 2, y + 31, Math.max(20, w - 45));
+    });
+    ctx.restore();
+}
+
+function imageLayerRect(width, height, transform = {}) {
+    const zoom = Number.isFinite(transform.zoom) ? Math.max(0.25, Math.min(3, transform.zoom)) : 1;
+    const x = Number.isFinite(transform.x) ? transform.x : 0, y = Number.isFinite(transform.y) ? transform.y : 0;
+    return { x: width * ((1 - zoom) / 2 + x), y: height * ((1 - zoom) / 2 + y), width: width * zoom, height: height * zoom };
+}
+
+function processImage(file, mode, opacity, quality, watermark = wmImg, maxDimension = 0, text = itemSettings.get(file)?.text, transform = itemSettings.get(file)?.transform) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = () => reject(new Error('Unable to read image.'));
@@ -425,8 +503,10 @@ function processImage(file, mode, opacity, quality, watermark = wmImg, maxDimens
                 canvas.width = Math.max(1, Math.round(img.width * previewScale)); canvas.height = Math.max(1, Math.round(img.height * previewScale));
                 const ctx = canvas.getContext('2d');
 
-                // 1. Draw Original
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                // Transform only the main image; watermark and text use the fixed canvas.
+                const rect = imageLayerRect(canvas.width, canvas.height, transform);
+                if (rect.x !== 0 || rect.y !== 0 || rect.width !== canvas.width || rect.height !== canvas.height) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+                ctx.drawImage(img, rect.x, rect.y, rect.width, rect.height);
 
                 // 2. Draw Watermark (chỉ nếu có)
                 if(watermark) {
@@ -436,6 +516,10 @@ function processImage(file, mode, opacity, quality, watermark = wmImg, maxDimens
 
                     if(mode === 'Fullscreen') {
                         ctx.drawImage(watermark, 0, 0, W, H);
+                    } else if (mode === 'Centre') {
+                        const scale = Math.min(W * 0.48 / wmW, H * 0.48 / wmH, 1);
+                        const width = wmW * scale, height = wmH * scale;
+                        ctx.drawImage(watermark, (W - width) / 2, (H - height) / 2, width, height);
                     } else if (mode === 'Bottom-right') {
                         // Python Logic: scale = int(W * 0.2), if scale < 50 scale = 50
                         let scale = Math.floor(W * 0.2);
@@ -459,6 +543,7 @@ function processImage(file, mode, opacity, quality, watermark = wmImg, maxDimens
                     }
                 }
 
+                drawTextBoxes(ctx, canvas.width, canvas.height, text);
                 WebpLimit.encode(canvas, quality).then(resolve, reject);
             };
             img.src = e.target.result;
