@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>ABK</title>
     <link rel="icon" type="image/png" href="assets/logo.png?v=7.2.1">
-    <link rel="stylesheet" href="style.css?v=7.3.0">
+    <link rel="stylesheet" href="style.css?v=8.0.0">
     <link rel="stylesheet" href="home-sphere.css?v=2.2">
 </head>
 <body>
@@ -20,14 +20,28 @@
         <nav id="top-navigation" class="top-nav" aria-label="Main navigation">
             <div class="nav-primary">
                 <button class="top-tab active" type="button" data-section="information" onclick="switchTab('tab-information')">Home</button>
+                <button class="top-tab" type="button" data-section="announcements" onclick="switchTab('tab-announcements')">News</button>
                 <button class="top-tab" type="button" data-section="tools" onclick="switchTab('tab-tool-library')">Tools</button>
             </div>
             <button id="tool-back-button" class="top-tab nav-back" type="button" onclick="returnToToolLibrary()" aria-hidden="true" tabindex="-1"><span aria-hidden="true">←</span><span id="nav-back-label">All tools</span></button>
         </nav>
-        <div class="app-version">Ver 7.3.0 Web</div>
+        <div class="app-version">Ver 8.0.0 Web</div>
     </header>
 
     <main>
+        <dialog id="news-notice" class="news-notice" aria-labelledby="news-notice-title" aria-describedby="news-notice-description">
+            <h2 id="news-notice-title">New announcement</h2>
+            <p id="news-notice-description">There is a new announcement. Please view it before continuing.</p>
+            <button id="news-notice-view" type="button">View news</button>
+        </dialog>
+        <div id="tab-announcements" class="tab-content announcements-page">
+            <section class="announcements-shell" aria-labelledby="announcements-title">
+                <p class="announcements-eyebrow">ABK NEWS</p>
+                <div class="announcements-heading"><div><h1 id="announcements-title">Stay in the loop.</h1><p>Important announcements and updates from the ABK team.</p></div><button id="announcements-refresh" type="button">Refresh</button></div>
+                <p id="announcements-status" class="announcements-status" role="status" aria-live="polite">Open this page to load announcements.</p>
+                <div id="announcements-list" class="announcements-list"></div>
+            </section>
+        </div>
         <div id="tab-auto-watermark" class="tab-content cdf-site-page">
             <section class="cdf-site-page-header">
                 <p>AUTO WATERMARK</p>
@@ -382,7 +396,8 @@
     <script src="Data/football-clubs.js?v=1.0"></script>
     <script src="Data/national-teams.js?v=1.0"></script>
     <script src="modules/skuAuto.js"></script>
-    <script src="script.js?v=7.3.0"></script>
+    <script src="modules/announcements.js?v=1.4"></script>
+    <script src="script.js?v=8.0.0"></script>
     <script src="modules/rubik-lighting.js?v=1.0"></script>
     <script src="modules/home-rubik.js?v=1.4"></script>
     <script src="modules/webp-limit.js?v=1.1"></script>

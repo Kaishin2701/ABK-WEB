@@ -1,7 +1,13 @@
 const UPDATE_LOG_ENTRIES = [
     {
-        version: '7.3.0',
+        version: '8.0.0',
         label: 'Current release',
+        title: 'Introducing News',
+        description: 'The new News tab displays announcements directly from Google Docs, with expandable cards, images and supported formatting. Users are prompted to view new announcements when opening Tools, with a reminder after five hours. Deleted document tabs no longer appear as announcements.'
+    },
+    {
+        version: '7.3.0',
+        label: 'Previous release',
         title: 'A unified Auto Watermark workspace',
         description: 'Standard and Plus are now combined in one workflow with optional text boxes, per-image watermark and output settings, and a clearer settings layout. Move and zoom the main image independently of its watermark and text boxes, with live previews and a reset control.'
     },
@@ -134,14 +140,16 @@ function switchTab(tabId) {
     if (!activeTab) return;
     activeTab.classList.add('active');
 
-    const isToolWorkspace = !['tab-information', 'tab-tool-library'].includes(tabId);
-    const section = tabId === 'tab-information' ? 'information' : 'tools';
+    const isToolWorkspace = !['tab-information', 'tab-tool-library', 'tab-announcements'].includes(tabId);
+    const section = tabId === 'tab-information' ? 'information' : tabId === 'tab-announcements' ? 'announcements' : 'tools';
     const backLabel = document.getElementById('nav-back-label');
     if (backLabel) backLabel.textContent = 'All tools';
     document.querySelectorAll('[data-section]').forEach((button) => {
         button.classList.toggle('active', button.dataset.section === section);
     });
     updateNavigationMode(isToolWorkspace);
+    if (tabId === 'tab-announcements') window.ABKAnnouncements?.loadIfNeeded();
+    if (tabId === 'tab-tool-library' || isToolWorkspace) window.ABKAnnouncements?.checkForNew();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
