@@ -109,8 +109,8 @@
         } catch (_) { return { ...tab, error: true }; }
       }));
       const fragment = document.createDocumentFragment();
-      results.forEach((item, index) => {
-        const card = document.createElement('details'); card.className = 'announcement-card'; card.open = index === 0;
+      results.forEach(item => {
+        const card = document.createElement('details'); card.className = 'announcement-card'; card.open = true;
         const heading = document.createElement('summary'); heading.textContent = item.title;
         const body = document.createElement('div'); body.className = 'announcement-body';
         if (item.error) body.textContent = 'This announcement could not be loaded. Please refresh.';

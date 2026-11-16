@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { extractTabs, shouldRemind } = require('../modules/announcements.js');
+assert.match(fs.readFileSync(path.join(__dirname, '../modules/announcements.js'), 'utf8'), /card\.open\s*=\s*true/);
 const fixture = `DOCS_modelChunk = ${JSON.stringify({ chunk: [
   { ty: 'mkch', d: [[1, 'First']] },
   { ty: 'ac', d: ['t.abc123', [1, 'Second'], [1]] }
